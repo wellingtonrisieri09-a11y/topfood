@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sobre Nós — TopFood Embalagens</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--red:#CC0000;--dark:#1C1C1C;--gray:#6B7280;--border:#E5E7EB;--bg:#F9FAFB;--font:'Inter',sans-serif;--font-h:'Poppins',sans-serif}
+    body{font-family:var(--font);color:var(--dark);background:#fff}
+    a{text-decoration:none;color:inherit}
+    /* TOPBAR */
+    .topbar{background:var(--dark);color:#fff;font-size:.8rem;padding:8px 5%;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+    .topbar a{color:#fff;opacity:.8;transition:.2s}.topbar a:hover{opacity:1}
+    /* HEADER */
+    header{background:#fff;padding:16px 5%;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);gap:16px;flex-wrap:wrap}
+    .logo{display:flex;align-items:center;gap:10px;font-family:var(--font-h);font-size:1.3rem;font-weight:800;color:var(--dark)}
+    .logo img{height:54px;width:auto;object-fit:contain}
+    .logo span{color:var(--red)}
+    /* NAV */
+    nav{background:var(--dark);padding:0 5%;display:flex;gap:0;overflow-x:auto}
+    nav a{color:rgba(255,255,255,.7);padding:13px 16px;font-size:.84rem;font-weight:500;transition:.2s;white-space:nowrap;border-bottom:3px solid transparent}
+    nav a:hover,nav a.active{color:#fff;border-bottom-color:var(--red)}
+    nav a.nav-cta{background:var(--red);color:#fff;margin:8px 0 8px 12px;border-radius:7px;border-bottom:none!important;padding:8px 16px}
+    /* HERO */
+    .page-hero{background:linear-gradient(135deg,var(--dark) 0%,#2d0000 100%);color:#fff;padding:60px 5%;text-align:center}
+    .page-hero h1{font-family:var(--font-h);font-size:2.4rem;font-weight:800;margin-bottom:12px}
+    .page-hero h1 span{color:#FCD34D}
+    .page-hero p{font-size:1.05rem;opacity:.8;max-width:600px;margin:0 auto}
+    /* SECTIONS */
+    .content-section{max-width:1100px;margin:0 auto;padding:60px 5%}
+    .section-title{font-family:var(--font-h);font-size:1.6rem;font-weight:800;margin-bottom:8px;color:var(--dark)}
+    .section-title span{color:var(--red)}
+    .section-sub{font-size:.95rem;color:var(--gray);margin-bottom:36px}
+    /* ABOUT */
+    .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+    .about-img{border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+    .about-img img{width:100%;height:380px;object-fit:cover}
+    .about-text h2{font-family:var(--font-h);font-size:1.8rem;font-weight:800;line-height:1.2;margin-bottom:16px}
+    .about-text h2 em{color:var(--red);font-style:normal}
+    .about-text p{font-size:.95rem;color:var(--gray);line-height:1.8;margin-bottom:14px}
+    /* VALUES */
+    .values-section{background:var(--bg);padding:60px 5%}
+    .values-grid{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+    .value-card{background:#fff;border-radius:14px;padding:28px 24px;box-shadow:0 2px 8px rgba(0,0,0,.06);text-align:center;border-top:4px solid var(--red)}
+    .value-icon{font-size:2.2rem;margin-bottom:12px;display:block}
+    .value-card h3{font-family:var(--font-h);font-size:1rem;font-weight:700;margin-bottom:8px}
+    .value-card p{font-size:.85rem;color:var(--gray);line-height:1.7}
+    /* STATS */
+    .stats-strip{background:var(--red);color:#fff;padding:40px 5%}
+    .stats-grid{max-width:900px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:20px;text-align:center}
+    .stat-num{font-family:var(--font-h);font-size:2.2rem;font-weight:800}
+    .stat-lbl{font-size:.82rem;opacity:.85;margin-top:4px}
+    /* DELIVERY */
+    #entrega{background:#fff;padding:60px 5%}
+    .entrega-inner{max-width:900px;margin:0 auto}
+    .info-list{list-style:none;display:flex;flex-direction:column;gap:12px}
+    .info-list li{display:flex;align-items:flex-start;gap:12px;padding:14px 18px;background:var(--bg);border-radius:10px;font-size:.9rem;line-height:1.6}
+    .info-list li span.icon{font-size:1.2rem;flex-shrink:0;margin-top:2px}
+    /* FAQ */
+    #faq{background:var(--bg);padding:60px 5%}
+    .faq-inner{max-width:800px;margin:0 auto}
+    .faq-item{background:#fff;border-radius:12px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+    .faq-q{padding:18px 20px;font-weight:600;font-size:.9rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;user-select:none}
+    .faq-q:hover{color:var(--red)}
+    .faq-arrow{transition:transform .25s;font-size:.8rem;opacity:.6;flex-shrink:0}
+    .faq-item.open .faq-arrow{transform:rotate(180deg)}
+    .faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s}
+    .faq-item.open .faq-a{max-height:200px;padding:0 20px 16px}
+    .faq-a p{font-size:.87rem;color:var(--gray);line-height:1.8}
+    /* CTA */
+    .cta-section{background:linear-gradient(135deg,var(--dark) 0%,#2d0000 100%);color:#fff;padding:60px 5%;text-align:center}
+    .cta-section h2{font-family:var(--font-h);font-size:1.8rem;font-weight:800;margin-bottom:12px}
+    .cta-section p{font-size:.95rem;opacity:.8;margin-bottom:28px}
+    .cta-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+    .cta-btn{padding:14px 28px;border-radius:10px;font-weight:700;font-size:.95rem;cursor:pointer;border:none;transition:.2s}
+    .cta-btn.primary{background:var(--red);color:#fff}.cta-btn.primary:hover{background:#a80000}
+    .cta-btn.outline{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.5)}.cta-btn.outline:hover{border-color:#fff;background:rgba(255,255,255,.08)}
+    /* FOOTER */
+    footer{background:#111;color:#9CA3AF;text-align:center;padding:24px 5%;font-size:.8rem}
+    footer a{color:#9CA3AF;margin:0 8px}.footer a:hover{color:#FCD34D}
+    @media(max-width:768px){
+      .about-grid{grid-template-columns:1fr}
+      .values-grid{grid-template-columns:1fr}
+      .stats-grid{grid-template-columns:repeat(2,1fr)}
+      .page-hero h1{font-size:1.7rem}
+    }
+  </style>
+  <!-- Marketing Tracking: Meta Pixel + Google Tag Manager -->
+  <script src="/tracking.js" defer></script>
+</head>
+<body>
+
+<div class="topbar">
+  <span>📦 TopFood Embalagens — Santo André, SP</span>
+  <div style="display:flex;gap:16px">
+    <a href="tel:+5511988856367">📱 (11) 98885-6367</a>
+    <a href="https://wa.me/5511988856367" target="_blank">💬 WhatsApp</a>
+  </div>
+</div>
+
+<header>
+  <a href="/" class="logo">
+    <img src="images/WhatsApp Image 2026-05-22 at 16.14.11 (1).jpeg" alt="TopFood" onerror="this.style.display='none'" />
+    <span>Top<span style="color:#fff;background:var(--red);padding:0 4px;border-radius:4px">Food</span></span>
+  </a>
+  <a href="/" style="font-size:.85rem;color:var(--red);font-weight:600">← Voltar para a loja</a>
+</header>
+
+<nav>
+  <a href="/">🏠 Início</a>
+  <a href="/#pastel">🥟 Pastel</a>
+  <a href="/#churros">🍬 Churros</a>
+  <a href="/#hamburger">🍔 Hamburguer</a>
+  <a href="/#fritas">🍟 Fritas</a>
+  <a href="sobre.html" class="active">ℹ️ Sobre</a>
+  <a href="contato.html">📬 Contato</a>
+  <a href="https://wa.me/5511988856367" target="_blank" class="nav-cta">📞 Falar com Vendedor</a>
+</nav>
+
+<div class="page-hero">
+  <h1>Sobre a <span>TopFood</span> Embalagens</h1>
+  <p>Embalagens que valorizam seu alimento e elevam a experiência do seu cliente.</p>
+</div>
+
+<!-- SOBRE -->
+<div class="content-section">
+  <div class="about-grid">
+    <div class="about-img">
+      <img src="images/04 - Hamburguer.png" alt="TopFood Embalagens" onerror="this.src='images/01 - Pastel.png'" />
+    </div>
+    <div class="about-text">
+      <h2>Nascemos para <em>transformar</em> a apresentação do seu delivery</h2>
+      <p>A TopFood Embalagens surgiu com uma missão clara: oferecer embalagens food service de alta qualidade, com design exclusivo chalk art, que valorizam o produto e fortalecem a identidade visual do seu negócio.</p>
+      <p>Atendemos restaurantes, lanchonetes, food trucks, dark kitchens e vendedores autônomos em todo o Brasil — desde quem começa com 50 unidades até pedidos de grande volume.</p>
+      <p>Nossos produtos são desenvolvidos com materiais aprovados para contato alimentar, resistentes à gordura e ao calor, garantindo que a embalagem chegue perfeita ao cliente final.</p>
+      <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap">
+        <a href="/#produtos" style="padding:12px 24px;background:var(--red);color:#fff;border-radius:9px;font-weight:700;font-size:.9rem">Ver Catálogo →</a>
+        <a href="https://wa.me/5511988856367" target="_blank" style="padding:12px 24px;background:#25D366;color:#fff;border-radius:9px;font-weight:700;font-size:.9rem">💬 WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VALORES -->
+<div class="values-section">
+  <div style="max-width:1100px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:40px">
+      <div class="section-title">Nossos <span>Valores</span></div>
+      <p class="section-sub">O que guia cada embalagem que sai daqui</p>
+    </div>
+    <div class="values-grid">
+      <div class="value-card">
+        <span class="value-icon">🎨</span>
+        <h3>Design Exclusivo</h3>
+        <p>Cada embalagem tem identidade própria com o estilo chalk art TopFood, garantindo apresentação premium para qualquer produto.</p>
+      </div>
+      <div class="value-card">
+        <span class="value-icon">🌿</span>
+        <h3>Sustentabilidade</h3>
+        <p>Utilizamos papel kraft reciclável e certificado, comprometidos com um negócio mais responsável com o meio ambiente.</p>
+      </div>
+      <div class="value-card">
+        <span class="value-icon">🤝</span>
+        <h3>Parceria Real</h3>
+        <p>Mais do que vender embalagens, queremos ser parceiros do crescimento do seu negócio com atendimento próximo e personalizado.</p>
+      </div>
+      <div class="value-card">
+        <span class="value-icon">✅</span>
+        <h3>Qualidade Garantida</h3>
+        <p>Todos os materiais são aprovados para contato alimentar, resistentes à gordura e ao calor, com controle de qualidade rigoroso.</p>
+      </div>
+      <div class="value-card">
+        <span class="value-icon">🚀</span>
+        <h3>Entrega Rápida</h3>
+        <p>Enviamos para todo o Brasil via Correios (PAC e SEDEX), com rastreamento em tempo real e cálculo de frete transparente.</p>
+      </div>
+      <div class="value-card">
+        <span class="value-icon">💰</span>
+        <h3>Preço Justo</h3>
+        <p>Pacotes econômicos de 50, 100 e 250 unidades — quanto mais você leva, mais você economiza por unidade.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NÚMEROS -->
+<div class="stats-strip">
+  <div class="stats-grid">
+    <div><div class="stat-num">500+</div><div class="stat-lbl">Clientes atendidos</div></div>
+    <div><div class="stat-num">4</div><div class="stat-lbl">Linhas de produto</div></div>
+    <div><div class="stat-num">100%</div><div class="stat-lbl">Aprovado anvisa</div></div>
+    <div><div class="stat-num">5★</div><div class="stat-lbl">Avaliação média</div></div>
+  </div>
+</div>
+
+<!-- POLÍTICA DE ENTREGA -->
+<div id="entrega">
+  <div class="entrega-inner">
+    <div class="section-title">Política de <span>Entrega</span></div>
+    <p class="section-sub">Transparência total no envio do seu pedido</p>
+    <ul class="info-list">
+      <li><span class="icon">📦</span><div><b>Prazo de separação:</b> Pedidos confirmados até 12h são separados no mesmo dia. Após 12h, separamos no próximo dia útil.</div></li>
+      <li><span class="icon">🚚</span><div><b>Transportadora:</b> Enviamos exclusivamente pelos Correios (PAC e SEDEX), garantindo rastreamento em todo o território nacional.</div></li>
+      <li><span class="icon">📍</span><div><b>Rastreamento:</b> O código de rastreamento é enviado via WhatsApp assim que o pedido é postado. Acompanhe pelo site dos Correios.</div></li>
+      <li><span class="icon">⏱️</span><div><b>Prazos:</b> PAC: 3 a 15 dias úteis (varia por estado). SEDEX: 1 a 5 dias úteis. O prazo começa a contar após a postagem.</div></li>
+      <li><span class="icon">⚖️</span><div><b>Frete calculado por peso:</b> O valor do frete é calculado com base no peso total do pedido. Quanto mais você compra, mais diluído fica o custo por unidade.</div></li>
+      <li><span class="icon">💚</span><div><b>Frete grátis:</b> Para pedidos acima do valor mínimo configurado (verifique na loja). Promoções sazonais são anunciadas no banner da loja.</div></li>
+    </ul>
+  </div>
+</div>
+
+<!-- FAQ -->
+<div id="faq">
+  <div class="faq-inner">
+    <div style="text-align:center;margin-bottom:36px">
+      <div class="section-title">Perguntas <span>Frequentes</span></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Qual é o pedido mínimo? <span class="faq-arrow">▼</span></div>
+      <div class="faq-a"><p>O pedido mínimo é de 50 unidades por embalagem. Disponível também nos pacotes de 100 e 250 unidades com desconto progressivo.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">As embalagens são aprovadas para contato com alimento? <span class="faq-arrow">▼</span></div>
+      <div class="faq-a"><p>Sim! Todas as embalagens TopFood utilizam papel kraft certificado e aprovado para contato direto com alimentos, sem riscos à saúde do consumidor.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Posso pedir embalagens personalizadas com meu logo? <span class="faq-arrow">▼</span></div>
+      <div class="faq-a"><p>No momento trabalhamos com o design exclusivo chalk art TopFood. Para personalização com logo próprio, entre em contato pelo WhatsApp para verificar viabilidade e volume mínimo.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Como acompanho meu pedido? <span class="faq-arrow">▼</span></div>
+      <div class="faq-a"><p>Após a postagem, enviamos o código de rastreamento via WhatsApp. Você também pode acompanhar na sua área de cliente no site, em "Minha conta → Meus pedidos".</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">E se meu pedido chegar com defeito? <span class="faq-arrow">▼</span></div>
+      <div class="faq-a"><p>Entre em contato conosco pelo WhatsApp em até 7 dias após o recebimento com fotos do problema. Faremos o reenvio ou reembolso sem burocracia.</p></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Vocês atendem pessoas jurídicas (CNPJ)? <span class="faq-arrow">▼</span></div>
+      <div class="faq-a"><p>Sim! Atendemos tanto pessoas físicas quanto jurídicas. Para emissão de nota fiscal e condições especiais para volume, entre em contato pelo WhatsApp.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2>Pronto para valorizar seu delivery?</h2>
+  <p>Garanta suas embalagens agora e deixe seus clientes encantados com a apresentação</p>
+  <div class="cta-btns">
+    <a href="/#produtos" class="cta-btn primary">🛒 Ver Catálogo</a>
+    <a href="https://wa.me/5511988856367?text=Olá! Quero um orçamento da TopFood." target="_blank" class="cta-btn outline">💬 Falar pelo WhatsApp</a>
+  </div>
+</div>
+
+<footer>
+  <p>© 2026 TopFood Embalagens — Todos os direitos reservados |
+    <a href="/">Loja</a>
+    <a href="sobre.html">Sobre</a>
+    <a href="contato.html">Contato</a>
+  </p>
+</footer>
+
+<script>
+  function toggleFaq(el) {
+    const item = el.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  }
+</script>
+</body>
+</html>

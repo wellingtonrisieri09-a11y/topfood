@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="index,follow"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@700;800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--red:#CC0000;--black:#111;--gray:#6B7280;--border:#E5E7EB}
+body{font-family:Inter,sans-serif;background:#f9fafb;color:#111}
+a{color:var(--red);text-decoration:none}
+.topbar{background:#111;padding:8px 5%;font-size:.76rem;color:#9CA3AF;display:flex;justify-content:space-between}
+.header{background:#fff;padding:14px 5%;display:flex;align-items:center;gap:16px;border-bottom:3px solid var(--red);position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.logo-wrap{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-wrap img{height:52px;width:auto}
+.logo-name{font-family:Poppins,sans-serif;font-weight:800;font-size:1.1rem;color:var(--red)}
+.container{max-width:860px;margin:0 auto;padding:48px 5% 80px}
+.breadcrumb{font-size:.82rem;color:var(--gray);margin-bottom:24px}
+.breadcrumb a{color:var(--red);font-weight:600}
+h1{font-family:Poppins,sans-serif;font-size:1.8rem;font-weight:800;margin-bottom:8px}
+.updated{font-size:.82rem;color:var(--gray);margin-bottom:32px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+h2{font-size:1.1rem;font-weight:700;margin:28px 0 10px;color:var(--black)}
+p,li{font-size:.93rem;line-height:1.8;color:#374151;margin-bottom:8px}
+ul,ol{padding-left:20px;margin-bottom:12px}
+.footer-mini{background:#111;color:#6B7280;text-align:center;padding:24px;font-size:.78rem;margin-top:40px}
+</style>
+</head>
+<body>
+<div class="topbar"><span>🚚 Frete para todo Brasil &nbsp;|&nbsp; 📦 Pacotes a partir de 50 un</span><a href="https://wa.me/5511988856367">📱 (11) 98885-6367</a></div>
+<header class="header">
+  <a href="/" class="logo-wrap">
+    <img src="/images/WhatsApp Image 2026-05-22 at 16.14.11 (1).jpeg" alt="TopFood" onerror="this.style.display='none'"/>
+    <span class="logo-name">TopFood <span style="color:#111;font-weight:400;font-size:.85rem">Embalagens</span></span>
+  </a>
+  <a href="/" style="margin-left:auto;font-size:.85rem;color:var(--red);font-weight:600">← Voltar à loja</a>
+</header>
+
+<style>
+.faq-item{border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden}
+.faq-q{padding:16px 20px;font-weight:700;font-size:.95rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:#fff}
+.faq-q:hover{background:#fef2f2}
+.faq-a{padding:0 20px;max-height:0;overflow:hidden;transition:max-height .3s,padding .3s;font-size:.9rem;color:#374151;line-height:1.7;background:#fafafa}
+.faq-item.open .faq-a{max-height:400px;padding:16px 20px}
+.faq-item.open .faq-arrow{transform:rotate(180deg)}
+.faq-arrow{transition:transform .3s;color:var(--red);font-size:1.1rem}
+</style>
+<div class="container">
+  <div class="breadcrumb"><a href="/">Início</a> › Perguntas Frequentes</div>
+  <h1>Perguntas Frequentes</h1>
+  <p class="updated">Dúvidas mais comuns dos nossos clientes</p>
+
+  <h2 style="margin-bottom:16px">📦 Sobre os produtos</h2>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Qual é a quantidade mínima de compra? <span class="faq-arrow">▼</span></div>
+    <div class="faq-a">A quantidade mínima é de <strong>50 unidades por pacote</strong>. Trabalhamos com pacotes de 50, 100 e 250 unidades. Quanto maior o pacote, menor o custo por unidade.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">As embalagens são aprovadas para contato alimentar? <span class="faq-arrow">▼</span></div>
+    <div class="faq-a">Sim. Todas as nossas embalagens são fabricadas em materiais <strong>atóxicos e aprovados para contato direto com alimentos</strong>, atendendo às normas da ANVISA.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">É possível personalizar com minha logo? <span class="faq-arrow">▼</span></div>
+    <div class="faq-a">Sim! Oferecemos personalização com a identidade visual da sua marca. Entre em contato pelo WhatsApp <a href="https://wa.me/5511988856367">(11) 98885-6367</a> para solicitar orçamento de personalização. Pedidos mínimos para personalização se aplicam.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">As embalagens resistem ao óleo e à gordura? <span class="faq-arrow">▼</span></div>
+    <div class="faq-a">Sim. Nossas embalagens possuem <strong>revestimento interno antigordurado</strong>, impedindo que o óleo atravesse o papelão e manche a parte externa da embalagem.</div>
+  </div>
+
+  <h2 style="margin:28px 0 16px">🚚 Sobre entrega e frete</h2>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Vocês entregam para todo o Brasil? <span class="faq-arrow">▼</span></div>
+    <div class="faq-a">Sim, entregamos para <strong>todo o Brasil</strong> via Correios (PAC e SEDEX). O valor do frete é calculado automaticamente ao informar seu CEP no carrinho.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Qual o prazo de entrega? <span class="faq-arrow">▼</span></div>
+    <div class="faq-a">Após a confirmação do pagamento, despachamos em até 2 dias úteis. O prazo de entrega varia conforme o CEP: PAC (3–8 dias úteis) e SEDEX (1–3 dias úteis) após o despacho.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Como rastreio meu pedido? <span class="faq-arrow">▼</span></div>
+    <div class="faq-a">Após o despacho, enviamos o código de rastreio pelo WhatsApp. Você pode acompanhar em tempo real pelo site dos Correios.</div>
+  </div>
+
+  <h2 style="margin:28px 0 16px">💳 Sobre pagamentos</h2>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Quais formas de pagamento vocês aceitam? <span class="faq-arrow">▼</span></div>
+    <div class="faq-a">Aceitamos <strong>PIX</strong> (confirmação imediata com desconto) e <strong>cartão de crédito/débito via Mercado Pago</strong> (em breve). Para pedidos grandes, entre em contato via WhatsApp para negociação.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">O pagamento por PIX tem desconto? <span class="faq-arrow">▼</span></div>
+    <div class="faq-a">Sim! Pagamentos via PIX têm processamento imediato e prioridade na separação do pedido.</div>
+  </div>
+
+  <h2 style="margin:28px 0 16px">🔄 Sobre trocas e devoluções</h2>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">O produto chegou com defeito. O que fazer? <span class="faq-arrow">▼</span></div>
+    <div class="faq-a">Entre em contato via WhatsApp <a href="https://wa.me/5511988856367">(11) 98885-6367</a> em até <strong>48 horas</strong> após o recebimento, enviando fotos do produto e da embalagem de envio. Resolveremos com reenvio ou reembolso integral.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Posso cancelar meu pedido? <span class="faq-arrow">▼</span></div>
+    <div class="faq-a">Pedidos podem ser cancelados em até <strong>24 horas</strong> após a confirmação, desde que ainda não tenham sido despachados. Após o despacho, o cancelamento não é possível. Entre em contato pelo WhatsApp o quanto antes.</div>
+  </div>
+
+  <div style="background:#fef2f2;border-radius:10px;padding:24px;margin-top:32px;text-align:center">
+    <p style="font-weight:700;font-size:1rem;color:#111;margin-bottom:8px">Ainda tem dúvidas?</p>
+    <p style="margin-bottom:16px">Fale diretamente com nossa equipe:</p>
+    <a href="https://wa.me/5511988856367" style="display:inline-block;background:#25d366;color:#fff;font-weight:700;padding:12px 28px;border-radius:8px;font-size:.95rem">💬 Falar no WhatsApp</a>
+  </div>
+</div>
+<footer class="footer-mini">© 2026 TopFood Embalagens Ltda — CNPJ 67.038.607/0001-31 — São Bernardo do Campo, SP</footer></body></html>

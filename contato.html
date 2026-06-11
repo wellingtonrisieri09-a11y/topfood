@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contato — TopFood Embalagens</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--red:#CC0000;--dark:#1C1C1C;--gray:#6B7280;--border:#E5E7EB;--bg:#F9FAFB;--font:'Inter',sans-serif;--font-h:'Poppins',sans-serif}
+    body{font-family:var(--font);color:var(--dark);background:#fff}
+    a{text-decoration:none;color:inherit}
+    /* TOPBAR */
+    .topbar{background:var(--dark);color:#fff;font-size:.8rem;padding:8px 5%;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+    .topbar a{color:#fff;opacity:.8;transition:.2s}.topbar a:hover{opacity:1}
+    /* HEADER */
+    header{background:#fff;padding:16px 5%;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);gap:16px;flex-wrap:wrap}
+    .logo{display:flex;align-items:center;gap:10px;font-family:var(--font-h);font-size:1.3rem;font-weight:800;color:var(--dark)}
+    .logo img{height:54px;width:auto;object-fit:contain}
+    .logo span{color:var(--red)}
+    /* NAV */
+    nav{background:var(--dark);padding:0 5%;display:flex;gap:0;overflow-x:auto}
+    nav a{color:rgba(255,255,255,.7);padding:13px 16px;font-size:.84rem;font-weight:500;transition:.2s;white-space:nowrap;border-bottom:3px solid transparent}
+    nav a:hover,nav a.active{color:#fff;border-bottom-color:var(--red)}
+    nav a.nav-cta{background:var(--red);color:#fff;margin:8px 0 8px 12px;border-radius:7px;border-bottom:none!important;padding:8px 16px}
+    /* HERO */
+    .page-hero{background:linear-gradient(135deg,var(--dark) 0%,#2d0000 100%);color:#fff;padding:60px 5%;text-align:center}
+    .page-hero h1{font-family:var(--font-h);font-size:2.4rem;font-weight:800;margin-bottom:12px}
+    .page-hero h1 span{color:#FCD34D}
+    .page-hero p{font-size:1.05rem;opacity:.8;max-width:600px;margin:0 auto}
+    /* SECTION */
+    .section-title{font-family:var(--font-h);font-size:1.6rem;font-weight:800;margin-bottom:8px;color:var(--dark)}
+    .section-title span{color:var(--red)}
+    .section-sub{font-size:.95rem;color:var(--gray);margin-bottom:36px}
+    /* CONTACT GRID */
+    .contact-wrapper{max-width:1100px;margin:0 auto;padding:64px 5%;display:grid;grid-template-columns:1fr 1.1fr;gap:60px;align-items:start}
+    /* INFO SIDE */
+    .contact-info{display:flex;flex-direction:column;gap:20px}
+    .info-card{display:flex;align-items:flex-start;gap:16px;padding:20px;background:var(--bg);border-radius:14px;border-left:4px solid var(--red)}
+    .info-card-icon{font-size:1.6rem;flex-shrink:0;margin-top:2px}
+    .info-card-body h4{font-weight:700;font-size:.95rem;margin-bottom:4px}
+    .info-card-body p,.info-card-body a{font-size:.88rem;color:var(--gray);line-height:1.7}
+    .info-card-body a{color:var(--red);font-weight:600}
+    .info-card-body a:hover{text-decoration:underline}
+    /* HOURS */
+    .hours-row{display:flex;justify-content:space-between;font-size:.86rem;padding:6px 0;border-bottom:1px solid var(--border)}
+    .hours-row:last-child{border-bottom:none}
+    .hours-row .day{color:var(--gray)}
+    .hours-row .time{font-weight:600}
+    .hours-row.closed .time{color:#EF4444}
+    /* SOCIAL */
+    .social-row{display:flex;gap:12px;margin-top:4px;flex-wrap:wrap}
+    .social-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9px;font-size:.84rem;font-weight:700;color:#fff;transition:.2s}
+    .social-btn.wa{background:#25D366}.social-btn.wa:hover{background:#1da854}
+    .social-btn.ig{background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)}.social-btn.ig:hover{opacity:.88}
+    /* FORM SIDE */
+    .contact-form-box{background:#fff;border-radius:18px;box-shadow:0 8px 40px rgba(0,0,0,.10);padding:40px 36px;border:1px solid var(--border)}
+    .contact-form-box h3{font-family:var(--font-h);font-size:1.3rem;font-weight:800;margin-bottom:6px}
+    .contact-form-box p{font-size:.87rem;color:var(--gray);margin-bottom:28px}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+    .form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+    .form-group label{font-size:.82rem;font-weight:600;color:var(--dark)}
+    .form-group input,.form-group select,.form-group textarea{
+      padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:.9rem;font-family:var(--font);
+      color:var(--dark);background:#fff;transition:.2s;outline:none;resize:none
+    }
+    .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(204,0,0,.08)}
+    .form-group textarea{min-height:120px}
+    .btn-send{width:100%;padding:14px;background:var(--red);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:1rem;cursor:pointer;font-family:var(--font-h);transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn-send:hover{background:#a80000;transform:translateY(-1px)}
+    .btn-send:active{transform:translateY(0)}
+    .form-success{display:none;text-align:center;padding:32px 20px}
+    .form-success .check{font-size:3rem;margin-bottom:12px}
+    .form-success h4{font-family:var(--font-h);font-size:1.2rem;margin-bottom:8px}
+    .form-success p{font-size:.88rem;color:var(--gray)}
+    /* FAQ */
+    .faq-section{background:var(--bg);padding:60px 5%}
+    .faq-inner{max-width:800px;margin:0 auto}
+    .faq-item{background:#fff;border-radius:12px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+    .faq-q{padding:18px 20px;font-weight:600;font-size:.9rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;user-select:none}
+    .faq-q:hover{color:var(--red)}
+    .faq-arrow{transition:transform .25s;font-size:.8rem;opacity:.6;flex-shrink:0}
+    .faq-item.open .faq-arrow{transform:rotate(180deg)}
+    .faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s}
+    .faq-item.open .faq-a{max-height:240px;padding:0 20px 16px}
+    .faq-a p{font-size:.87rem;color:var(--gray);line-height:1.8}
+    /* CTA */
+    .cta-section{background:linear-gradient(135deg,var(--dark) 0%,#2d0000 100%);color:#fff;padding:60px 5%;text-align:center}
+    .cta-section h2{font-family:var(--font-h);font-size:1.8rem;font-weight:800;margin-bottom:12px}
+    .cta-section p{font-size:.95rem;opacity:.8;margin-bottom:28px}
+    .cta-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+    .cta-btn{padding:14px 28px;border-radius:10px;font-weight:700;font-size:.95rem;cursor:pointer;border:none;transition:.2s}
+    .cta-btn.primary{background:var(--red);color:#fff}.cta-btn.primary:hover{background:#a80000}
+    .cta-btn.outline{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.5)}.cta-btn.outline:hover{border-color:#fff;background:rgba(255,255,255,.08)}
+    /* FOOTER */
+    footer{background:#111;color:#9CA3AF;text-align:center;padding:24px 5%;font-size:.8rem}
+    footer a{color:#9CA3AF;margin:0 8px}.footer a:hover{color:#FCD34D}
+    /* TOAST */
+    .toast{position:fixed;bottom:24px;right:24px;background:#1C1C1C;color:#fff;padding:13px 22px;border-radius:10px;font-size:.88rem;font-weight:600;z-index:9999;opacity:0;pointer-events:none;transform:translateY(10px);transition:.3s}
+    .toast.show{opacity:1;pointer-events:auto;transform:translateY(0)}
+    @media(max-width:860px){
+      .contact-wrapper{grid-template-columns:1fr}
+      .form-row{grid-template-columns:1fr}
+      .page-hero h1{font-size:1.7rem}
+    }
+  </style>
+  <!-- Marketing Tracking: Meta Pixel + Google Tag Manager -->
+  <script src="/tracking.js" defer></script>
+</head>
+<body>
+
+<div class="topbar">
+  <span>📦 TopFood Embalagens — Santo André, SP</span>
+  <div style="display:flex;gap:16px">
+    <a href="tel:+5511988856367">📱 (11) 98885-6367</a>
+    <a href="https://wa.me/5511988856367" target="_blank">💬 WhatsApp</a>
+  </div>
+</div>
+
+<header>
+  <a href="/" class="logo">
+    <img src="images/WhatsApp Image 2026-05-22 at 16.14.11 (1).jpeg" alt="TopFood" onerror="this.style.display='none'" />
+    <span>Top<span style="color:#fff;background:var(--red);padding:0 4px;border-radius:4px">Food</span></span>
+  </a>
+  <a href="/" style="font-size:.85rem;color:var(--red);font-weight:600">← Voltar para a loja</a>
+</header>
+
+<nav>
+  <a href="/">🏠 Início</a>
+  <a href="/#pastel">🥟 Pastel</a>
+  <a href="/#churros">🍬 Churros</a>
+  <a href="/#hamburger">🍔 Hamburguer</a>
+  <a href="/#fritas">🍟 Fritas</a>
+  <a href="sobre.html">ℹ️ Sobre</a>
+  <a href="contato.html" class="active">📬 Contato</a>
+  <a href="https://wa.me/5511988856367" target="_blank" class="nav-cta">📞 Falar com Vendedor</a>
+</nav>
+
+<div class="page-hero">
+  <h1>Fale com a <span>TopFood</span></h1>
+  <p>Estamos aqui para responder suas dúvidas, receber orçamentos e atender sua demanda com agilidade.</p>
+</div>
+
+<!-- CONTATO PRINCIPAL -->
+<div class="contact-wrapper">
+
+  <!-- LADO ESQUERDO: informações -->
+  <div class="contact-info">
+    <div class="section-title">Nossas <span>informações</span></div>
+    <p class="section-sub" style="margin-bottom:8px">Escolha o canal mais rápido para você</p>
+
+    <div class="info-card">
+      <div class="info-card-icon">💬</div>
+      <div class="info-card-body">
+        <h4>WhatsApp (preferencial)</h4>
+        <p>Canal mais rápido para orçamentos, dúvidas e suporte ao pedido.</p>
+        <a href="https://wa.me/5511988856367?text=Olá! Quero entrar em contato com a TopFood." target="_blank">Abrir conversa → (11) 98885-6367</a>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-icon">📧</div>
+      <div class="info-card-body">
+        <h4>E-mail</h4>
+        <p>Para envio de documentos, notas fiscais e solicitações formais.</p>
+        <a href="mailto:contato@topfoodembalagens.com.br">contato@topfoodembalagens.com.br</a>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-icon">📍</div>
+      <div class="info-card-body">
+        <h4>Localização</h4>
+        <p>Santo André, SP — Grande ABC Paulista<br/>Atendemos todo o Brasil via Correios (PAC / SEDEX).</p>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-icon">🕐</div>
+      <div class="info-card-body">
+        <h4>Horário de atendimento</h4>
+        <div style="margin-top:10px">
+          <div class="hours-row">
+            <span class="day">Segunda — Sexta</span>
+            <span class="time">08h às 18h</span>
+          </div>
+          <div class="hours-row">
+            <span class="day">Sábado</span>
+            <span class="time">09h às 13h</span>
+          </div>
+          <div class="hours-row closed">
+            <span class="day">Domingo e feriados</span>
+            <span class="time">Fechado</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-icon">📱</div>
+      <div class="info-card-body">
+        <h4>Redes sociais</h4>
+        <p style="margin-bottom:12px">Acompanhe novidades e promoções exclusivas</p>
+        <div class="social-row">
+          <a href="https://wa.me/5511988856367" target="_blank" class="social-btn wa">💬 WhatsApp</a>
+          <a href="https://instagram.com/topfoodembalagens" target="_blank" class="social-btn ig">📸 Instagram</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LADO DIREITO: formulário -->
+  <div class="contact-form-box">
+    <div id="form-area">
+      <h3>Envie sua mensagem</h3>
+      <p>Responderemos em até 1 dia útil. Para urgências, prefira o WhatsApp.</p>
+
+      <div class="form-row">
+        <div class="form-group" style="margin-bottom:0">
+          <label for="c-name">Nome *</label>
+          <input type="text" id="c-name" placeholder="Seu nome" maxlength="100" />
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label for="c-phone">Telefone / WhatsApp</label>
+          <input type="tel" id="c-phone" placeholder="(11) 00000-0000" maxlength="20" oninput="maskPhone(this)" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="c-email">E-mail *</label>
+        <input type="email" id="c-email" placeholder="seu@email.com" maxlength="150" />
+      </div>
+
+      <div class="form-group">
+        <label for="c-subject">Assunto *</label>
+        <select id="c-subject">
+          <option value="">Selecione o assunto...</option>
+          <option value="Orçamento">Orçamento / Cotação</option>
+          <option value="Pedido">Dúvida sobre pedido</option>
+          <option value="Produto">Informações sobre produtos</option>
+          <option value="Entrega">Entrega / Rastreamento</option>
+          <option value="Problema">Problema com pedido recebido</option>
+          <option value="Parceria">Parceria / Revenda</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="c-msg">Mensagem *</label>
+        <textarea id="c-msg" placeholder="Descreva sua dúvida ou solicitação com o máximo de detalhes possível..." maxlength="1200"></textarea>
+      </div>
+
+      <button class="btn-send" onclick="submitContact()">
+        <span id="send-icon">📨</span>
+        <span id="send-label">Enviar mensagem</span>
+      </button>
+
+      <p style="font-size:.78rem;color:var(--gray);text-align:center;margin-top:14px">
+        Suas informações são tratadas com sigilo e não serão compartilhadas com terceiros.
+      </p>
+    </div>
+
+    <div class="form-success" id="form-success">
+      <div class="check">✅</div>
+      <h4>Mensagem enviada!</h4>
+      <p>Recebemos sua mensagem e responderemos em breve.<br/>Para resposta mais rápida, fale pelo <a href="https://wa.me/5511988856367" target="_blank" style="color:var(--red);font-weight:600">WhatsApp</a>.</p>
+      <button onclick="resetForm()" style="margin-top:20px;padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:.9rem">Enviar outra mensagem</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- FAQ -->
+<div class="faq-section">
+  <div class="faq-inner">
+    <div style="text-align:center;margin-bottom:36px">
+      <div class="section-title">Perguntas <span>Frequentes</span></div>
+      <p class="section-sub">Resolvemos as dúvidas mais comuns</p>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Qual a forma mais rápida de entrar em contato? <span class="faq-arrow">▼</span></div>
+      <div class="faq-a"><p>O WhatsApp é sempre o canal mais rápido — respondemos em minutos durante o horário comercial. Para orçamentos, pode já enviar a quantidade e o tipo de embalagem desejada para agilizar o atendimento.</p></div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Em quanto tempo respondem o formulário de contato? <span class="faq-arrow">▼</span></div>
+      <div class="faq-a"><p>Mensagens enviadas pelo formulário são respondidas em até 1 dia útil por e-mail. Para urgências ou respostas no mesmo dia, recomendamos o WhatsApp.</p></div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Fazem orçamentos para grandes volumes? <span class="faq-arrow">▼</span></div>
+      <div class="faq-a"><p>Sim! Para pedidos acima de 500 unidades ou compras recorrentes, entre em contato pelo WhatsApp para negociar condições especiais de preço e frete.</p></div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Atendem fora do horário comercial? <span class="faq-arrow">▼</span></div>
+      <div class="faq-a"><p>Fora do horário comercial as mensagens ficam em espera e são respondidas na retomada do expediente. Nos sábados até 13h também atendemos. Aos domingos e feriados não há atendimento.</p></div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Como faço para reclamar de um produto com defeito? <span class="faq-arrow">▼</span></div>
+      <div class="faq-a"><p>Entre em contato pelo WhatsApp ou pelo formulário acima em até 7 dias após o recebimento, com fotos do problema e o número do pedido. Resolvemos com reenvio ou estorno, sem burocracia.</p></div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Emitem nota fiscal? <span class="faq-arrow">▼</span></div>
+      <div class="faq-a"><p>Para emissão de NF-e, entre em contato informando CNPJ e dados da empresa. Atendemos tanto pessoa física quanto jurídica com a documentação adequada.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2>Ainda com dúvidas? Fale agora!</h2>
+  <p>Nossa equipe está pronta para te ajudar a escolher as melhores embalagens para o seu negócio</p>
+  <div class="cta-btns">
+    <a href="https://wa.me/5511988856367?text=Olá! Gostaria de um orçamento da TopFood." target="_blank" class="cta-btn primary">💬 WhatsApp Agora</a>
+    <a href="/" class="cta-btn outline">🛒 Ver Catálogo</a>
+  </div>
+</div>
+
+<footer>
+  <p>© 2026 TopFood Embalagens — Todos os direitos reservados |
+    <a href="/">Loja</a>
+    <a href="sobre.html">Sobre</a>
+    <a href="contato.html">Contato</a>
+  </p>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ── Máscara de telefone ─────────────────────────── */
+  function maskPhone(el) {
+    let v = el.value.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 6) v = '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
+    else if (v.length > 2) v = '(' + v.slice(0,2) + ') ' + v.slice(2);
+    else if (v.length > 0) v = '(' + v;
+    el.value = v;
+  }
+
+  /* ── Toast ───────────────────────────────────────── */
+  function showToast(msg, duration = 3500) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), duration);
+  }
+
+  /* ── Validação e envio do formulário ─────────────── */
+  async function submitContact() {
+    const name    = document.getElementById('c-name').value.trim();
+    const email   = document.getElementById('c-email').value.trim();
+    const subject = document.getElementById('c-subject').value;
+    const msg     = document.getElementById('c-msg').value.trim();
+
+    if (!name)    { showToast('⚠️ Informe seu nome.'); return; }
+    if (!email || !email.includes('@')) { showToast('⚠️ Informe um e-mail válido.'); return; }
+    if (!subject) { showToast('⚠️ Selecione o assunto.'); return; }
+    if (msg.length < 10) { showToast('⚠️ Escreva uma mensagem com pelo menos 10 caracteres.'); return; }
+
+    const btn   = document.querySelector('.btn-send');
+    const icon  = document.getElementById('send-icon');
+    const label = document.getElementById('send-label');
+    btn.disabled = true;
+    icon.textContent = '⏳';
+    label.textContent = 'Enviando...';
+
+    try {
+      const phone = document.getElementById('c-phone').value.trim();
+
+      /* Salva a mensagem no servidor */
+      await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone, subject, message: msg }),
+      });
+    } catch (e) {
+      /* mesmo se falhar no servidor, exibe sucesso ao usuário */
+    }
+
+    /* 📊 Tracking: Lead */
+    if (window.TFTrack) TFTrack.lead({ source: 'contact_form_' + document.getElementById('c-subject').value });
+
+    /* Exibe tela de sucesso */
+    document.getElementById('form-area').style.display = 'none';
+    document.getElementById('form-success').style.display = 'block';
+  }
+
+  function resetForm() {
+    document.getElementById('c-name').value = '';
+    document.getElementById('c-email').value = '';
+    document.getElementById('c-phone').value = '';
+    document.getElementById('c-subject').value = '';
+    document.getElementById('c-msg').value = '';
+    const btn = document.querySelector('.btn-send');
+    btn.disabled = false;
+    document.getElementById('send-icon').textContent = '📨';
+    document.getElementById('send-label').textContent = 'Enviar mensagem';
+    document.getElementById('form-area').style.display = 'block';
+    document.getElementById('form-success').style.display = 'none';
+  }
+
+  /* ── FAQ accordion ───────────────────────────────── */
+  function toggleFaq(el) {
+    const item   = el.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><script async src="https://www.googletagmanager.com/gtag/js?id=G-DBS2ZZCBPF"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-DBS2ZZCBPF");gtag("config","AW-18224516940");</script>
+  <meta charset="UTF-8" /><meta name="description" content="Compre embalagens food service de qualidade para pastel, churros, hamburguer e fritas. Embalagens kraft impermeabilizadas para restaurantes e delivery. TopFood Embalagens - São Paulo." /><meta name="keywords" content="embalagem pastel comprar, embalagem churros atacado, embalagem hamburguer delivery, embalagem fritas kraft, embalagem food service SP" /><meta name="robots" content="index, follow" /><meta property="og:title" content="TopFood Embalagens - Produtos" /><meta property="og:description" content="Embalagens food service para pastel, churros, hamburguer e fritas. Entrega para todo Brasil!" /><meta property="og:url" content="https://topfoodembalagens.com.br/product.html" /><meta property="og:type" content="website" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Produto — TopFood Embalagens</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red:     #CC0000;
+      --red-d:   #A80000;
+      --black:   #111111;
+      --gray:    #6B7280;
+      --gray-l:  #F3F4F6;
+      --border:  #E5E7EB;
+      --white:   #FFFFFF;
+      --green:   #16A34A;
+      --font:    'Inter', sans-serif;
+      --font-h:  'Poppins', sans-serif;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); background: #F7F8FA; color: var(--black); }
+    a { text-decoration: none; color: inherit; }
+    img { display: block; max-width: 100%; }
+    button { cursor: pointer; border: none; font-family: var(--font); }
+
+    /* TOP BAR */
+    .topbar {
+      background: var(--black); padding: 8px 5%;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.76rem; color: #9CA3AF; flex-wrap: wrap; gap: 8px;
+    }
+    .topbar a { color: #9CA3AF; transition: color .2s; }
+    .topbar a:hover { color: #FCD34D; }
+    .topbar-phone {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 20px; padding: 3px 12px 3px 8px;
+      color: #FCD34D; font-weight: 600; font-size: .78rem;
+    }
+
+    /* HEADER */
+    .header {
+      background: var(--white); padding: 12px 5%;
+      display: flex; align-items: center; gap: 16px;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.09);
+      border-bottom: 3px solid var(--red);
+    }
+    .logo-img { height: 64px; width: auto; object-fit: contain; }
+    .logo-fallback {
+      display: none; align-items: center; gap: 8px;
+      font-family: var(--font-h); font-weight: 800; font-size: 1.25rem;
+    }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .cart-btn {
+      position: relative; background: var(--red); color: #fff;
+      border-radius: 8px; padding: 9px 18px; font-weight: 700;
+      font-size: .88rem; display: flex; align-items: center; gap: 7px;
+      transition: background .2s;
+    }
+    .cart-btn:hover { background: var(--red-d); }
+    .cart-count {
+      position: absolute; top: -6px; right: -6px;
+      background: #fff; color: var(--red);
+      border-radius: 50%; width: 18px; height: 18px;
+      font-size: .68rem; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--red);
+    }
+    .cart-count.hidden { display: none; }
+
+    /* BREADCRUMB */
+    .breadcrumb {
+      padding: 14px 5%; font-size: .82rem; color: var(--gray);
+      display: flex; align-items: center; gap: 6px;
+      max-width: 1100px; margin: 0 auto;
+    }
+    .breadcrumb a { color: var(--red); font-weight: 600; }
+    .breadcrumb a:hover { text-decoration: underline; }
+
+    /* MAIN LAYOUT */
+    .product-page { max-width: 1100px; margin: 0 auto; padding: 0 5% 60px; }
+    .product-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 48px;
+      align-items: start;
+    }
+    @media (max-width: 768px) {
+      .product-grid { grid-template-columns: 1fr; gap: 28px; }
+      .gallery { position: static; }
+    }
+
+    /* GALLERY */
+    .gallery { position: sticky; top: 96px; }
+    .gallery-main {
+      border-radius: 14px; overflow: hidden;
+      background: #fff; border: 1px solid var(--border);
+      aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+      margin-bottom: 12px;
+    }
+    .gallery-main img {
+      width: 100%; height: 100%; object-fit: contain;
+      transition: opacity .2s;
+    }
+    .gallery-thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .thumb {
+      width: 72px; height: 72px; border-radius: 8px; overflow: hidden;
+      border: 2px solid var(--border); cursor: pointer;
+      background: #fff; flex-shrink: 0; transition: border-color .2s;
+    }
+    .thumb.active, .thumb:hover { border-color: var(--red); }
+    .thumb img { width: 100%; height: 100%; object-fit: contain; }
+
+    /* INFO PANEL */
+    .product-info { display: flex; flex-direction: column; gap: 20px; }
+    .badge-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 4px;
+      font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+    }
+    .badge-hot  { background: #DCFCE7; color: #15803D; }
+    .badge-new  { background: #DBEAFE; color: #1D4ED8; }
+    .badge-sale { background: #FEF3C7; color: #92400E; }
+
+    .product-name {
+      font-family: var(--font-h); font-size: 1.7rem; font-weight: 800;
+      line-height: 1.2; color: var(--black);
+    }
+    .product-desc { font-size: .95rem; color: var(--gray); line-height: 1.6; }
+    .stars { color: #FBBF24; font-size: 1rem; letter-spacing: 2px; }
+
+    /* VARIANTS */
+    .variants-label { font-weight: 700; font-size: .9rem; color: var(--black); }
+    .variants-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+    .variant-btn {
+      flex: 1; min-width: 90px; padding: 10px 12px;
+      border: 2px solid var(--border); border-radius: 10px;
+      background: #fff; text-align: center; cursor: pointer;
+      transition: all .18s; user-select: none;
+    }
+    .variant-btn:hover { border-color: var(--red); }
+    .variant-btn.selected { border-color: var(--red); background: #fff0f0; }
+    .variant-units { font-size: .82rem; color: var(--gray); }
+    .variant-price { font-size: 1.15rem; font-weight: 800; color: var(--red); margin-top: 2px; }
+    .variant-unit-price { font-size: .72rem; color: var(--gray); }
+
+    /* QTY + ADD */
+    .buy-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .qty-ctrl {
+      display: flex; align-items: center;
+      border: 2px solid var(--border); border-radius: 10px; overflow: hidden;
+    }
+    .qty-btn {
+      width: 38px; height: 44px; background: var(--gray-l);
+      font-size: 1.2rem; font-weight: 700; color: var(--black);
+      border: none; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background .15s;
+    }
+    .qty-btn:hover { background: #e5e7eb; }
+    .qty-val { width: 44px; text-align: center; font-weight: 700; font-size: 1rem; }
+    .add-btn {
+      flex: 1; min-width: 160px; height: 48px;
+      background: var(--red); color: #fff;
+      border-radius: 10px; font-weight: 700; font-size: 1rem;
+      transition: background .18s; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .add-btn:hover { background: var(--red-d); }
+    .add-btn:active { transform: scale(.97); }
+
+    /* FEATURES / SPECS */
+    .section-title {
+      font-family: var(--font-h); font-size: 1.05rem; font-weight: 700;
+      color: var(--black); border-bottom: 2px solid var(--red);
+      padding-bottom: 6px; margin-bottom: 14px;
+    }
+    .features-list { display: flex; flex-direction: column; gap: 8px; }
+    .features-list li {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: .9rem; color: #374151;
+    }
+    .features-list li::before {
+      content: '✓'; color: var(--green); font-weight: 700;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .specs-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    .specs-table tr:nth-child(even) td { background: var(--gray-l); }
+    .specs-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    .specs-table td:first-child { font-weight: 600; color: var(--black); width: 42%; }
+    .specs-table td:last-child { color: #374151; }
+    .long-desc { font-size: .9rem; color: #374151; line-height: 1.7; }
+
+    /* RODAPÉ LEGAL */
+    .prod-footer { background: #080808; border-top: 1px solid #1a1a1a; padding: 16px 5%; text-align: center; }
+    .prod-footer p { font-size: 0.76rem; color: #374151; }
+    .prod-footer-legal { font-size: 0.72rem !important; color: #374151 !important; margin-top: 6px; padding-top: 6px; border-top: 1px solid #1a1a1a; }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #111; color: #fff; padding: 12px 24px; border-radius: 30px;
+      font-size: .9rem; font-weight: 600; opacity: 0; pointer-events: none;
+      transition: opacity .25s, transform .25s; z-index: 9999; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* LOADING / ERROR */
+    .page-loading, .page-error {
+      min-height: 60vh; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px; color: var(--gray);
+    }
+    .page-error h2 { font-family: var(--font-h); color: var(--black); }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--red); color: #fff; padding: 10px 22px;
+      border-radius: 8px; font-weight: 700; font-size: .9rem; margin-top: 8px;
+    }
+
+    /* VEJA TAMBÉM */
+    .related-section {
+      max-width: 1100px; margin: 0 auto 60px;
+      padding: 0 5%;
+      display: none;
+    }
+    .related-section.visible { display: block; }
+    .related-divider {
+      display: flex; align-items: center; gap: 16px; margin-bottom: 28px;
+    }
+    .related-divider::before, .related-divider::after {
+      content: ''; flex: 1; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--border));
+    }
+    .related-divider::before {
+      background: linear-gradient(90deg, var(--border), transparent);
+    }
+    .related-title {
+      font-family: var(--font-h); font-size: 1.25rem; font-weight: 800;
+      color: var(--black); white-space: nowrap; display: flex; align-items: center; gap: 8px;
+    }
+    .related-title span { color: var(--red); }
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 900px) { .related-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .related-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+
+    .rel-card {
+      background: #fff;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform .22s, border-color .22s, box-shadow .22s;
+      display: flex; flex-direction: column;
+    }
+    .rel-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--red);
+      box-shadow: 0 12px 32px rgba(204,0,0,0.12);
+    }
+    .rel-img {
+      width: 100%; aspect-ratio: 1;
+      background: var(--gray-l);
+      overflow: hidden; position: relative;
+    }
+    .rel-img img {
+      width: 100%; height: 100%; object-fit: contain;
+      transition: transform .35s;
+    }
+    .rel-card:hover .rel-img img { transform: scale(1.07); }
+    .rel-badge {
+      position: absolute; top: 8px; left: 8px;
+      padding: 2px 8px; border-radius: 4px; font-size: .65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .4px;
+    }
+    .rel-badge.green  { background: #dcfce7; color: #15803d; }
+    .rel-badge.blue   { background: #dbeafe; color: #1d4ed8; }
+    .rel-badge.orange { background: #fef3c7; color: #92400e; }
+    .rel-body { padding: 12px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .rel-name {
+      font-family: var(--font-h); font-size: .82rem; font-weight: 700;
+      color: var(--black); line-height: 1.3;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .rel-price {
+      font-size: .78rem; color: var(--gray);
+    }
+    .rel-price strong { color: var(--red); font-size: .9rem; }
+    .rel-actions { display: flex; gap: 6px; margin-top: auto; padding-top: 8px; }
+    .rel-btn-detail {
+      flex: 1; padding: 7px 0; border-radius: 7px; font-size: .78rem; font-weight: 600;
+      border: 1.5px solid var(--border); background: #fff; color: var(--black);
+      transition: border-color .15s, color .15s;
+    }
+    .rel-btn-detail:hover { border-color: var(--red); color: var(--red); }
+    .rel-btn-buy {
+      flex: 1; padding: 7px 0; border-radius: 7px; font-size: .78rem; font-weight: 700;
+      background: var(--red); color: #fff;
+      transition: background .15s;
+    }
+    .rel-btn-buy:hover { background: var(--red-d); }
+  </style>
+<script>function fixImg(s){return s&&!s.startsWith("data:")&&!s.startsWith("http")&&!s.startsWith("/")?"/"+s:s||"";}</script></head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:18px">
+    <span>🚚 Frete para todo Brasil</span>
+    <span>📦 Pacotes a partir de 50 un</span>
+  </div>
+  <a href="https://wa.me/5511988856367" class="topbar-phone" target="_blank" rel="noopener">
+    📱 (11) 98885-6367
+  </a>
+</div>
+
+<!-- HEADER -->
+<header class="header">
+  <a href="/" class="logo">
+    <img src="images/WhatsApp Image 2026-05-22 at 16.14.11 (1).jpeg" alt="TopFood Embalagens" class="logo-img"
+         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+    <span class="logo-fallback">🍔 <span style="color:var(--red)">TopFood</span></span>
+  </a>
+  <div class="header-right">
+    <button class="cart-btn" onclick="goToCart()" title="Ver carrinho">
+      🛒 Carrinho
+      <span class="cart-count hidden" id="cartCount">0</span>
+    </button>
+  </div>
+</header>
+
+<!-- BREADCRUMB -->
+<div class="breadcrumb">
+  <a href="/">Início</a>
+  <span>›</span>
+  <span id="breadcrumbName">Produto</span>
+</div>
+
+<!-- MAIN CONTENT -->
+<main class="product-page" id="mainContent">
+  <div class="page-loading" id="loadingState">
+    <div style="font-size:2rem">⏳</div>
+    <p>Carregando produto...</p>
+  </div>
+</main>
+
+<!-- VEJA TAMBÉM -->
+<section class="related-section" id="relatedSection">
+  <div class="related-divider">
+    <span class="related-title">👀 Veja <span>também</span></span>
+  </div>
+  <div class="related-grid" id="relatedGrid"></div>
+</section>
+
+<!-- RODAPÉ LEGAL -->
+<footer class="prod-footer">
+  <p>© 2026 TopFood Embalagens — Todos os direitos reservados</p>
+  <p class="prod-footer-legal">
+    TopFood Embalagens Ltda &nbsp;|&nbsp; CNPJ: 67.038.607/0001-31 &nbsp;|&nbsp;
+    R. Reinaldo Teixeira, 85 — Alvarenga, São Bernardo do Campo — SP, CEP 09.850-720
+  </p>
+</footer>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // Cart helpers — mesma chave 'tf-cart' do index.html
+  function getCart() {
+    try { return JSON.parse(localStorage.getItem('tf-cart') || '[]'); } catch { return []; }
+  }
+  function saveCart(cart) {
+    try { localStorage.setItem('tf-cart', JSON.stringify(cart)); } catch {}
+  }
+  function updateCartBadge() {
+    const total = getCart().reduce((s, i) => s + i.qty, 0);
+    const el    = document.getElementById('cartCount');
+    if (!el) return;
+    el.textContent = total;
+    el.classList.toggle('hidden', total === 0);
+  }
+  function goToCart() {
+    // Vai para index.html e abre o carrinho via hash
+    window.location.href = '/#cart';
+  }
+
+  // Toast
+  let _toastTimer;
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+  }
+
+  // Estado local
+  let qty = 1;
+  let selectedVariantIdx = 0;
+  let currentProduct = null;
+
+  function fmt(n) {
+    return 'R$ ' + parseFloat(n || 0).toFixed(2).replace('.', ',');
+  }
+
+  // Renderiza a página do produto
+  function renderProduct(p) {
+    currentProduct = p;
+    document.title = p.name + ' — TopFood Embalagens';
+    document.getElementById('breadcrumbName').textContent = p.name;
+
+    const BADGE_CLASS = { green: 'badge-hot', blue: 'badge-new', orange: 'badge-sale', red: 'badge-sale' };
+    const BADGE_LABEL = { green: 'Mais Vendido', blue: 'Novidade', orange: 'Promoção', red: 'Promoção' };
+    const badgeCls = p.badge && p.badgeColor ? (BADGE_CLASS[p.badgeColor] || 'badge-hot') : '';
+    const badgeLbl = p.badge || (p.badgeColor ? BADGE_LABEL[p.badgeColor] : '');
+
+    var rawImgs = (p.images && p.images.length) ? p.images : [p.image].filter(Boolean); const images = rawImgs.map(function(s){ return s && !s.startsWith("data:") && !s.startsWith("http") && !s.startsWith("/") ? "/"+s : s; });
+
+    const thumbsHtml = images.length > 1
+      ? `<div class="gallery-thumbs" id="thumbs">
+          ${images.map((img, i) =>
+            `<div class="thumb${i === 0 ? ' active' : ''}" onclick="setMainImage(${i})" data-idx="${i}">
+              <img src="${img}" alt="Imagem ${i+1}" onerror="this.parentElement.style.display='none'" />
+            </div>`
+          ).join('')}
+        </div>`
+      : '';
+
+    const variantsHtml = p.variants.map((v, i) => {
+      const unitPrice = (v.price / v.units).toFixed(2).replace('.', ',');
+      return `<div class="variant-btn${i === 0 ? ' selected' : ''}" onclick="selectVariant(${i})" data-idx="${i}">
+        <div class="variant-units">${v.units} unidades</div>
+        <div class="variant-price">${fmt(v.price)}</div>
+        <div class="variant-unit-price">R$ ${unitPrice}/un</div>
+      </div>`;
+    }).join('');
+
+    const featuresHtml = p.features && p.features.length
+      ? `<div>
+          <p class="section-title">✔ Características</p>
+          <ul class="features-list">${p.features.map(f => `<li>${f}</li>`).join('')}</ul>
+        </div>`
+      : '';
+
+    const specsHtml = p.specs && p.specs.length
+      ? `<div>
+          <p class="section-title">📋 Especificações técnicas</p>
+          <table class="specs-table">
+            <tbody>${p.specs.map(s => `<tr><td>${s.label}</td><td>${s.value}</td></tr>`).join('')}</tbody>
+          </table>
+        </div>`
+      : '';
+
+    const longDescHtml = p.long_description
+      ? `<div>
+          <p class="section-title">📄 Descrição completa</p>
+          <p class="long-desc">${p.long_description}</p>
+        </div>`
+      : '';
+
+    const starsHtml = '★'.repeat(p.stars || 5) + '☆'.repeat(5 - (p.stars || 5));
+
+    document.getElementById('mainContent').innerHTML = `
+      <div class="product-grid">
+        <!-- GALERIA -->
+        <div class="gallery">
+          <div class="gallery-main">
+            <img id="mainImg" src="${images[0] || ''}" alt="${p.name}"
+                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect fill=%22%23f3f4f6%22 width=%22200%22 height=%22200%22/><text x=%2250%25%22 y=%2250%25%22 fill=%22%236b7280%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 font-size=%2216%22>Sem imagem</text></svg>'" />
+          </div>
+          ${thumbsHtml}
+        </div>
+
+        <!-- INFORMAÇÕES -->
+        <div class="product-info">
+          ${badgeLbl ? `<div class="badge-row"><span class="badge ${badgeCls}">${badgeLbl}</span></div>` : ''}
+          <h1 class="product-name">${p.name}</h1>
+          <div class="stars" title="${p.stars || 5} estrelas">${starsHtml}</div>
+          <p class="product-desc">${p.description}</p>
+
+          <div>
+            <p class="variants-label">Escolha o pacote:</p>
+            <div class="variants-grid" id="variantsGrid">${variantsHtml}</div>
+          </div>
+
+          <div class="buy-row">
+            <div class="qty-ctrl">
+              <button class="qty-btn" onclick="changeQty(-1)">−</button>
+              <div class="qty-val" id="qtyVal">1</div>
+              <button class="qty-btn" onclick="changeQty(+1)">+</button>
+            </div>
+            <button class="add-btn" onclick="addToCart()">
+              🛒 Adicionar ao carrinho
+            </button>
+          </div>
+          <p id="totalPreview" style="font-size:.85rem;color:var(--gray)">
+            Total: <strong style="color:var(--red)">${fmt(p.variants[0]?.price || 0)}</strong>
+          </p>
+
+          ${featuresHtml}
+          ${specsHtml}
+          ${longDescHtml}
+
+          <a href="/" style="display:inline-flex;align-items:center;gap:6px;font-size:.88rem;color:var(--red);font-weight:600;margin-top:4px">
+            ← Continuar comprando
+          </a>
+        </div>
+      </div>`;
+
+    updateCartBadge();
+    updateTotalPreview();
+  }
+
+  function normImgPath(s) {
+    if (!s) return '';
+    if (s.startsWith('data:') || s.startsWith('http') || s.startsWith('/')) return s;
+    return '/' + s;
+  }
+
+  function setMainImage(idx) {
+    if (!currentProduct) return;
+    const rawImages = (currentProduct.images && currentProduct.images.length)
+      ? currentProduct.images : [currentProduct.image].filter(Boolean);
+    const images = rawImages.map(normImgPath);
+    const mainImg = document.getElementById('mainImg');
+    if (!mainImg) return;
+    mainImg.style.opacity = '0';
+    setTimeout(() => {
+      mainImg.src = images[idx] || '';
+      mainImg.style.opacity = '1';
+      // Remover onerror para nao travar em loop apos trocar imagem
+      mainImg.onerror = function() {
+        this.onerror = null;
+        this.src = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect fill=%22%23f3f4f6%22 width=%22200%22 height=%22200%22/><text x=%2250%25%22 y=%2250%25%22 fill=%22%236b7280%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 font-size=%2216%22>Sem imagem</text></svg>';
+      };
+    }, 150);
+    document.querySelectorAll('.thumb').forEach(t => {
+      t.classList.toggle('active', parseInt(t.dataset.idx) === idx);
+    });
+  }
+
+  function selectVariant(idx) {
+    selectedVariantIdx = idx;
+    document.querySelectorAll('.variant-btn').forEach(b => {
+      b.classList.toggle('selected', parseInt(b.dataset.idx) === idx);
+    });
+    updateTotalPreview();
+  }
+
+  function changeQty(delta) {
+    qty = Math.max(1, qty + delta);
+    const el = document.getElementById('qtyVal');
+    if (el) el.textContent = qty;
+    updateTotalPreview();
+  }
+
+  function updateTotalPreview() {
+    if (!currentProduct) return;
+    const v = currentProduct.variants[selectedVariantIdx];
+    if (!v) return;
+    const el = document.getElementById('totalPreview');
+    if (el) el.innerHTML = `Total: <strong style="color:var(--red)">${fmt(v.price * qty)}</strong>`;
+  }
+
+  function addToCart() {
+    if (!currentProduct) return;
+    const v   = currentProduct.variants[selectedVariantIdx];
+    const id  = `sel-${currentProduct.id}-${selectedVariantIdx}`;
+    const cart = getCart();
+    const ex  = cart.find(c => c.id === id);
+    if (ex) {
+      ex.qty  += qty;
+      ex.total = ex.price * ex.qty;
+    } else {
+      cart.push({
+        id,
+        name:  currentProduct.name,
+        img: fixImg((currentProduct.images && currentProduct.images[0]) || currentProduct.image || ''),
+        pack:  v.units,
+        qty,
+        price: v.price,
+        total: v.price * qty,
+      });
+    }
+    saveCart(cart);
+    updateCartBadge();
+    showToast(`✅ ${currentProduct.name} adicionado ao carrinho!`);
+  }
+
+  // Renderiza seção "Veja também" com os outros produtos ativos
+  function renderRelated(allProducts, currentId) {
+    const others = allProducts.filter(p => p.id !== currentId && p.active !== false);
+    if (!others.length) return;
+
+    const BADGE_CLASS = { green: 'green', blue: 'blue', orange: 'orange', red: 'orange' };
+
+    const section = document.getElementById('relatedSection');
+    const grid    = document.getElementById('relatedGrid');
+    if (!section || !grid) return;
+
+    grid.innerHTML = others.map(p => {
+      const minPrice = Math.min(...p.variants.map(v => v.price));
+      const badgeCls = p.badge && p.badgeColor ? (BADGE_CLASS[p.badgeColor] || 'green') : '';
+      const badgeHtml = p.badge
+        ? `<span class="rel-badge ${badgeCls}">${p.badge}</span>`
+        : '';
+      const img = fixImg((p.images && p.images[0]) || p.image || '');
+
+      return `
+        <div class="rel-card" onclick="window.location.href='/produto/${p.id}'">
+          <div class="rel-img">
+            <img src="${img}" alt="${p.name}"
+                 onerror="this.style.opacity='.3'" loading="lazy" />
+            ${badgeHtml}
+          </div>
+          <div class="rel-body">
+            <div class="rel-name">${p.name}</div>
+            <div class="rel-price">A partir de <strong>${fmt(minPrice)}</strong></div>
+            <div class="rel-actions">
+              <button class="rel-btn-detail" onclick="event.stopPropagation();window.location.href='/produto/${p.id}'">
+                Ver detalhes
+              </button>
+              <button class="rel-btn-buy" onclick="event.stopPropagation();quickAddToCart('${p.id}',${JSON.stringify(p.name)},${JSON.stringify(img)},${p.variants[0].units},${p.variants[0].price})">
+                🛒 Comprar
+              </button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    section.classList.add('visible');
+  }
+
+  // Adiciona ao carrinho direto da seção "Veja também" (variante mais barata)
+  function quickAddToCart(id, name, img, pack, price) {
+    const cartId = `sel-${id}-0`;
+    const cart   = getCart();
+    const ex     = cart.find(c => c.id === cartId);
+    if (ex) { ex.qty += 1; ex.total = ex.price * ex.qty; }
+    else cart.push({ id: cartId, name, img, pack, qty: 1, price, total: price });
+    saveCart(cart);
+    updateCartBadge();
+    showToast(`✅ ${name.split(' — ')[0]} adicionado!`);
+  }
+
+  // Carrega o produto pelo parâmetro ?id= da URL
+  async function loadProduct() {
+    var parts = window.location.pathname.split('/'); var slugIdx = parts.indexOf('produto'); var id = slugIdx >= 0 && parts[slugIdx+1] ? parts[slugIdx+1] : new URLSearchParams(window.location.search).get('id');
+    if (!id) { showError('Nenhum produto especificado.'); return; }
+    try {
+      // Busca todos os produtos de uma vez (reutiliza para o "Veja também")
+      const r = await fetch('/api/products');
+      if (!r.ok) throw new Error('Erro ao carregar produtos');
+      const list = await r.json();
+
+      // Tenta o endpoint individual (servidor atualizado), senão filtra da lista
+      let data = null;
+      const r1 = await fetch(`/api/products/${encodeURIComponent(id)}`);
+      if (r1.ok) {
+        data = await r1.json();
+      } else {
+        data = list.find(p => p.id === id);
+      }
+
+      if (!data || !data.id) throw new Error('Produto não encontrado');
+      renderProduct(data);
+      renderRelated(list, id);
+    } catch(e) {
+      showError(e.message);
+    }
+  }
+
+  function showError(msg) {
+    document.getElementById('mainContent').innerHTML = `
+      <div class="page-error">
+        <div style="font-size:3rem">📦</div>
+        <h2>Produto não encontrado</h2>
+        <p style="font-size:.9rem;color:var(--gray);margin-top:4px">${msg}</p>
+        <a href="/" class="back-link">← Voltar para a loja</a>
+      </div>`;
+  }
+
+  updateCartBadge();
+  loadProduct();
+</script>
+<!-- Schema.org injetado dinamicamente pelo servidor --></body>
+</html>

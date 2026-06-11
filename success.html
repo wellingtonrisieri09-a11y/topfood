@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pagamento Aprovado — TopFood Embalagens</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Oswald:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Roboto', sans-serif; background: #f5f5f5; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    .card { background: #fff; border-radius: 16px; padding: 50px 40px; text-align: center; max-width: 480px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+    .icon { font-size: 5rem; margin-bottom: 20px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; background: #dcfce7; color: #15803d; font-size: 0.8rem; font-weight: 700; padding: 6px 14px; border-radius: 30px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+    h1 { font-family: 'Oswald', sans-serif; font-size: 1.9rem; color: #1a1a1a; margin-bottom: 12px; }
+    p { color: #777; line-height: 1.7; margin-bottom: 8px; font-size: 0.95rem; }
+    .divider { border: none; border-top: 1px solid #e5e5e5; margin: 24px 0; }
+    .info-box { background: #f8f9fa; border-radius: 10px; padding: 16px 20px; text-align: left; margin-bottom: 24px; }
+    .info-box p { font-size: 0.85rem; color: #555; margin-bottom: 6px; }
+    .info-box p:last-child { margin-bottom: 0; }
+    .btn-primary { display: inline-block; background: #CC0000; color: #fff; padding: 14px 32px; border-radius: 8px; font-weight: 700; font-size: 1rem; text-decoration: none; transition: background 0.2s; margin-bottom: 10px; }
+    .btn-primary:hover { background: #A50000; }
+    .btn-wa { display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: #fff; padding: 12px 24px; border-radius: 8px; font-weight: 700; font-size: 0.9rem; text-decoration: none; transition: background 0.2s; }
+    .btn-wa:hover { background: #20bd58; }
+    .logo { font-family: 'Oswald', sans-serif; font-size: 1.1rem; color: #CC0000; margin-top: 30px; }
+    .logo small { display: block; font-family: 'Roboto', sans-serif; font-size: 0.7rem; color: #aaa; font-weight: 400; letter-spacing: 1px; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">✅</div>
+    <span class="badge">✔ Pagamento Aprovado</span>
+    <h1>Pedido Confirmado!</h1>
+    <p>Seu pagamento foi processado com sucesso pelo Mercado Pago.</p>
+    <p>Em breve você receberá a confirmação por e-mail.</p>
+
+    <hr class="divider" />
+
+    <div class="info-box">
+      <p>📦 <strong>Próximos passos:</strong></p>
+      <p>• Seu pedido será separado e enviado em até 2 dias úteis</p>
+      <p>• Você receberá o código de rastreamento por e-mail</p>
+      <p>• Em caso de dúvidas, entre em contato pelo WhatsApp</p>
+    </div>
+
+    <a href="/" class="btn-primary">← Voltar à Loja</a>
+    <br /><br />
+    <a href="https://wa.me/5511988856367?text=Olá! Acabei de finalizar meu pedido e quero acompanhar o status." class="btn-wa">
+      💬 Falar no WhatsApp
+    </a>
+
+    <div class="logo">
+      TOPFOOD
+      <small>Embalagens</small>
+    </div>
+  </div>
+</body>
+</html>
