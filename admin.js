@@ -2288,22 +2288,12 @@ async function saveAdCenter() {
     tiktok_pixel_id:  document.getElementById('ac-tiktok-pixel').value.trim(),
   };
   try {
-    const res = await apiFetch('/api/admin/settings', { method:'PUT', body: JSON.stringify(updates) });
-    if (!res.ok) throw new Error('Falha ao salvar');
     Object.assign(STATE.settings, updates);
-    // Sincronizar com campos de settings também
-    const cfgPx = document.getElementById('cfg-pixel-id');
-    const cfgGtm = document.getElementById('cfg-gtm-id');
-    const cfgGads = document.getElementById('cfg-gads-id');
-    const cfgGadsL = document.getElementById('cfg-gads-label');
-    if (cfgPx) cfgPx.value = updates.meta_pixel_id;
-    if (cfgGtm) cfgGtm.value = updates.gtm_id;
-    if (cfgGads) cfgGads.value = updates.google_ads_id;
-    if (cfgGadsL) cfgGadsL.value = updates.google_ads_label;
+    await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify(STATE.settings) });
     updateAdStatus();
-    showToast('✅ Pixels salvos com sucesso!');
+    toast('✅ Pixels salvos com sucesso!');
   } catch(e) {
-    showToast('❌ Erro ao salvar: ' + e.message);
+    toast('❌ Erro ao salvar: ' + e.message, 'error');
   }
 }
 
@@ -2312,16 +2302,16 @@ function gerarUTM() {
   const source = document.getElementById('utm-source')?.value || '';
   const medium = document.getElementById('utm-medium')?.value || '';
   const camp   = (document.getElementById('utm-campaign-name')?.value || '').trim().replace(/\s+/g, '-').toLowerCase();
-  if (!camp) { showToast('⚠️ Informe o nome da campanha'); return; }
+  if (!camp) { toast('⚠️ Informe o nome da campanha'); return; }
   const link = `${base}?utm_source=${source}&utm_medium=${medium}&utm_campaign=${encodeURIComponent(camp)}`;
   document.getElementById('utm-generated-link').value = link;
 }
 
 function copiarUTM() {
   const el = document.getElementById('utm-generated-link');
-  if (!el || !el.value) { showToast('⚠️ Gere um link primeiro'); return; }
-  navigator.clipboard.writeText(el.value).then(() => showToast('✅ Link copiado!')).catch(() => {
-    el.select(); document.execCommand('copy'); showToast('✅ Copiado!');
+  if (!el || !el.value) { toast('⚠️ Gere um link primeiro'); return; }
+  navigator.clipboard.writeText(el.value).then(() => toast('✅ Link copiado!')).catch(() => {
+    el.select(); document.execCommand('copy'); toast('✅ Copiado!');
   });
 }
 
@@ -2338,10 +2328,13 @@ let _budgetData = [];
 
 async function loadBudgets() {
   try {
-    const res = await apiFetch('/api/eco/budget');
-    const data = await res.json();
+    const data = await api('/api/eco/budget');
     if (data.ok) { _budgetData = data.budgets; renderBudgetCards(); }
-  } catch(e) { console.warn('Budget load error:', e); }
+  } catch(e) {
+    console.warn('Budget load error:', e);
+    const c = document.getElementById('budget-cards');
+    if (c) c.innerHTML = '<div style="color:var(--muted);padding:12px">Erro ao carregar orçamentos. Recarregue a página.</div>';
+  }
 }
 
 function renderBudgetCards() {
@@ -2407,36 +2400,38 @@ function openBudgetEdit(platform) {
   const val = prompt(`${plat.emoji} ${plat.label} — Orçamento mensal (R$):`, b.monthly_budget || '');
   if (val === null) return;
   const num = parseFloat(String(val).replace(',','.'));
-  if (isNaN(num) || num < 0) { showToast('⚠️ Valor inválido'); return; }
+  if (isNaN(num) || num < 0) { toast('⚠️ Valor inválido'); return; }
   saveBudget(platform, num);
 }
 
 async function saveBudget(platform, monthly_budget) {
   try {
-    const res = await apiFetch(`/api/eco/budget/${platform}`, {
+    const data = await api(`/api/eco/budget/${platform}`, {
       method: 'PUT', body: JSON.stringify({ monthly_budget })
     });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error);
-    showToast('✅ Orçamento salvo!');
+    if (!data.ok) throw new Error(data.error || 'Falha ao salvar');
+    toast('✅ Orçamento salvo!');
     await loadBudgets();
-  } catch(e) { showToast('❌ Erro: ' + e.message); }
+  } catch(e) {
+    toast(String(e.message).includes('403') ? '❌ Apenas o proprietário pode alterar orçamentos' : '❌ Erro: ' + e.message, 'error');
+  }
 }
 
 async function registerSpend() {
   const platform = document.getElementById('budget-spend-platform')?.value;
   const amount   = parseFloat(document.getElementById('budget-spend-amount')?.value || '0');
-  if (!platform || isNaN(amount) || amount <= 0) { showToast('⚠️ Preencha plataforma e valor'); return; }
+  if (!platform || isNaN(amount) || amount <= 0) { toast('⚠️ Preencha plataforma e valor'); return; }
   try {
-    const res = await apiFetch(`/api/eco/budget/${platform}/spend`, {
+    const data = await api(`/api/eco/budget/${platform}/spend`, {
       method: 'POST', body: JSON.stringify({ amount })
     });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error);
-    showToast('✅ Gasto registrado!');
+    if (!data.ok) throw new Error(data.error || 'Falha');
+    toast('✅ Gasto registrado!');
     document.getElementById('budget-spend-amount').value = '';
     await loadBudgets();
-  } catch(e) { showToast('❌ Erro: ' + e.message); }
+  } catch(e) {
+    toast(String(e.message).includes('403') ? '❌ Apenas o proprietário pode registrar gastos' : '❌ Erro: ' + e.message, 'error');
+  }
 }
 
 async function resetBudgetMonth() {
@@ -2444,12 +2439,12 @@ async function resetBudgetMonth() {
   try {
     for (const plat of ALL_PLATFORMS) {
       const b = _budgetData.find(x => x.platform === plat.key);
-      if (b) await apiFetch(`/api/eco/budget/${plat.key}`, {
+      if (b) await api(`/api/eco/budget/${plat.key}`, {
         method: 'PUT', body: JSON.stringify({ monthly_budget: b.monthly_budget })
       });
     }
-    showToast('✅ Gastos zerados para o novo mês!');
+    toast('✅ Gastos zerados para o novo mês!');
     await loadBudgets();
-  } catch(e) { showToast('❌ Erro ao zerar: ' + e.message); }
+  } catch(e) { toast('❌ Erro ao zerar: ' + e.message, 'error'); }
 }
 
