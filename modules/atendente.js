@@ -24,6 +24,7 @@ const DATA_DIR = path.join(__dirname, '..', 'data');
 const AUTH_DIR = path.join(DATA_DIR, 'wa_auth');          // credenciais Baileys
 const CFG_FILE = path.join(DATA_DIR, 'atendente.json');    // config persistente
 const LOG_FILE = path.join(DATA_DIR, 'atendente_log.json'); // últimas conversas
+const MEM_FILE = path.join(DATA_DIR, 'atendente_memoria.json'); // M8: memória persistente
 
 const CLAUDE_MODEL = 'claude-haiku-4-5';
 const CLAUDE_URL = 'https://api.anthropic.com/v1/messages';
@@ -41,7 +42,7 @@ let lastQR = null;              // último QR (string) p/ parear
 let connState = 'desconectado'; // desconectado | aguardando_qr | conectado
 let starting = false;
 let catalogCache = { ts: 0, text: '' };
-const chatContext = new Map();  // jid -> [{role, content}]
+const chatContext = new Map(Object.entries(mem.contexts || {}));  // jid -> [{role, content}] (restaurado do disco)
 const lastReplyAt = new Map();  // jid -> timestamp (cooldown)
 const mediaCount = new Map();   // jid -> áudios/mídias seguidos sem texto
 
@@ -61,6 +62,20 @@ let cfg = loadJSON(CFG_FILE, {
   stats: { recebidas: 0, respondidas: 0, escaladas: 0 }
 });
 function saveCfg() { saveJSON(CFG_FILE, cfg); }
+
+// M8 — Claude Memory: contexto das conversas sobrevive a reinícios do servidor
+const mem = loadJSON(MEM_FILE, { contexts: {} });
+let memSaveTimer = null;
+function saveMem() { // debounce p/ não escrever em disco a cada mensagem
+  if (memSaveTimer) return;
+  memSaveTimer = setTimeout(() => {
+    memSaveTimer = null;
+    // limita a 300 conversas guardadas (remove as mais antigas)
+    const jids = Object.keys(mem.contexts);
+    for (let i = 0; i < jids.length - 300; i++) delete mem.contexts[jids[i]];
+    saveJSON(MEM_FILE, mem);
+  }, 3000);
+}
 
 let log = loadJSON(LOG_FILE, []);
 function addLog(entry) {
@@ -94,6 +109,41 @@ async function getCatalogText() {
 }
 
 // ------------------------------------------------------------
+// M8 — Ficha do cliente: cruza o número do WhatsApp com pedidos da loja
+// ------------------------------------------------------------
+let ordersCache = { ts: 0, list: [] };
+function getFichaCliente(jid) {
+  try {
+    if (!jid.endsWith('@s.whatsapp.net')) return ''; // @lid não expõe o número real
+    const fone = jid.replace(/\D/g, '').slice(-8);   // últimos 8 dígitos (ignora DDI/9 extra)
+    if (fone.length < 8) return '';
+
+    if (Date.now() - ordersCache.ts > 5 * 60 * 1000) {
+      const { readData } = require('../db');
+      ordersCache = { ts: Date.now(), list: readData('orders.json') || [] };
+    }
+    const meus = ordersCache.list.filter(o => {
+      const f = String(o.customer?.phone || o.customer?.whatsapp || '').replace(/\D/g, '');
+      return f && f.slice(-8) === fone;
+    });
+    if (!meus.length) return '';
+
+    meus.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+    const ult = meus[0];
+    const itens = (ult.items || []).map(i => `${i.qty || i.quantity || 1}x ${i.name || i.title || ''}`).join(', ');
+    return [
+      'FICHA DO CLIENTE (já comprou na loja — trate como cliente da casa, use o nome dele):',
+      `- Nome: ${ult.customer?.name || 'não informado'}`,
+      `- Total de pedidos: ${meus.length}`,
+      `- Último pedido: ${String(ult.created_at || '').slice(0, 10)} — ${itens || 'itens n/d'} — R$ ${ult.total} — status: ${ult.status}`
+    ].join('\n');
+  } catch (e) {
+    console.error('[M8] ficha cliente:', e.message);
+    return '';
+  }
+}
+
+// ------------------------------------------------------------
 // Claude
 // ------------------------------------------------------------
 async function askClaude(jid, userText) {
@@ -101,6 +151,7 @@ async function askClaude(jid, userText) {
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY ausente no .env');
 
   const catalog = await getCatalogText();
+  const ficha = getFichaCliente(jid);
   const system = [
     'Você é a atendente virtual da TopFood Embalagens (embalagens food service: pastel, churros, hambúrguer, batata frita).',
     `Site e checkout: ${SITE} — WhatsApp humano: (11) 98885-6367.`,
@@ -114,6 +165,8 @@ async function askClaude(jid, userText) {
     '3. Se não souber a resposta, se o cliente reclamar, pedir orçamento personalizado/arte/quantidade fora do catálogo, ou pedir para falar com uma pessoa: responda EXATAMENTE começando com [HUMANO] seguido de uma frase educada avisando que vai chamar um atendente.',
     '4. Não invente prazos de entrega nem fretes — diga que o frete é calculado no site pelo CEP.',
     '5. Não fale sobre assuntos fora da TopFood.',
+    '6. Se o cliente disser o nome dele, passe a usá-lo naturalmente.',
+    ficha ? '\n' + ficha : '',
     cfg.promptExtra ? `\nINSTRUÇÕES EXTRAS DO DONO:\n${cfg.promptExtra}` : ''
   ].join('\n');
 
@@ -135,6 +188,7 @@ async function askClaude(jid, userText) {
   const reply = (data.content || []).map(b => b.text || '').join('').trim();
   ctx.push({ role: 'assistant', content: reply });
   chatContext.set(jid, ctx);
+  mem.contexts[jid] = ctx; saveMem(); // M8: memória sobrevive a reinícios
   return reply;
 }
 
