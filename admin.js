@@ -1759,7 +1759,7 @@ function renderAbandoned() {
   tbody.innerHTML = list.map(a=>`
     <tr>
       <td><b>${a.id}</b></td>
-      <td>${a.cep||'—'}</td>
+      <td>${a.name ? `<b>${a.name}</b><br><span style="color:var(--muted);font-size:.78rem">${a.phone||'sem telefone'}</span>` : (a.cep||'—')}</td>
       <td>${a.items.map(i=>i.name.split('(')[0].trim()).join(', ')}</td>
       <td><b>R$ ${fmt(a.total)}</b></td>
       <td>${timeAgo(a.date)}</td>
@@ -1772,8 +1772,27 @@ function renderAbandoned() {
 function recoverCart(id) {
   const a = STATE.abandoned.find(x=>x.id===id);
   if(!a) return;
-  const msg = encodeURIComponent(`Olá! Vimos que você deixou produtos no carrinho da TopFood 🛒\n\nProdutos: ${a.items.map(i=>i.name).join(', ')}\nTotal: R$ ${fmt(a.total)}\n\nAinda quer finalizar? Podemos ajudar! 😊`);
-  window.open(`https://wa.me/5511988856367?text=${msg}`, '_blank');
+  // Telefone do CLIENTE (com DDI 55)
+  let phone = String(a.phone || '').replace(/\D/g, '');
+  if (!phone) { toast('❌ Este carrinho não tem telefone do cliente.', 'error'); return; }
+  if (!phone.startsWith('55')) phone = '55' + phone;
+
+  const nome = (a.name || '').split(' ')[0] || 'tudo bem';
+  const itens = a.items.map(i => `• ${i.qty || 1}x ${i.name.split('(')[0].trim()}`).join('\n');
+  const msg = encodeURIComponent(
+`Olá ${nome}! 👋 Aqui é da *TopFood Embalagens*.
+
+Vimos que você montou seu carrinho no nosso site mas não finalizou:
+
+${itens}
+*Total: R$ ${fmt(a.total)}*
+
+🎁 Use o cupom *PIX5* e ganhe *5% de desconto* pagando no PIX!
+
+Finalize aqui: https://topfoodembalagens.com.br
+
+Qualquer dúvida estamos à disposição! 😊`);
+  window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
   a.recovered = true;
   api('/api/admin/abandoned/'+id,{method:'PUT',body:JSON.stringify({recovered:true})}).catch(()=>{});
   renderAbandoned();

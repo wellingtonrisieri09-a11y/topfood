@@ -517,7 +517,19 @@ app.post('/api/admin/abandoned', (req, res) => {
   };
   list.unshift(entry);
   writeData('abandoned.json', list.slice(0, 200));
-  res.json({ ok: true });
+  res.json({ ok: true, id: entry.id });
+});
+
+// POST /api/abandoned-recovered — site marca carrinho como recuperado ao concluir compra
+app.post('/api/abandoned-recovered', (req, res) => {
+  try {
+    const { id } = req.body || {};
+    if (!id) return res.status(400).json({ ok: false });
+    const list = readData('abandoned.json');
+    const item = list.find(a => a.id === id);
+    if (item) { item.recovered = true; item.recovered_at = new Date().toISOString(); writeData('abandoned.json', list); }
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ ok: false }); }
 });
 app.put('/api/admin/abandoned/:id', requireAuth, (req, res) => {
   const list = readData('abandoned.json');

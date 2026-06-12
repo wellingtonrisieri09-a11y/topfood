@@ -562,6 +562,7 @@
           coupon: appliedCoupon?.code || '',
         });
       }
+      markCartRecovered();
       return data.order_id || null;
     } catch(e) {
       console.error('[TopFood] Falha ao salvar pedido:', e.message);
@@ -1240,8 +1241,43 @@
     if (!checkoutData.addrNum) { showToast('⚠️ Informe o número do endereço'); return; }
     if (!checkoutData.cep)     { showToast('⚠️ Informe o CEP para calcular o frete'); return; }
     if (!selectedShipping)     { showToast('⚠️ Selecione uma opção de frete'); return; }
+    captureAbandonedCart();
     checkoutStep = 3;
     renderCheckoutStep();
+  }
+
+  // ─── Recuperação de carrinho abandonado ───
+  // Registra o carrinho assim que o cliente preenche os dados (passo 2 → 3).
+  // Se concluir a compra, é marcado como recuperado automaticamente.
+  async function captureAbandonedCart() {
+    try {
+      if (window._abandonedId) return; // já registrado nesta sessão
+      const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+      const res = await fetch('/api/admin/abandoned', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:  checkoutData.nome  || '',
+          email: checkoutData.email || '',
+          phone: checkoutData.phone || '',
+          cep:   checkoutData.cep   || '',
+          items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.price })),
+          total: subtotal,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.id) window._abandonedId = data.id;
+    } catch(e) { /* silencioso — não pode atrapalhar o checkout */ }
+  }
+
+  function markCartRecovered() {
+    try {
+      if (!window._abandonedId) return;
+      fetch('/api/abandoned-recovered', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: window._abandonedId }),
+      }).catch(() => {});
+      window._abandonedId = null;
+    } catch(e) {}
   }
 
   // ── Step 3: Pagamento ────────────────────────
