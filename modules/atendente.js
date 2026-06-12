@@ -43,6 +43,7 @@ let starting = false;
 let catalogCache = { ts: 0, text: '' };
 const chatContext = new Map();  // jid -> [{role, content}]
 const lastReplyAt = new Map();  // jid -> timestamp (cooldown)
+const mediaCount = new Map();   // jid -> áudios/mídias seguidos sem texto
 
 function loadJSON(file, fallback) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; }
@@ -236,7 +237,41 @@ async function handleMessage(m) {
     if (text && !text.startsWith('🤖')) pauseChat(jid, 'humano assumiu');
     return;
   }
-  if (!text.trim()) return;
+  // Áudio/mídia sem texto: a IA não ouve — responder educadamente, nunca deixar no vácuo
+  if (!text.trim()) {
+    const isAudio = !!m.message?.audioMessage;
+    const isMedia = !!(m.message?.imageMessage || m.message?.videoMessage
+      || m.message?.documentMessage || m.message?.stickerMessage);
+    if (!isAudio && !isMedia) return;
+
+    cfg.stats.recebidas++;
+    addLog({ tipo: 'cliente', jid, texto: isAudio ? '[mensagem de áudio]' : '[mídia sem texto]' });
+    if (!cfg.enabled || isPaused(jid)) { saveCfg(); return; }
+    if (Date.now() - (lastReplyAt.get(jid) || 0) < REPLY_COOLDOWN_MS) { saveCfg(); return; }
+    lastReplyAt.set(jid, Date.now());
+
+    const seguidos = (mediaCount.get(jid) || 0) + 1;
+    mediaCount.set(jid, seguidos);
+
+    let reply;
+    if (isAudio && seguidos >= 2) {
+      // cliente claramente prefere áudio — escalar para humano
+      pauseChat(jid, 'cliente prefere áudio');
+      cfg.stats.escaladas++;
+      const num = jid.replace(/@.*$/, '');
+      await notifyOwner(`⚠️ Cliente mandou áudios e a IA não consegue ouvir!\nNúmero: ${num}\nO chat está pausado para a IA — responda você.`);
+      reply = '🤖 Sem problemas! Já chamei um atendente humano pra te ouvir. Um instante, por favor! 🙏';
+    } else if (isAudio) {
+      reply = '🤖 Recebi seu áudio! Por aqui eu só consigo ler mensagens escritas 😅 Pode me mandar por texto? Se preferir continuar por áudio, me avisa que eu chamo um atendente humano.';
+    } else {
+      reply = '🤖 Recebi seu arquivo! Me conta por texto como posso ajudar? 😊';
+    }
+    saveCfg();
+    await sock.sendMessage(jid, { text: reply });
+    addLog({ tipo: 'ia', jid, texto: reply });
+    return;
+  }
+  mediaCount.delete(jid); // voltou a escrever — zera a contagem de áudios
 
   cfg.stats.recebidas++;
   addLog({ tipo: 'cliente', jid, texto: text.slice(0, 500) });
@@ -342,7 +377,7 @@ function registerAtendenteRoutes(app, requireAuth) {
 
   // reconexão automática no boot, se configurado E já pareado antes
   let jaPareado = false;
-  try { jaPareado = !!(function(c){return c.registered || c.me})(JSON.parse(fs.readFileSync(path.join(AUTH_DIR, 'creds.json'), 'utf8'))); } catch {}
+  try { jaPareado = !!(function(c){ return c.registered || c.me; })(JSON.parse(fs.readFileSync(path.join(AUTH_DIR, 'creds.json'), 'utf8'))); } catch {}
   if (cfg.autostart && jaPareado) startSock().catch(e => console.error('[M5] autostart:', e.message));
 
   console.log('[M5] IA Atendente registrado (enabled=' + cfg.enabled + ')');
