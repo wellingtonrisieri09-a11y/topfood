@@ -2326,6 +2326,44 @@
       s.style.animationDuration = (11 + Math.random() * 7) + 's';
       fundo.appendChild(s);
     }
+    // Tema Copa: desenho de jogador comemorando o gol (esboço verde-amarelo)
+    if (tema.id === 'copa') {
+      var gol = document.createElement('div');
+      gol.style.cssText = 'position:absolute;right:1vw;bottom:6vh;width:min(440px,42vw);opacity:.13;transform:rotate(-4deg)';
+      gol.innerHTML = '<svg viewBox="0 0 420 320" xmlns="http://www.w3.org/2000/svg" fill="none">' +
+        // Raios de explosão do gol (amarelo)
+        '<g stroke="#E0B400" stroke-width="5" stroke-linecap="round" opacity=".85">' +
+        '<line x1="228" y1="58" x2="222" y2="18"/><line x1="262" y1="68" x2="288" y2="34"/>' +
+        '<line x1="196" y1="64" x2="172" y2="30"/><line x1="282" y1="96" x2="322" y2="80"/>' +
+        '<line x1="172" y1="92" x2="132" y2="74"/></g>' +
+        // Corpo do jogador — pictograma deslizando de joelhos, braços abertos
+        '<g stroke="#00702B" stroke-width="15" stroke-linecap="round" stroke-linejoin="round">' +
+        // cabeça
+        '<circle cx="227" cy="86" r="17" fill="#00702B" stroke="none"/>' +
+        // tronco inclinado para trás
+        '<path d="M222 106 Q205 135 193 168"/>' +
+        // braço esquerdo aberto para cima
+        '<path d="M216 112 Q180 92 152 64"/>' +
+        // braço direito aberto para cima
+        '<path d="M228 110 Q272 92 304 68"/>' +
+        // perna deslizando à frente
+        '<path d="M193 168 Q235 192 268 210 Q295 222 316 222"/>' +
+        // perna dobrada embaixo
+        '<path d="M193 168 Q165 196 158 224 Q172 236 192 236"/>' +
+        '</g>' +
+        // Faixa amarela na camisa (detalhe Brasil)
+        '<path d="M214 124 Q204 142 198 158" stroke="#E0B400" stroke-width="6" stroke-linecap="round"/>' +
+        // Rastro do deslize no gramado
+        '<g stroke="#00702B" stroke-width="5" stroke-linecap="round" opacity=".5">' +
+        '<path d="M120 250 Q200 262 320 252"/><path d="M148 268 Q220 278 300 270"/></g>' +
+        // Bola no canto
+        '<circle cx="78" cy="208" r="22" stroke="#00702B" stroke-width="6"/>' +
+        '<path d="M68 198 L88 218 M88 198 L68 218" stroke="#00702B" stroke-width="4"/>' +
+        // GOOOL! escrito à mão
+        '<text x="40" y="120" font-family="Comic Sans MS, cursive" font-size="44" font-weight="bold" fill="#E0B400" stroke="#00702B" stroke-width="1.2" transform="rotate(-8 40 120)">GOOOL!</text>' +
+        '</svg>';
+      fundo.appendChild(gol);
+    }
     document.body.appendChild(fundo);
   })();
 
