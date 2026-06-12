@@ -1432,6 +1432,20 @@
       animation: copaShine 6s linear infinite;
     }
     .copa-confete { text-shadow: 0 2px 8px rgba(0,0,0,.25); }
+    /* Fundo decorativo do tema — atrás de TUDO, não interfere em nada */
+    #temaFundo {
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      overflow: hidden; user-select: none;
+    }
+    #temaFundo span {
+      position: absolute; opacity: .10; filter: grayscale(15%);
+      animation: fundoFlutua 14s ease-in-out infinite;
+    }
+    @keyframes fundoFlutua {
+      0%, 100% { transform: translateY(0) rotate(var(--rot, 0deg)); }
+      50% { transform: translateY(-18px) rotate(var(--rot, 0deg)); }
+    }
+    @media (max-width: 768px) { #temaFundo span { opacity: .07; } }
   </style>
 </head>
 <body>
@@ -2288,6 +2302,32 @@
       localStorage.setItem(chave, new Date().toDateString());
     };
   }
+
+  // ── FUNDO DECORATIVO — emojis gigantes e suaves atrás de todo o site ──
+  (function montarFundo() {
+    if (document.getElementById('temaFundo')) return;
+    var fundo = document.createElement('div');
+    fundo.id = 'temaFundo';
+    fundo.setAttribute('aria-hidden', 'true');
+    var emojis = tema.emojis;
+    // 16 emojis espalhados: maiores nas laterais, discretos no centro
+    for (var i = 0; i < 16; i++) {
+      var s = document.createElement('span');
+      s.textContent = emojis[i % emojis.length];
+      var ladoEsq = i % 2 === 0;
+      // Concentra nas laterais (0-18vw e 82-100vw) onde não tem conteúdo no desktop
+      var x = ladoEsq ? (Math.random() * 14) : (82 + Math.random() * 14);
+      var y = 4 + (i / 16) * 92 + (Math.random() * 5);
+      s.style.left = x + 'vw';
+      s.style.top = y + 'vh';
+      s.style.fontSize = (2.6 + Math.random() * 2.8) + 'rem';
+      s.style.setProperty('--rot', (Math.random() * 50 - 25) + 'deg');
+      s.style.animationDelay = (Math.random() * 8) + 's';
+      s.style.animationDuration = (11 + Math.random() * 7) + 's';
+      fundo.appendChild(s);
+    }
+    document.body.appendChild(fundo);
+  })();
 
   // ── CHUVA DE COMEMORAÇÃO — caprichada: maior, com balanço e brilho ──
   var chaveConfete = 'confete-' + tema.id;
