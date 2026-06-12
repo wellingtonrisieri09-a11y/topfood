@@ -170,6 +170,7 @@ async function startSock() {
 
     fs.mkdirSync(AUTH_DIR, { recursive: true });
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+    let paired = !!state.creds.registered; // já pareou alguma vez?
 
     sock = makeWASocket({
       auth: state,
@@ -183,7 +184,7 @@ async function startSock() {
     sock.ev.on('connection.update', (u) => {
       if (u.qr) { lastQR = u.qr; connState = 'aguardando_qr'; }
       if (u.connection === 'open') {
-        lastQR = null; connState = 'conectado';
+        lastQR = null; connState = 'conectado'; paired = true;
         console.log('[M5] WhatsApp conectado ✅');
         addLog({ tipo: 'sistema', texto: 'WhatsApp conectado' });
       }
@@ -191,9 +192,10 @@ async function startSock() {
         connState = 'desconectado';
         const code = u.lastDisconnect?.error?.output?.statusCode;
         const loggedOut = code === DisconnectReason.loggedOut;
-        console.log('[M5] Conexão fechada. loggedOut=', loggedOut);
+        console.log('[M5] Conexão fechada. loggedOut=', loggedOut, 'pareado=', paired);
         sock = null;
-        if (!loggedOut && cfg.autostart) setTimeout(() => startSock().catch(() => {}), 5000);
+        // Só reconecta sozinho se JÁ pareou — sem pareamento seria loop infinito de QR
+        if (!loggedOut && cfg.autostart && paired) setTimeout(() => startSock().catch(() => {}), 10000);
       }
     });
 
@@ -325,8 +327,10 @@ function registerAtendenteRoutes(app, requireAuth) {
     res.json({ ok: true });
   });
 
-  // reconexão automática no boot, se configurado
-  if (cfg.autostart) startSock().catch(e => console.error('[M5] autostart:', e.message));
+  // reconexão automática no boot, se configurado E já pareado antes
+  let jaPareado = false;
+  try { jaPareado = !!JSON.parse(fs.readFileSync(path.join(AUTH_DIR, 'creds.json'), 'utf8')).registered; } catch {}
+  if (cfg.autostart && jaPareado) startSock().catch(e => console.error('[M5] autostart:', e.message));
 
   console.log('[M5] IA Atendente registrado (enabled=' + cfg.enabled + ')');
 }
