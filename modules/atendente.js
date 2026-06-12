@@ -172,8 +172,12 @@ async function startSock() {
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
     let paired = !!state.creds.registered; // já pareou alguma vez?
 
+    // Versão atual do WA Web — sem isso o WhatsApp rejeita com 405
+    const { version } = await baileys.fetchLatestBaileysVersion();
+
     sock = makeWASocket({
       auth: state,
+      version,
       logger: pino({ level: 'warn' }),
       browser: ['TopFood Atendente', 'Chrome', '1.0']
     });
