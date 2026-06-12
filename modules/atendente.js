@@ -170,7 +170,7 @@ async function startSock() {
 
     fs.mkdirSync(AUTH_DIR, { recursive: true });
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-    let paired = !!state.creds.registered; // já pareou alguma vez?
+    let paired = !!(state.creds.registered || state.creds.me); // já pareou alguma vez?
 
     // Versão atual do WA Web — sem isso o WhatsApp rejeita com 405
     const { version } = await baileys.fetchLatestBaileysVersion();
@@ -197,7 +197,7 @@ async function startSock() {
         const code = u.lastDisconnect?.error?.output?.statusCode;
         const loggedOut = code === DisconnectReason.loggedOut;
         // creds.registered vira true no momento do scan — reavaliar aqui, não usar só o snapshot do boot
-        paired = paired || !!state.creds.registered;
+        paired = paired || !!(state.creds.registered || state.creds.me);
         const restartRequired = code === DisconnectReason.restartRequired; // 515: WA exige reconectar p/ concluir pareamento
         console.log('[M5] Conexão fechada. code=', code, 'loggedOut=', loggedOut, 'pareado=', paired);
         sock = null;
@@ -342,7 +342,7 @@ function registerAtendenteRoutes(app, requireAuth) {
 
   // reconexão automática no boot, se configurado E já pareado antes
   let jaPareado = false;
-  try { jaPareado = !!JSON.parse(fs.readFileSync(path.join(AUTH_DIR, 'creds.json'), 'utf8')).registered; } catch {}
+  try { jaPareado = !!(function(c){return c.registered || c.me})(JSON.parse(fs.readFileSync(path.join(AUTH_DIR, 'creds.json'), 'utf8'))); } catch {}
   if (cfg.autostart && jaPareado) startSock().catch(e => console.error('[M5] autostart:', e.message));
 
   console.log('[M5] IA Atendente registrado (enabled=' + cfg.enabled + ')');
