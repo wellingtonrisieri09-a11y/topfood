@@ -22,7 +22,7 @@ let STATE = {
   contact_messages: [],
   users: [],
   currentPage: 'overview',
-  onlineCount: Math.floor(Math.random()*8)+4,
+  onlineCount: 0,
   charts: {},
   // Auth
   role: 'admin',
@@ -2242,16 +2242,19 @@ function updateBadges() {
 }
 
 /* ══════════════════════════════════════════════════════
-   ONLINE COUNTER (simulated)
+   ONLINE COUNTER (real — visitantes únicos nos últimos 5 min)
 ══════════════════════════════════════════════════════ */
 function startOnlineCounter() {
-  function update() {
-    const delta = Math.floor(Math.random()*3)-1;
-    STATE.onlineCount = Math.max(1, Math.min(30, STATE.onlineCount+delta));
-    document.getElementById('online-count').textContent = STATE.onlineCount;
-    document.getElementById('kpi-online').textContent   = STATE.onlineCount;
+  async function update() {
+    try {
+      const r = await api('/api/eco/online');
+      STATE.onlineCount = r.online;
+      document.getElementById('online-count').textContent = STATE.onlineCount;
+      document.getElementById('kpi-online').textContent   = STATE.onlineCount;
+    } catch(e) {}
   }
-  setInterval(update, 4000);
+  update();
+  setInterval(update, 30000);
 }
 
 /* ══════════════════════════════════════════════════════

@@ -8,6 +8,7 @@ const { registerBudgetRoutes } = require('./modules/budget');
 const { registerBackupRoutes } = require('./modules/backup');
 const { registerAsaasRoutes, createPixCharge } = require('./modules/asaas');
 const { registerAtendenteRoutes } = require('./modules/atendente');
+const { registerOnlineRoutes } = require('./modules/online');
 const express = require('express');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 const cors       = require('cors');
@@ -1557,6 +1558,7 @@ registerBudgetRoutes(app, requireAuth, requireOwner);
 registerBackupRoutes(app, requireOwner);
 registerAsaasRoutes(app, requireAuth, requireOwner);
 registerAtendenteRoutes(app, requireAuth);
+registerOnlineRoutes(app, requireAuth);
 
 // Limpar blacklist e reservas expiradas a cada 30min
 setInterval(() => { try { cleanBlacklist(); releaseExpiredReservations(); } catch(e){} }, 30 * 60 * 1000);
