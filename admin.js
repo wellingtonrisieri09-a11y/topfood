@@ -2589,7 +2589,7 @@ async function resetBudgetMonth() {
 ══════════════════════════════════════════════════════ */
 let atQrTimer = null;
 
-function loadAtendente(){ atRefresh(); atLoadConversas(); }
+function loadAtendente(){ atRefresh(); atLoadConversas(); atLoadPausados(); }
 
 async function atRefresh() {
   try {
@@ -2674,4 +2674,27 @@ async function atLoadConversas() {
         + String(l.texto||'').replace(/</g,'&lt;') + '</div>';
     }).join('') || '<p>Nenhuma conversa ainda.</p>';
   } catch(e) {}
+}
+
+
+async function atLoadPausados() {
+  try {
+    const lista = await api('/api/eco/atendente/pausados');
+    const el = document.getElementById('at-pausados-lista');
+    if (!lista.length) { el.innerHTML = '<p>Nenhum chat pausado.</p>'; return; }
+    el.innerHTML = lista.map(function(p){
+      return '<div style="display:flex;align-items:center;gap:12px;padding:8px;border-bottom:1px solid rgba(128,128,128,.2)">'
+        + '<div style="flex:1"><b>' + p.numero + '</b><br><span style="opacity:.7;font-size:12px">'
+        + p.motivo + ' · IA volta sozinha em ' + (p.expiraEmMin > 60 ? Math.round(p.expiraEmMin/60) + 'h' : p.expiraEmMin + 'min') + '</span></div>'
+        + '<button class="btn btn-primary" onclick="atResume(\'' + p.jid + '\')">▶️ Retomar IA agora</button></div>';
+    }).join('');
+  } catch(e) {}
+}
+
+async function atResume(jid) {
+  try {
+    await api('/api/eco/atendente/chat-resume', { method:'POST', body: JSON.stringify({ jid: jid }) });
+    toast('IA retomada nesse chat!');
+    atLoadPausados(); atRefresh();
+  } catch(e) { toast('Erro ao retomar', 'error'); }
 }

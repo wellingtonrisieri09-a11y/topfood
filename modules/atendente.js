@@ -424,6 +424,19 @@ function registerAtendenteRoutes(app, requireAuth) {
     res.json({ ok: true });
   });
 
+  app.get('/api/eco/atendente/pausados', guard, (req, res) => {
+    const now = Date.now();
+    const lista = Object.entries(cfg.pausedChats)
+      .filter(([, p]) => p.until > now)
+      .map(([jid, p]) => ({
+        jid,
+        numero: jid.replace(/@.*$/, ''),
+        motivo: p.reason,
+        expiraEmMin: Math.round((p.until - now) / 60000)
+      }));
+    res.json(lista);
+  });
+
   app.post('/api/eco/atendente/chat-resume', guard, (req, res) => {
     const { jid } = req.body || {};
     if (jid && cfg.pausedChats[jid]) { delete cfg.pausedChats[jid]; saveCfg(); }
