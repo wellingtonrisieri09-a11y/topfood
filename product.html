@@ -126,6 +126,55 @@
       position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
       background: rgba(0,0,0,.35); color: #fff; font-size: 1.3rem; pointer-events: none;
     }
+    .gallery-main img { cursor: zoom-in; }
+
+    /* LIGHTBOX — zoom em tela cheia */
+    .lightbox {
+      position: fixed; inset: 0; z-index: 9999; display: none;
+      background: rgba(0,0,0,.92); align-items: center; justify-content: center;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox-img-wrap {
+      width: 90vw; height: 86vh; display: flex; align-items: center; justify-content: center;
+      overflow: hidden; position: relative;
+    }
+    .lightbox-img-wrap img {
+      max-width: 100%; max-height: 100%; object-fit: contain;
+      cursor: zoom-in; transition: transform .25s ease; transform-origin: center;
+      user-select: none; -webkit-user-drag: none;
+    }
+    .lightbox-img-wrap img.zoomed { cursor: zoom-out; }
+    .lightbox-close {
+      position: absolute; top: 18px; right: 22px; z-index: 2;
+      background: rgba(255,255,255,.12); border: none; color: #fff;
+      width: 44px; height: 44px; border-radius: 50%; font-size: 1.4rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .lightbox-close:hover { background: rgba(255,255,255,.28); }
+    .lightbox-nav {
+      position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+      background: rgba(255,255,255,.12); border: none; color: #fff;
+      width: 48px; height: 48px; border-radius: 50%; font-size: 1.5rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .lightbox-nav:hover { background: rgba(255,255,255,.28); }
+    .lightbox-prev { left: 18px; }
+    .lightbox-next { right: 18px; }
+    .lightbox-counter {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      color: #fff; font-size: .9rem; background: rgba(255,255,255,.12);
+      padding: 6px 16px; border-radius: 99px;
+    }
+    .lightbox-hint {
+      position: absolute; top: 24px; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,.75); font-size: .82rem;
+    }
+    @media (max-width: 768px) {
+      .lightbox-nav { width: 40px; height: 40px; }
+      .lightbox-hint { display: none; }
+    }
     @media (max-width: 768px) {
       .gallery { flex-direction: column-reverse; }
       .gallery-thumbs { flex-direction: row; max-height: none; overflow-x: auto; max-width: 100%; }
@@ -499,7 +548,7 @@
         <div class="gallery">
           ${thumbsHtml}
           <div class="gallery-main" id="galleryMain">
-            <img id="mainImg" src="${images[0] || ''}" alt="${p.name}"
+            <img id="mainImg" src="${images[0] || ''}" alt="${p.name}" onclick="openLightbox()"
                  onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect fill=%22%23f3f4f6%22 width=%22200%22 height=%22200%22/><text x=%2250%25%22 y=%2250%25%22 fill=%22%236b7280%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 font-size=%2216%22>Sem imagem</text></svg>'" />
           </div>
         </div>
@@ -562,7 +611,7 @@
     if (media.type === 'video') {
       main.innerHTML = `<video id="mainImg" src="${media.src}" controls autoplay muted loop playsinline></video>`;
     } else {
-      main.innerHTML = `<img id="mainImg" src="${media.src}" alt="" style="opacity:0" />`;
+      main.innerHTML = `<img id="mainImg" src="${media.src}" alt="" style="opacity:0" onclick="openLightbox()" />`;
       const img = document.getElementById('mainImg');
       img.onload = () => { img.style.opacity = '1'; };
       img.onerror = function() {
@@ -719,6 +768,94 @@
 
   updateCartBadge();
   loadProduct();
+
+  /* ══════ LIGHTBOX ZOOM ══════ */
+  let _lbIdx = 0;
+
+  function _lbImages() {
+    return (window._mediaList || []).filter(m => m.type === 'img');
+  }
+
+  function openLightbox() {
+    const imgs = _lbImages();
+    if (!imgs.length) return;
+    // Abrir na imagem atualmente exibida (se for imagem)
+    const current = (window._mediaList || [])[_currentMediaIdx];
+    _lbIdx = Math.max(0, imgs.findIndex(m => current && m.src === current.src));
+    _lbShow();
+    document.getElementById('lightbox').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('open');
+    document.body.style.overflow = '';
+    _lbResetZoom();
+  }
+
+  function _lbShow() {
+    const imgs = _lbImages();
+    const img = document.getElementById('lbImg');
+    _lbResetZoom();
+    img.src = imgs[_lbIdx] ? imgs[_lbIdx].src : '';
+    document.getElementById('lbCounter').textContent = (_lbIdx + 1) + ' / ' + imgs.length;
+    // Esconder setas se só tem 1 imagem
+    const showNav = imgs.length > 1 ? '' : 'none';
+    document.querySelector('.lightbox-prev').style.display = showNav;
+    document.querySelector('.lightbox-next').style.display = showNav;
+  }
+
+  function lbNav(dir) {
+    const imgs = _lbImages();
+    if (!imgs.length) return;
+    _lbIdx = (_lbIdx + dir + imgs.length) % imgs.length;
+    _lbShow();
+  }
+
+  function lbToggleZoom(ev) {
+    const img = document.getElementById('lbImg');
+    if (img.classList.contains('zoomed')) {
+      _lbResetZoom();
+    } else {
+      // Zoom 2.2x centrado no ponto clicado
+      const rect = img.getBoundingClientRect();
+      const ox = ((ev.clientX - rect.left) / rect.width) * 100;
+      const oy = ((ev.clientY - rect.top) / rect.height) * 100;
+      img.style.transformOrigin = ox + '% ' + oy + '%';
+      img.style.transform = 'scale(2.2)';
+      img.classList.add('zoomed');
+    }
+  }
+
+  function _lbResetZoom() {
+    const img = document.getElementById('lbImg');
+    if (!img) return;
+    img.style.transform = '';
+    img.style.transformOrigin = 'center';
+    img.classList.remove('zoomed');
+  }
+
+  // Teclado: ESC fecha, setas navegam
+  document.addEventListener('keydown', (e) => {
+    const lb = document.getElementById('lightbox');
+    if (!lb || !lb.classList.contains('open')) return;
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft') lbNav(-1);
+    if (e.key === 'ArrowRight') lbNav(1);
+  });
+
 </script>
-<!-- Schema.org injetado dinamicamente pelo servidor --></body>
+<!-- Schema.org injetado dinamicamente pelo servidor -->
+  <!-- LIGHTBOX ZOOM -->
+  <div class="lightbox" id="lightbox" onclick="if(event.target===this) closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()" aria-label="Fechar">✕</button>
+    <button class="lightbox-nav lightbox-prev" onclick="lbNav(-1)" aria-label="Anterior">‹</button>
+    <div class="lightbox-img-wrap" id="lbWrap">
+      <img id="lbImg" src="" alt="Zoom do produto" onclick="lbToggleZoom(event)" />
+    </div>
+    <button class="lightbox-nav lightbox-next" onclick="lbNav(1)" aria-label="Próxima">›</button>
+    <div class="lightbox-hint">Clique na foto para ampliar · ESC para fechar</div>
+    <div class="lightbox-counter" id="lbCounter"></div>
+  </div>
+</body>
 </html>
