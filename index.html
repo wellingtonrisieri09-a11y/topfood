@@ -56,7 +56,9 @@
       --font-h:   'Poppins', sans-serif;
     }
     html { scroll-behavior: smooth; }
-    @media (max-width: 767px) { #wa-float { bottom: 80px !important; } }
+    @media (max-width: 767px) { #wa-float { width: 50px !important; height: 50px !important; right: 12px !important; } }
+    /* Esconde o WhatsApp flutuante quando carrinho ou checkout estão abertos */
+    body.painel-aberto #wa-float { display: none !important; }
     body { font-family: var(--font); background: #F7F8FA; color: var(--black); overflow-x: hidden; }
     a { text-decoration: none; color: inherit; }
     img { display: block; max-width: 100%; }
@@ -2189,10 +2191,9 @@
 <!-- BOTÃO WHATSAPP FLUTUANTE -->
 <a href="https://wa.me/5511988856367?text=Ol%C3%A1%2C+vim+pelo+site+TopFood+e+tenho+uma+d%C3%BAvida!" target="_blank" rel="noopener"
    id="wa-float"
-   style="position:fixed;bottom:28px;right:24px;z-index:9999;background:#25d366;color:#fff;border-radius:50px;padding:13px 20px 13px 16px;display:flex;align-items:center;gap:9px;font-weight:700;font-size:.88rem;box-shadow:0 4px 20px rgba(37,211,102,.5);text-decoration:none;transition:transform .2s"
-   onmouseover="this.style.transform='scale(1.07)'" onmouseout="this.style.transform='scale(1)'">
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.121 1.533 5.855L0 24l6.335-1.509A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.866 9.866 0 01-5.031-1.381l-.361-.214-3.741.981.998-3.648-.235-.374A9.845 9.845 0 012.118 12C2.118 6.538 6.538 2.118 12 2.118c5.463 0 9.882 4.42 9.882 9.882 0 5.463-4.419 9.882-9.882 9.882z"/></svg>
-  Falar com vendedor
+   style="position:fixed;top:50%;right:18px;transform:translateY(-50%);z-index:900;background:#25d366;color:#fff;border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(37,211,102,.5);text-decoration:none;transition:transform .2s" title="Falar com vendedor no WhatsApp"
+   onmouseover="this.style.transform='translateY(-50%) scale(1.12)'" onmouseout="this.style.transform='translateY(-50%)'">
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.121 1.533 5.855L0 24l6.335-1.509A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.866 9.866 0 01-5.031-1.381l-.361-.214-3.741.981.998-3.648-.235-.374A9.845 9.845 0 012.118 12C2.118 6.538 6.538 2.118 12 2.118c5.463 0 9.882 4.42 9.882 9.882 0 5.463-4.419 9.882-9.882 9.882z"/></svg>
 </a>
 <!-- FIM WHATSAPP FLOAT -->
 <!-- EXIT INTENT BANNER -->

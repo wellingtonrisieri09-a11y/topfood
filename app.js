@@ -344,6 +344,7 @@
   }
 
   function openCart() {
+    document.body.classList.add('painel-aberto');
     document.getElementById('cartSidebar').classList.add('open');
     document.getElementById('cartOverlay').classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -354,6 +355,10 @@
     }
   }
   function closeCart() {
+    // Só reexibe o WhatsApp se o checkout NÃO estiver aberto (checkout abre antes do carrinho fechar)
+    if (!document.getElementById('checkoutOverlay')?.classList.contains('open')) {
+      document.body.classList.remove('painel-aberto');
+    }
     document.getElementById('cartSidebar').classList.remove('open');
     document.getElementById('cartOverlay').classList.remove('open');
     // Não reseta overflow se o checkout modal estiver aberto
@@ -977,6 +982,7 @@
     checkoutStep     = 1;
     // Abre checkout PRIMEIRO (overflow já travado), depois fecha carrinho
     document.getElementById('checkoutOverlay').classList.add('open');
+    document.body.classList.add('painel-aberto');
     document.body.style.overflow = 'hidden';
     renderCheckoutStep();
     closeCart(); // seguro: closeCart agora detecta que checkout está aberto e não reseta overflow
@@ -988,6 +994,7 @@
 
   function closeCheckout() {
     document.getElementById('checkoutOverlay').classList.remove('open');
+    document.body.classList.remove('painel-aberto');
     document.body.style.overflow = '';
   }
 
