@@ -41,6 +41,7 @@ check "Produto carrega"             "$BASE/product.html" 200
 # Conteúdo crítico
 check_contains "Meta Pixel presente"     "$BASE/"  "1202105157078230"
 check_contains "Google Tag presente"     "$BASE/"  "G-DBS2ZZCBPF"
+check_contains "TikTok Pixel presente"    "$BASE/"  "D8LMLI3C77U1GALAHI80"
 check_contains "Checkout JS presente"    "$BASE/app.js"  "ckGoStep3"
 check_contains "Validação CPF presente"  "$BASE/app.js"  "validarCPF"
 

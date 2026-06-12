@@ -172,6 +172,10 @@
         content_ids: [id], content_name: name,
         value, currency, num_items: qty,
       });
+      if (window.ttq) window.ttq.track('AddToCart', {
+        content_id: String(id), content_name: name, content_type: 'product',
+        value, currency, quantity: qty,
+      });
     },
 
     /* Iniciar checkout */
@@ -189,6 +193,10 @@
       if (window.fbq) window.fbq('track', 'InitiateCheckout', {
         value: parseFloat(subtotal), currency, num_items: items.length,
         content_ids: items.map(i => i.id),
+      });
+      if (window.ttq) window.ttq.track('InitiateCheckout', {
+        value: parseFloat(subtotal), currency,
+        contents: items.map(i => ({ content_id: String(i.id), quantity: i.qty || 1 })),
       });
     },
 
@@ -212,6 +220,10 @@
         content_type: 'product',
         content_ids: items.map(i => i.id),
         num_items: items.length,
+      });
+      if (window.ttq) window.ttq.track('CompletePayment', {
+        value: revenue, currency,
+        contents: items.map(i => ({ content_id: String(i.id), quantity: i.qty || 1 })),
       });
       // Google Ads conversion
       const s = window.__TF_SETTINGS || {};

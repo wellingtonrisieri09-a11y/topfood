@@ -549,6 +549,10 @@
         if (typeof fbq === 'function') {
           fbq('track', 'Purchase', { value: total, currency: 'BRL', contents: items, content_type: 'product' });
         }
+        // TikTok — compra concluída
+        if (typeof ttq !== 'undefined') {
+          ttq.track('CompletePayment', { value: total, currency: 'BRL', contents: items.map(i => ({ content_id: i.id, quantity: i.quantity })) });
+        }
         // Google Analytics 4 — purchase event (importado pelo Google Ads via GA4)
         if (typeof gtag === 'function') {
           gtag('event', 'purchase', {
@@ -967,6 +971,7 @@
 
   function openCheckout() {
     try { if (typeof fbq==='function') fbq('track','InitiateCheckout'); } catch(e){}
+    try { if (typeof ttq!=='undefined') ttq.track('InitiateCheckout'); } catch(e){}
     try { if (typeof gtag==='function') gtag('event','begin_checkout'); } catch(e){}
     if (cart.length === 0) { showToast('❌ Carrinho vazio!'); return; }
     const cust = getLoggedCustomer();
