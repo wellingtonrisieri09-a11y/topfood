@@ -42,7 +42,7 @@ let lastQR = null;              // último QR (string) p/ parear
 let connState = 'desconectado'; // desconectado | aguardando_qr | conectado
 let starting = false;
 let catalogCache = { ts: 0, text: '' };
-const chatContext = new Map(Object.entries(mem.contexts || {}));  // jid -> [{role, content}] (restaurado do disco)
+const chatContext = new Map();  // jid -> [{role, content}] (hidratado do disco após carregar mem)
 const lastReplyAt = new Map();  // jid -> timestamp (cooldown)
 const mediaCount = new Map();   // jid -> áudios/mídias seguidos sem texto
 
@@ -65,6 +65,7 @@ function saveCfg() { saveJSON(CFG_FILE, cfg); }
 
 // M8 — Claude Memory: contexto das conversas sobrevive a reinícios do servidor
 const mem = loadJSON(MEM_FILE, { contexts: {} });
+for (const [k, v] of Object.entries(mem.contexts || {})) chatContext.set(k, v);
 let memSaveTimer = null;
 function saveMem() { // debounce p/ não escrever em disco a cada mensagem
   if (memSaveTimer) return;
