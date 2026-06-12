@@ -4,8 +4,8 @@
 ══════════════════════════════════════════════════════ */
 // Permissões espelhadas do servidor (para UI)
 const ROLE_PERMISSIONS = {
-  owner:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','campaigns','newsletter','contact','settings','users'], canDelete: true  },
-  admin:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','campaigns','contact','settings','users'], canDelete: true  },
+  owner:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','campaigns','newsletter','contact','settings','users'], canDelete: true  },
+  admin:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','campaigns','contact','settings','users'], canDelete: true  },
   socio:      { pages: ['overview','orders','reports','adcenter','campaigns'],                                                                 canDelete: true  },
   secretaria: { pages: ['orders','customers','abandoned','contact'],                                                                canDelete: false },
   designer:   { pages: ['orders'],                                                                                                  canDelete: false },
@@ -190,6 +190,7 @@ async function loadAll() {
    NAVIGATION
 ══════════════════════════════════════════════════════ */
 const PAGE_TITLES = {
+  atendente:'IA Atendente',
   overview:'Visão Geral', orders:'Pedidos', products:'Produtos',
   customers:'Clientes', abandoned:'Carrinhos Abandonados',
   reports:'Relatórios', campaigns:'Campanhas & SEO',
@@ -215,6 +216,7 @@ function navigate(page) {
   if(page==='abandoned') renderAbandoned();
   if(page==='reports')   renderReports();
   if(page==='adcenter')   loadAdCenter();
+  if(page==='atendente')  loadAtendente();
     if(page==='campaigns')  loadCampaigns();
   if(page==='newsletter') loadNewsletterLeads();
   if(page==='contact')    loadContactMessages();
@@ -2577,3 +2579,96 @@ async function resetBudgetMonth() {
   } catch(e) { toast('❌ Erro ao zerar: ' + e.message, 'error'); }
 }
 
+
+
+/* ══════════════════════════════════════════════════════
+   M5 — IA ATENDENTE WHATSAPP
+══════════════════════════════════════════════════════ */
+let atQrTimer = null;
+
+function loadAtendente(){ atRefresh(); atLoadConversas(); }
+
+async function atRefresh() {
+  try {
+    const s = await api('/api/eco/atendente/status');
+    const mapa = { conectado:'✅ conectado', aguardando_qr:'🔄 aguardando QR', desconectado:'⚠️ desconectado' };
+    document.getElementById('at-conexao').textContent = mapa[s.conexao] || s.conexao;
+    document.getElementById('at-enabled').textContent = s.enabled ? '✅ ativa' : '⏸️ desligada';
+    document.getElementById('at-apikey').textContent = s.apiKeyOk ? '✅ ok' : '⚠️ falta ANTHROPIC_API_KEY';
+    document.getElementById('at-pausados').textContent = s.pausados;
+    document.getElementById('at-recebidas').textContent = s.stats.recebidas;
+    document.getElementById('at-respondidas').textContent = s.stats.respondidas;
+    document.getElementById('at-escaladas').textContent = s.stats.escaladas;
+    document.getElementById('at-cfg-enabled').checked = s.enabled;
+    document.getElementById('at-cfg-autostart').checked = s.autostart;
+    document.getElementById('at-cfg-notify').value = s.notifyNumber || '';
+    document.getElementById('at-cfg-prompt').value = s.promptExtra || '';
+    if (s.temQR) atShowQR(); else document.getElementById('at-qr-box').style.display = 'none';
+  } catch(e) { toast('Erro ao carregar status do atendente', 'error'); }
+}
+
+async function atShowQR() {
+  try {
+    const r = await api('/api/eco/atendente/qr');
+    if (r.qr) {
+      document.getElementById('at-qr-img').src = r.qr;
+      document.getElementById('at-qr-box').style.display = 'block';
+    }
+    if (r.conexao === 'conectado') {
+      document.getElementById('at-qr-box').style.display = 'none';
+      clearInterval(atQrTimer); atQrTimer = null;
+      toast('WhatsApp conectado!');
+      atRefresh();
+    }
+  } catch(e) {}
+}
+
+async function atStart() {
+  try {
+    await api('/api/eco/atendente/start', { method:'POST' });
+    toast('Iniciando conexão — o QR aparece em alguns segundos…');
+    if (!atQrTimer) atQrTimer = setInterval(atShowQR, 3000);
+  } catch(e) { toast('Erro ao iniciar: ' + e.message, 'error'); }
+}
+
+async function atStop() {
+  try {
+    await api('/api/eco/atendente/stop', { method:'POST' });
+    clearInterval(atQrTimer); atQrTimer = null;
+    toast('Atendente parado.'); atRefresh();
+  } catch(e) { toast('Erro ao parar', 'error'); }
+}
+
+async function atLogout() {
+  if (!confirm('Desparear o WhatsApp? Será preciso escanear um novo QR.')) return;
+  try {
+    await api('/api/eco/atendente/logout', { method:'POST' });
+    toast('Sessão removida.'); atRefresh();
+  } catch(e) { toast('Erro ao desparear', 'error'); }
+}
+
+async function atSaveCfg() {
+  try {
+    await api('/api/eco/atendente/config', { method:'POST', body: JSON.stringify({
+      enabled: document.getElementById('at-cfg-enabled').checked,
+      autostart: document.getElementById('at-cfg-autostart').checked,
+      notifyNumber: document.getElementById('at-cfg-notify').value,
+      promptExtra: document.getElementById('at-cfg-prompt').value
+    })});
+    toast('Configuração salva!'); atRefresh();
+  } catch(e) { toast('Erro ao salvar', 'error'); }
+}
+
+async function atLoadConversas() {
+  try {
+    const lista = await api('/api/eco/atendente/conversas');
+    const icone = { cliente:'👤', ia:'🤖', sistema:'ℹ️', erro:'❌' };
+    document.getElementById('at-conversas').innerHTML = lista.map(function(l){
+      const hora = new Date(l.ts).toLocaleString('pt-BR');
+      const num = (l.jid || '').replace('@s.whatsapp.net','');
+      return '<div style="padding:6px;border-bottom:1px solid rgba(128,128,128,.2)">'
+        + (icone[l.tipo]||'·') + ' <b>' + num + '</b> <span style="opacity:.6">' + hora + '</span><br>'
+        + String(l.texto||'').replace(/</g,'&lt;') + '</div>';
+    }).join('') || '<p>Nenhuma conversa ainda.</p>';
+  } catch(e) {}
+}
