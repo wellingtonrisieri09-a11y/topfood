@@ -53,6 +53,7 @@ check "API products responde"       "$BASE/api/products"  200
 # APIs protegidas devem recusar sem login
 check "API admin/orders protegida"  "$BASE/api/admin/orders"  401
 check "API budget protegida"        "$BASE/api/eco/budget"    401
+check "API atendente protegida"     "$BASE/api/eco/atendente/status" 401
 
 # Segurança
 check "server.js bloqueado"         "$BASE/server.js"      404
