@@ -98,26 +98,38 @@
       .gallery { position: static; }
     }
 
-    /* GALLERY */
-    .gallery { position: sticky; top: 96px; }
+    /* GALLERY — estilo Mercado Livre: thumbs verticais à esquerda */
+    .gallery { position: sticky; top: 96px; display: flex; gap: 12px; align-items: flex-start; }
+    .gallery-thumbs {
+      display: flex; flex-direction: column; gap: 8px;
+      max-height: 520px; overflow-y: auto; flex-shrink: 0;
+      scrollbar-width: thin; padding: 2px;
+    }
     .gallery-main {
-      border-radius: 14px; overflow: hidden;
+      border-radius: 14px; overflow: hidden; flex: 1;
       background: #fff; border: 1px solid var(--border);
       aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-      margin-bottom: 12px;
     }
-    .gallery-main img {
+    .gallery-main img, .gallery-main video {
       width: 100%; height: 100%; object-fit: contain;
       transition: opacity .2s;
     }
-    .gallery-thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
     .thumb {
-      width: 72px; height: 72px; border-radius: 8px; overflow: hidden;
-      border: 2px solid var(--border); cursor: pointer;
-      background: #fff; flex-shrink: 0; transition: border-color .2s;
+      width: 64px; height: 64px; border-radius: 8px; overflow: hidden;
+      border: 2px solid var(--border); cursor: pointer; position: relative;
+      background: #fff; flex-shrink: 0; transition: border-color .15s, box-shadow .15s;
     }
-    .thumb.active, .thumb:hover { border-color: var(--red); }
+    .thumb.active { border-color: var(--red); box-shadow: 0 0 0 1px var(--red); }
+    .thumb:hover { border-color: var(--red); }
     .thumb img { width: 100%; height: 100%; object-fit: contain; }
+    .thumb-play {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.35); color: #fff; font-size: 1.3rem; pointer-events: none;
+    }
+    @media (max-width: 768px) {
+      .gallery { flex-direction: column-reverse; }
+      .gallery-thumbs { flex-direction: row; max-height: none; overflow-x: auto; max-width: 100%; }
+    }
 
     /* INFO PANEL */
     .product-info { display: flex; flex-direction: column; gap: 20px; }
@@ -429,11 +441,19 @@
 
     var rawImgs = (p.images && p.images.length) ? p.images : [p.image].filter(Boolean); const images = rawImgs.map(function(s){ return s && !s.startsWith("data:") && !s.startsWith("http") && !s.startsWith("/") ? "/"+s : s; });
 
-    const thumbsHtml = images.length > 1
+    // Lista unificada de mídia: vídeos primeiro thumb depois imagens (vídeo converte mais)
+    const rawVideos = (p.videos && p.videos.length) ? p.videos : (p.video ? [p.video] : []);
+    const videos = rawVideos.map(function(s){ return s && !s.startsWith("data:") && !s.startsWith("http") && !s.startsWith("/") ? "/"+s : s; });
+    window._mediaList = images.map(src => ({ type: 'img', src }))
+      .concat(videos.map(src => ({ type: 'video', src })));
+
+    const thumbsHtml = window._mediaList.length > 1
       ? `<div class="gallery-thumbs" id="thumbs">
-          ${images.map((img, i) =>
-            `<div class="thumb${i === 0 ? ' active' : ''}" onclick="setMainImage(${i})" data-idx="${i}">
-              <img src="${img}" alt="Imagem ${i+1}" onerror="this.parentElement.style.display='none'" />
+          ${window._mediaList.map((m, i) =>
+            `<div class="thumb${i === 0 ? ' active' : ''}" onclick="setMainImage(${i})" onmouseenter="setMainImage(${i})" data-idx="${i}">
+              ${m.type === 'video'
+                ? `<video src="${m.src}" muted preload="metadata"></video><div class="thumb-play">▶</div>`
+                : `<img src="${m.src}" alt="Imagem ${i+1}" onerror="this.parentElement.style.display='none'" />`}
             </div>`
           ).join('')}
         </div>`
@@ -477,11 +497,11 @@
       <div class="product-grid">
         <!-- GALERIA -->
         <div class="gallery">
-          <div class="gallery-main">
+          ${thumbsHtml}
+          <div class="gallery-main" id="galleryMain">
             <img id="mainImg" src="${images[0] || ''}" alt="${p.name}"
                  onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect fill=%22%23f3f4f6%22 width=%22200%22 height=%22200%22/><text x=%2250%25%22 y=%2250%25%22 fill=%22%236b7280%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 font-size=%2216%22>Sem imagem</text></svg>'" />
           </div>
-          ${thumbsHtml}
         </div>
 
         <!-- INFORMAÇÕES -->
@@ -530,23 +550,27 @@
     return '/' + s;
   }
 
+  let _currentMediaIdx = 0;
   function setMainImage(idx) {
-    if (!currentProduct) return;
-    const rawImages = (currentProduct.images && currentProduct.images.length)
-      ? currentProduct.images : [currentProduct.image].filter(Boolean);
-    const images = rawImages.map(normImgPath);
-    const mainImg = document.getElementById('mainImg');
-    if (!mainImg) return;
-    mainImg.style.opacity = '0';
-    setTimeout(() => {
-      mainImg.src = images[idx] || '';
-      mainImg.style.opacity = '1';
-      // Remover onerror para nao travar em loop apos trocar imagem
-      mainImg.onerror = function() {
+    if (!window._mediaList || !window._mediaList.length) return;
+    if (idx === _currentMediaIdx && document.getElementById('mainImg')) return;
+    _currentMediaIdx = idx;
+    const media = window._mediaList[idx];
+    const main = document.getElementById('galleryMain');
+    if (!main || !media) return;
+
+    if (media.type === 'video') {
+      main.innerHTML = `<video id="mainImg" src="${media.src}" controls autoplay muted loop playsinline></video>`;
+    } else {
+      main.innerHTML = `<img id="mainImg" src="${media.src}" alt="" style="opacity:0" />`;
+      const img = document.getElementById('mainImg');
+      img.onload = () => { img.style.opacity = '1'; };
+      img.onerror = function() {
         this.onerror = null;
+        this.style.opacity = '1';
         this.src = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect fill=%22%23f3f4f6%22 width=%22200%22 height=%22200%22/><text x=%2250%25%22 y=%2250%25%22 fill=%22%236b7280%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 font-size=%2216%22>Sem imagem</text></svg>';
       };
-    }, 150);
+    }
     document.querySelectorAll('.thumb').forEach(t => {
       t.classList.toggle('active', parseInt(t.dataset.idx) === idx);
     });
