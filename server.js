@@ -738,6 +738,35 @@ app.post('/api/admin/upload-image', requireAuth, (req, res) => {
 });
 
 // ============================================================
+// POST /api/admin/upload-video — Upload binário de vídeo (até 80 MB)
+// ============================================================
+app.post('/api/admin/upload-video', requireAuth,
+  express.raw({ type: () => true, limit: '80mb' }),
+  (req, res) => {
+  try {
+    const filename = String(req.query.filename || 'video.mp4');
+    const ext = path.extname(filename).toLowerCase();
+    if (!['.mp4', '.webm', '.mov', '.m4v'].includes(ext)) {
+      return res.status(400).json({ error: 'Formato inválido. Use MP4, WebM ou MOV.' });
+    }
+    if (!req.body || !req.body.length) {
+      return res.status(400).json({ error: 'Arquivo vazio.' });
+    }
+    const base = path.basename(filename, path.extname(filename))
+                   .replace(/[^a-zA-Z0-9\s\-_]/g, '').trim().slice(0, 60) || 'video';
+    const safeName = `${base}-${Date.now()}${ext}`;
+    const vidDir = path.join(__dirname, 'videos');
+    if (!fs.existsSync(vidDir)) fs.mkdirSync(vidDir);
+    fs.writeFileSync(path.join(vidDir, safeName), req.body);
+    console.log(`🎬 Vídeo salvo: videos/${safeName} (${(req.body.length/1024/1024).toFixed(1)} MB)`);
+    res.json({ ok: true, path: `videos/${safeName}`, name: safeName });
+  } catch(e) {
+    console.error('Erro upload vídeo:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ============================================================
 // DELETE /api/admin/images/:name — Remove imagem da pasta
 // ============================================================
 app.delete('/api/admin/images/:name', requireAuth, (req, res) => {

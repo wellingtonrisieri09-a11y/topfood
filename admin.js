@@ -1074,6 +1074,7 @@ function editProduct(id) {
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveProduct('${id}')"><i class="fa fa-save"></i> Salvar produto</button>`;
   initImgManager(p.images && p.images.length ? p.images : (p.image ? [p.image] : []));
+  initVideoManager(p.videos || []);
   showModal();
 }
 async function saveProduct(id) {
@@ -1132,6 +1133,7 @@ function newProductModal() {
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveNewProduct()"><i class="fa fa-save"></i> Criar Produto</button>`;
   initImgManager([]);
+  initVideoManager([]);
   // Inicia hint de variantes
   setTimeout(() => syncVariantHints(), 50);
   showModal();
@@ -1221,6 +1223,23 @@ function buildProductForm(p) {
         <div class="img-drop-hint">💡 Arraste para reordenar. A <b>primeira</b> foto é a imagem principal.</div>
       </div>
     </div>
+    <div class="form-row" style="margin-top:14px">
+      <label>Vídeos do produto <span style="color:var(--muted);font-weight:400;font-size:.7rem">(máx. 3 vídeos · MP4 até 80 MB · aparecem na galeria com ▶)</span></label>
+      <div class="img-mgr">
+        <div class="img-mgr-header">
+          <div class="img-mgr-count"><b id="video-count">0</b> <span>/ 3 vídeos</span></div>
+          <label class="btn-upload-img" id="btn-upload-video">
+            <i class="fa fa-video"></i> Adicionar vídeos
+            <input type="file" id="video-upload-input" multiple accept="video/mp4,video/webm,video/quicktime" onchange="handleVideoUpload(event)" style="display:none" />
+          </label>
+        </div>
+        <div class="img-grid" id="video-grid"></div>
+        <div class="img-upload-bar">
+          <div class="img-upload-progress" id="video-upload-progress"><div class="img-upload-progress-fill" id="video-upload-fill" style="width:0%"></div></div>
+          <div class="img-upload-msg" id="video-upload-msg"></div>
+        </div>
+      </div>
+    </div>
     <div class="form-row">
       <label>Características <span style="font-weight:400;color:var(--muted)">(uma por linha)</span></label>
       <textarea id="ep-features" rows="5" placeholder="Material kraft impermeabilizado&#10;Design exclusivo chalk art&#10;Aprovado para contato alimentar">${featsVal}</textarea>
@@ -1304,6 +1323,7 @@ function readProductFromForm() {
     variants:         readVariantsFromForm(),
     images:           [..._editImages],
     image:            _editImages[0] || '',
+    videos:           [..._editVideos],
     features:         feats,
     specs:            specs,
   };
@@ -1483,6 +1503,96 @@ function readFileAsBase64(file) {
 function imgMsg(msg) {
   const el = document.getElementById('img-upload-msg');
   if(el) el.textContent = msg;
+}
+
+/* ══════════════════════════════════════════════════════
+   VIDEO MANAGER — upload de vídeos do produto
+══════════════════════════════════════════════════════ */
+let _editVideos = [];
+
+function initVideoManager(videos) {
+  _editVideos = Array.isArray(videos) ? [...videos] : [];
+  renderVideoGrid();
+}
+
+function renderVideoGrid() {
+  const grid = document.getElementById('video-grid');
+  const countEl = document.getElementById('video-count');
+  const btn = document.getElementById('btn-upload-video');
+  if(!grid) return;
+  const n = _editVideos.length;
+  if(countEl) countEl.textContent = n;
+  if(btn) btn.classList.toggle('disabled', n >= 3);
+  if(n === 0) {
+    grid.innerHTML = `<div class="img-grid-empty">
+      <i class="fa fa-video" style="font-size:2rem;opacity:.3;display:block;margin-bottom:8px"></i>
+      Nenhum vídeo. Clique em "Adicionar vídeos" para fazer upload.
+    </div>`;
+    return;
+  }
+  grid.innerHTML = _editVideos.map((src, i) => `
+    <div class="img-card">
+      <video src="${src.startsWith('/') ? src : '/' + src}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover"></video>
+      <div class="img-card-num">▶ ${i + 1}</div>
+      <button class="img-card-del" onclick="removeVideo(${i})" title="Remover vídeo"><i class="fa fa-trash"></i></button>
+    </div>`).join('');
+}
+
+function removeVideo(idx) {
+  _editVideos.splice(idx, 1);
+  renderVideoGrid();
+}
+
+function videoMsg(msg) {
+  const el = document.getElementById('video-upload-msg');
+  if(el) el.textContent = msg;
+}
+
+async function handleVideoUpload(event) {
+  const files = Array.from(event.target.files || []);
+  if(!files.length) return;
+  const slots = 3 - _editVideos.length;
+  if(slots <= 0) { videoMsg('❌ Máximo de 3 vídeos atingido. Remova um para adicionar outro.'); return; }
+  const toUpload = files.slice(0, slots);
+  const prog = document.getElementById('video-upload-progress');
+  const fill = document.getElementById('video-upload-fill');
+  if(prog) prog.style.display = 'block';
+  let okCount = 0;
+  for(let i = 0; i < toUpload.length; i++) {
+    const file = toUpload[i];
+    if(file.size > 80 * 1024 * 1024) {
+      videoMsg(`❌ "${file.name}" tem ${(file.size/1024/1024).toFixed(0)} MB. Máximo 80 MB — comprima o vídeo.`);
+      await new Promise(r => setTimeout(r, 2000));
+      continue;
+    }
+    if(fill) fill.style.width = Math.round((i / toUpload.length) * 90) + '%';
+    videoMsg(`Enviando ${i + 1}/${toUpload.length}: ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)… aguarde, vídeos demoram mais`);
+    try {
+      const r = await fetch('/api/admin/upload-video?filename=' + encodeURIComponent(file.name), {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token(), 'Content-Type': file.type || 'application/octet-stream' },
+        body: file,
+      });
+      if(!r.ok) throw new Error(r.status);
+      const data = await r.json();
+      _editVideos.push(data.path);
+      renderVideoGrid();
+      okCount++;
+    } catch(e) {
+      const msg = String(e.message).includes('401') ? '❌ Sessão expirada. Faça login novamente.'
+        : String(e.message).includes('413') ? `❌ "${file.name}" é muito grande para o servidor.`
+        : `❌ Erro ao enviar "${file.name}" (${e.message}).`;
+      videoMsg(msg);
+      await new Promise(r => setTimeout(r, 1800));
+    }
+  }
+  if(fill) fill.style.width = '100%';
+  if(okCount > 0) videoMsg(`✅ ${okCount} vídeo${okCount !== 1 ? 's' : ''} enviado${okCount !== 1 ? 's' : ''} com sucesso! Salve o produto para publicar.`);
+  setTimeout(() => {
+    if(prog) prog.style.display = 'none';
+    if(fill) fill.style.width = '0%';
+  }, 3000);
+  event.target.value = '';
 }
 
 /* ══════════════════════════════════════════════════════
