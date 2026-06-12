@@ -1381,8 +1381,46 @@
 .bnr-right{flex:1;display:flex;align-items:center;justify-content:center;height:100%}
 .bnr-img{max-height:420px;max-width:100%;object-fit:contain;filter:drop-shadow(0 8px 40px rgba(0,0,0,.9))}
 </style>
+
+  <style id="copa-css">
+    /* ── CLIMA DE COPA DO MUNDO 🇧🇷 ── */
+    .copa-strip {
+      position: relative; z-index: 50; display: flex; align-items: center; justify-content: center;
+      gap: 10px; padding: 9px 38px 9px 14px; text-align: center;
+      background: linear-gradient(110deg, #009739 0%, #009739 30%, #FEDD00 50%, #009739 70%, #009739 100%);
+      background-size: 220% 100%;
+      animation: copaShine 6s linear infinite;
+      color: #fff; font-weight: 800; font-size: .92rem;
+      text-shadow: 0 1px 3px rgba(0,0,0,.45);
+    }
+    @keyframes copaShine { 0% { background-position: 0% 0; } 100% { background-position: 220% 0; } }
+    .copa-strip .copa-ball { display: inline-block; animation: copaBounce 1s ease-in-out infinite; font-size: 1.05rem; }
+    @keyframes copaBounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px) rotate(20deg); } }
+    .copa-close {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: rgba(0,0,0,.25); border: none; color: #fff; cursor: pointer;
+      width: 24px; height: 24px; border-radius: 50%; font-size: .8rem; line-height: 1;
+    }
+    .copa-close:hover { background: rgba(0,0,0,.45); }
+    .copa-confete {
+      position: fixed; top: -40px; z-index: 9998; pointer-events: none;
+      font-size: 1.5rem; animation: copaCai linear forwards;
+    }
+    @keyframes copaCai {
+      to { transform: translateY(110vh) rotate(720deg); opacity: .9; }
+    }
+    @media (max-width: 600px) { .copa-strip { font-size: .78rem; padding-right: 40px; } }
+  </style>
 </head>
 <body>
+  <!-- 🇧🇷 CLIMA DE COPA -->
+  <div class="copa-strip" id="copaStrip" style="display:none">
+    <span class="copa-ball">⚽</span>
+    <span>🇧🇷 É CLIMA DE COPA! Brasil rumo ao <b>HEXA</b> — boa sorte, Seleção! 🏆</span>
+    <span class="copa-ball" style="animation-delay:.3s">⚽</span>
+    <button class="copa-close" onclick="copaFechar()" aria-label="Fechar">✕</button>
+  </div>
+
   <!-- Google Tag Manager (noscript) -->
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WVNP67J3"
   height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
