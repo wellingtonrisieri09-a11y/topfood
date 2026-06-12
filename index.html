@@ -2222,5 +2222,42 @@
 <!-- FIM EXIT INTENT BANNER -->
 
 <script src="/app.js" defer></script>
+
+<script id="copa-js">
+(function() {
+  var fechadoEm = localStorage.getItem('copa-strip-fechada');
+  var hoje = new Date().toDateString();
+  if (fechadoEm !== hoje) {
+    var strip = document.getElementById('copaStrip');
+    if (strip) strip.style.display = 'flex';
+  }
+  window.copaFechar = function() {
+    var strip = document.getElementById('copaStrip');
+    if (strip) strip.style.display = 'none';
+    localStorage.setItem('copa-strip-fechada', new Date().toDateString());
+  };
+
+  if (!sessionStorage.getItem('copa-confete')) {
+    sessionStorage.setItem('copa-confete', '1');
+    var emojis = ['⚽','🇧🇷','🏆','⚽','💚','💛'];
+    setTimeout(function() {
+      for (var i = 0; i < 12; i++) {
+        (function(i) {
+          setTimeout(function() {
+            var el = document.createElement('div');
+            el.className = 'copa-confete';
+            el.textContent = emojis[i % emojis.length];
+            el.style.left = (4 + Math.random() * 92) + 'vw';
+            el.style.animationDuration = (2.6 + Math.random() * 2) + 's';
+            el.style.fontSize = (1.1 + Math.random() * 1.1) + 'rem';
+            document.body.appendChild(el);
+            setTimeout(function() { el.remove(); }, 5200);
+          }, i * 180);
+        })(i);
+      }
+    }, 600);
+  }
+})();
+</script>
 </body>
 </html>
