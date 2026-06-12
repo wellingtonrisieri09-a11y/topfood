@@ -1410,14 +1410,19 @@
       to { transform: translateY(110vh) rotate(720deg); opacity: .9; }
     }
     @media (max-width: 600px) { .copa-strip { font-size: .78rem; padding-right: 40px; } }
+    /* Tema Dia dos Namorados ❤️ */
+    .copa-strip.tema-love {
+      background: linear-gradient(110deg, #B3001B 0%, #B3001B 30%, #FF5C8A 50%, #B3001B 70%, #B3001B 100%);
+      background-size: 220% 100%;
+      animation: copaShine 6s linear infinite;
+    }
+    .copa-confete { text-shadow: 0 2px 8px rgba(0,0,0,.25); }
   </style>
 </head>
 <body>
-  <!-- 🇧🇷 CLIMA DE COPA -->
+  <!-- TEMA SAZONAL (preenchido por data via JS) -->
   <div class="copa-strip" id="copaStrip" style="display:none">
-    <span class="copa-ball">⚽</span>
-    <span>🇧🇷 É CLIMA DE COPA! Brasil rumo ao <b>HEXA</b> — boa sorte, Seleção! 🏆</span>
-    <span class="copa-ball" style="animation-delay:.3s">⚽</span>
+    <span id="temaConteudo"></span>
     <button class="copa-close" onclick="copaFechar()" aria-label="Fechar">✕</button>
   </div>
 
@@ -2225,37 +2230,72 @@
 
 <script id="copa-js">
 (function() {
-  var fechadoEm = localStorage.getItem('copa-strip-fechada');
-  var hoje = new Date().toDateString();
-  if (fechadoEm !== hoje) {
-    var strip = document.getElementById('copaStrip');
-    if (strip) strip.style.display = 'flex';
-  }
-  window.copaFechar = function() {
-    var strip = document.getElementById('copaStrip');
-    if (strip) strip.style.display = 'none';
-    localStorage.setItem('copa-strip-fechada', new Date().toDateString());
-  };
+  // ── MOTOR DE TEMAS SAZONAIS — escolhe o tema pela data ──
+  // Datas no formato MM-DD. Primeiro tema que casar, vence.
+  var TEMAS = [
+    { id: 'namorados', inicio: '06-12', fim: '06-12',
+      classe: 'tema-love',
+      faixa: '💝 <b>Dia dos Namorados</b> — surpreenda quem você ama com aquele lanche especial! ❤️',
+      emojis: ['❤️','💝','💘','🌹','💖','😍'] },
+    { id: 'copa', inicio: '06-11', fim: '07-19',
+      classe: '',
+      faixa: '<span class="copa-ball">⚽</span> 🇧🇷 É CLIMA DE COPA! Brasil rumo ao <b>HEXA</b> — boa sorte, Seleção! 🏆 <span class="copa-ball" style="animation-delay:.3s">⚽</span>',
+      emojis: ['⚽','🏆','🇧🇷','⚽','🏆','💚','💛','🥇'] },
+  ];
 
-  if (!sessionStorage.getItem('copa-confete')) {
-    sessionStorage.setItem('copa-confete', '1');
-    var emojis = ['⚽','🇧🇷','🏆','⚽','💚','💛'];
+  function hojeMMDD() {
+    var d = new Date();
+    return String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function temaAtivo() {
+    var hoje = hojeMMDD();
+    for (var i = 0; i < TEMAS.length; i++) {
+      var t = TEMAS[i];
+      if (hoje >= t.inicio && hoje <= t.fim) return t;
+    }
+    return null;
+  }
+
+  var tema = temaAtivo();
+  if (!tema) return;
+
+  var strip = document.getElementById('copaStrip');
+  var conteudo = document.getElementById('temaConteudo');
+  if (strip && conteudo) {
+    conteudo.innerHTML = tema.faixa;
+    if (tema.classe) strip.classList.add(tema.classe);
+    // Faixa some se fechada hoje (chave inclui o tema, então tema novo = faixa volta)
+    var chave = 'tema-fechado-' + tema.id;
+    if (localStorage.getItem(chave) !== new Date().toDateString()) {
+      strip.style.display = 'flex';
+    }
+    window.copaFechar = function() {
+      strip.style.display = 'none';
+      localStorage.setItem(chave, new Date().toDateString());
+    };
+  }
+
+  // ── CHUVA DE COMEMORAÇÃO — caprichada: maior, com balanço e brilho ──
+  var chaveConfete = 'confete-' + tema.id;
+  if (!sessionStorage.getItem(chaveConfete)) {
+    sessionStorage.setItem(chaveConfete, '1');
+    var emojis = tema.emojis;
     setTimeout(function() {
-      for (var i = 0; i < 12; i++) {
+      for (var i = 0; i < 18; i++) {
         (function(i) {
           setTimeout(function() {
             var el = document.createElement('div');
             el.className = 'copa-confete';
             el.textContent = emojis[i % emojis.length];
-            el.style.left = (4 + Math.random() * 92) + 'vw';
-            el.style.animationDuration = (2.6 + Math.random() * 2) + 's';
-            el.style.fontSize = (1.1 + Math.random() * 1.1) + 'rem';
+            el.style.left = (3 + Math.random() * 94) + 'vw';
+            el.style.animationDuration = (3 + Math.random() * 2.4) + 's';
+            el.style.fontSize = (2 + Math.random() * 1.6) + 'rem';   // 2.0 a 3.6rem — bem visível
             document.body.appendChild(el);
-            setTimeout(function() { el.remove(); }, 5200);
-          }, i * 180);
+            setTimeout(function() { el.remove(); }, 6200);
+          }, i * 160);
         })(i);
       }
-    }, 600);
+    }, 500);
   }
 })();
 </script>
