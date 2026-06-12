@@ -196,10 +196,19 @@ async function startSock() {
         connState = 'desconectado';
         const code = u.lastDisconnect?.error?.output?.statusCode;
         const loggedOut = code === DisconnectReason.loggedOut;
-        console.log('[M5] Conexão fechada. loggedOut=', loggedOut, 'pareado=', paired);
+        // creds.registered vira true no momento do scan — reavaliar aqui, não usar só o snapshot do boot
+        paired = paired || !!state.creds.registered;
+        const restartRequired = code === DisconnectReason.restartRequired; // 515: WA exige reconectar p/ concluir pareamento
+        console.log('[M5] Conexão fechada. code=', code, 'loggedOut=', loggedOut, 'pareado=', paired);
         sock = null;
-        // Só reconecta sozinho se JÁ pareou — sem pareamento seria loop infinito de QR
-        if (!loggedOut && cfg.autostart && paired) setTimeout(() => startSock().catch(() => {}), 10000);
+        if (loggedOut) return;
+        if (restartRequired) {
+          // parte obrigatória do fluxo de pareamento — reconectar já
+          setTimeout(() => startSock().catch(() => {}), 2000);
+        } else if (cfg.autostart && paired) {
+          setTimeout(() => startSock().catch(() => {}), 10000);
+        }
+        // não pareado e sem restartRequired: fica quieto (evita loop infinito de QR)
       }
     });
 
