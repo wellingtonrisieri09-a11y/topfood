@@ -2,7 +2,7 @@ require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
 const { readData, writeData, readSettings, db, auditLog, blacklistToken, isTokenBlacklisted, releaseExpiredReservations, cleanBlacklist } = require('./db');
-const { registerSeoRoutes } = require('./modules/seo');
+const { registerSeoRoutes, seoTitle } = require('./modules/seo');
 const { registerAuthRoutes, requireAuth, requireOwner, requireAdminPlus } = require('./modules/auth');
 const { registerFeedRoutes }   = require('./modules/feeds');
 const { registerBudgetRoutes } = require('./modules/budget');
@@ -1384,7 +1384,7 @@ app.get('/produto/:slug', function(req, res) {
     // Titulo
     html = html.replace(
       '<title>Produto — TopFood Embalagens</title>',
-      '<title>' + title + ' — TopFood Embalagens</title>'
+      '<title>' + seoTitle(product) + '</title>'
     );
     html = html.replace(
       'content="Compre embalagens food service de qualidade para pastel, churros, hamburguer e fritas. Embalagens kraft impermeabilizadas para restaurantes e delivery. TopFood Embalagens - São Paulo."',

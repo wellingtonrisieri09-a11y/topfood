@@ -12,6 +12,25 @@ function esc(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// Termo de busca por categoria (como as pessoas pesquisam no Google)
+const CAT_TERMO = {
+  hamburger: 'Hambúrguer', burger: 'Hambúrguer', pastel: 'Pastel',
+  churros: 'Churros', fritas: 'Batata Frita', batata: 'Batata Frita',
+  pizza: 'Pizza', acai: 'Açaí', doces: 'Doces'
+};
+
+// Título SEO otimizado por produto: "Embalagem para <tipo> <diferencial> | Atacado — TopFood"
+function seoTitle(p) {
+  const cat = (p.category || '').toLowerCase();
+  const termo = CAT_TERMO[cat] || (p.category ? p.category.charAt(0).toUpperCase() + p.category.slice(1) : 'Delivery');
+  let dif = '';
+  const parts = (p.name || '').split(/[—–-]/);
+  if (parts.length > 1) dif = parts[parts.length - 1].trim();
+  let base = 'Embalagem para ' + termo;
+  if (dif && dif.toLowerCase().indexOf(termo.toLowerCase()) === -1) base += ' ' + dif;
+  return (base + ' | Atacado — TopFood').slice(0, 68);
+}
+
 function cardHTML(p) {
   const id    = esc(p.id);
   const name  = esc(p.name || '');
@@ -60,4 +79,4 @@ function registerSeoRoutes(app, readData) {
   console.log('[SEO] SSR da home registrado (produtos no HTML)');
 }
 
-module.exports = { registerSeoRoutes };
+module.exports = { registerSeoRoutes, seoTitle };
