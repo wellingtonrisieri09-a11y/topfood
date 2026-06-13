@@ -1559,6 +1559,7 @@ registerBackupRoutes(app, requireOwner);
 registerAsaasRoutes(app, requireAuth, requireOwner);
 registerAtendenteRoutes(app, requireAuth);
 registerOnlineRoutes(app, requireAuth);
+registerMlRoutes(app, requireAuth);
 
 // Limpar blacklist e reservas expiradas a cada 30min
 setInterval(() => { try { cleanBlacklist(); releaseExpiredReservations(); } catch(e){} }, 30 * 60 * 1000);
