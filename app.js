@@ -164,7 +164,9 @@
       if (!Array.isArray(products) || products.length === 0) throw new Error('Lista vazia');
       renderProducts(products);
     } catch (e) {
-      // Servidor offline → usa fallback local (funciona mesmo sem npm start)
+      // Servidor pode estar reiniciando (deploy) — tenta de novo antes do fallback
+      window._prodRetry = (window._prodRetry || 0) + 1;
+      if (window._prodRetry <= 3) { setTimeout(loadProducts, 2500); return; }
       renderProducts(PRODUCTS_FALLBACK);
     }
     // Após carregar: rola para âncora do hash se existir (#pastel, #churros, etc.)
