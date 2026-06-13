@@ -93,6 +93,42 @@ function getDossie(days = 30, force = false) {
   return data;
 }
 
+// ── Cérebro: Claude conversa sobre o dossiê (rápido pq o dossiê já está pronto) ──
+async function perguntarIA(pergunta, days) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error('SEM_CREDITO_OU_CHAVE');
+  const dossie = getDossie(days || 30);
+  const system = [
+    'Você é a IA Gestora de Marketing da TopFood Embalagens (embalagens food service: pastel, churros, hambúrguer, batata frita).',
+    'Responda em português do Brasil, DIRETO e prático, com dados e recomendações acionáveis. Use listas curtas e números quando ajudar.',
+    'Verba de marketing aprovada: R$ 3.000/mês (~R$ 100/dia) somando Google + Meta + TikTok.',
+    'Estratégia de verba: fase de teste (espalhar pouco, achar o que converte) → concentrar no que traz cliente mais barato.',
+    'IMPORTANTE: baseie-se SOMENTE no dossiê abaixo (comportamento real do site nos últimos dias). Se ainda não houver dados de anúncios, deixe claro que as campanhas ainda não rodaram e foque no que dá pra ver do site.',
+    'Nunca invente números que não estão no dossiê.',
+    '',
+    'DOSSIÊ ATUAL (JSON):',
+    JSON.stringify(dossie)
+  ].join('\n');
+
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5',
+      max_tokens: 800,
+      system,
+      messages: [{ role: 'user', content: String(pergunta || 'Faça um resumo do que está acontecendo no site e o que devo priorizar.') }]
+    })
+  });
+  if (!r.ok) {
+    const txt = await r.text();
+    if (r.status === 400 && /credit/i.test(txt)) throw new Error('SEM_CREDITO_OU_CHAVE');
+    throw new Error('Claude ' + r.status + ': ' + txt.slice(0, 150));
+  }
+  const data = await r.json();
+  return (data.content || []).map(b => b.text || '').join('').trim();
+}
+
 // ── Rotas ───────────────────────────────────────────────────
 function registerInsightsRoutes(app, requireAuth) {
   // Público — o site manda os eventos de comportamento
@@ -119,7 +155,21 @@ function registerInsightsRoutes(app, requireAuth) {
     }
   });
 
-  console.log('[M15] Insights do site registrado: POST /api/track + GET /api/eco/insights');
+  // Painel — pergunta livre à IA Gestora (responde com base no dossiê)
+  app.post('/api/eco/insights/perguntar', requireAuth, async (req, res) => {
+    try {
+      const resposta = await perguntarIA((req.body && req.body.pergunta) || '', (req.body && req.body.days) || 30);
+      res.json({ ok: true, resposta });
+    } catch (e) {
+      if (e.message === 'SEM_CREDITO_OU_CHAVE') {
+        return res.json({ ok: false, semCredito: true,
+          resposta: 'A IA precisa de créditos da Anthropic para analisar. Assim que os créditos forem adicionados (previsto p/ segunda), ela responde aqui. Os dados já estão sendo coletados normalmente — veja o dossiê acima.' });
+      }
+      res.status(500).json({ ok: false, error: e.message });
+    }
+  });
+
+  console.log('[M15] Insights do site registrado: POST /api/track + GET /api/eco/insights + perguntar');
 }
 
 module.exports = { registerInsightsRoutes, getDossie };

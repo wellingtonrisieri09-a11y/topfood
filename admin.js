@@ -4,8 +4,8 @@
 ══════════════════════════════════════════════════════ */
 // Permissões espelhadas do servidor (para UI)
 const ROLE_PERMISSIONS = {
-  owner:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','campaigns','newsletter','contact','settings','users'], canDelete: true  },
-  admin:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','campaigns','contact','settings','users'], canDelete: true  },
+  owner:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','newsletter','contact','settings','users'], canDelete: true  },
+  admin:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','contact','settings','users'], canDelete: true  },
   socio:      { pages: ['overview','orders','reports','adcenter','campaigns'],                                                                 canDelete: true  },
   secretaria: { pages: ['orders','customers','abandoned','contact'],                                                                canDelete: false },
   designer:   { pages: ['orders'],                                                                                                  canDelete: false },
@@ -191,6 +191,7 @@ async function loadAll() {
 ══════════════════════════════════════════════════════ */
 const PAGE_TITLES = {
   atendente:'IA Atendente',
+  insights:'Inteligência',
   overview:'Visão Geral', orders:'Pedidos', products:'Produtos',
   customers:'Clientes', abandoned:'Carrinhos Abandonados',
   reports:'Relatórios', campaigns:'Campanhas & SEO',
@@ -217,6 +218,7 @@ function navigate(page) {
   if(page==='reports')   renderReports();
   if(page==='adcenter')   loadAdCenter();
   if(page==='atendente')  loadAtendente();
+  if(page==='insights')   loadInsights();
     if(page==='campaigns')  loadCampaigns();
   if(page==='newsletter') loadNewsletterLeads();
   if(page==='contact')    loadContactMessages();
@@ -2697,4 +2699,45 @@ async function atResume(jid) {
     toast('IA retomada nesse chat!');
     atLoadPausados(); atRefresh();
   } catch(e) { toast('Erro ao retomar', 'error'); }
+}
+
+
+/* ══════════════════════════════════════════════════════
+   M15 — INTELIGÊNCIA (IA Gestora · Camada 1)
+══════════════════════════════════════════════════════ */
+function inList(elId, arr, fmt) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!arr || !arr.length) { el.innerHTML = '<p style="opacity:.6">Ainda sem dados — vão aparecer conforme os clientes navegam.</p>'; return; }
+  el.innerHTML = arr.map(function(x){
+    return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(128,128,128,.15)">' + fmt(x) + '</div>';
+  }).join('');
+}
+
+async function loadInsights() {
+  try {
+    const d = await api('/api/eco/insights');
+    document.getElementById('in-eventos').textContent = d.resumo.eventos;
+    document.getElementById('in-pedidos').textContent = d.resumo.pedidos;
+    document.getElementById('in-fat').textContent = 'R$ ' + Number(d.resumo.faturamento||0).toFixed(2).replace('.',',');
+    document.getElementById('in-aband').textContent = d.resumo.carrinhos_abandonados;
+    inList('in-buscas', d.buscas_top, function(x){ return '<span>'+x.ref+'</span><b>'+x.n+'</b>'; });
+    inList('in-vistos', d.produtos_vistos, function(x){ return '<span>'+x.ref+'</span><b>'+x.n+'</b>'; });
+    inList('in-carts', d.produtos_add_carrinho, function(x){ return '<span>'+x.ref+'</span><b>'+x.n+'</b>'; });
+    inList('in-oport', d.oportunidades, function(o){ return '<span>'+o.id+'</span><b>'+o.views+' views · '+o.conversao+'% carrinho</b>'; });
+  } catch(e) { toast('Erro ao carregar inteligência', 'error'); }
+}
+
+async function askIA(pergunta) {
+  const box = document.getElementById('in-resposta');
+  box.textContent = '🤔 Analisando os dados do site...';
+  try {
+    const r = await api('/api/eco/insights/perguntar', { method:'POST', body: JSON.stringify({ pergunta: pergunta }) });
+    box.textContent = r.resposta || r.error || 'Sem resposta.';
+  } catch(e) { box.textContent = 'Erro: ' + e.message; }
+}
+function askIAFromBox() {
+  const q = document.getElementById('in-pergunta').value.trim();
+  if (!q) { toast('Escreva uma pergunta', 'error'); return; }
+  askIA(q);
 }
