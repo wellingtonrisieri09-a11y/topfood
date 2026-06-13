@@ -89,17 +89,18 @@
     ctx.font = '800 64px Arial';
     wrapText(state.chamada || (curProd ? curProd.name : 'Sua embalagem aqui'), W / 2, txtY, W - 140, 70);
 
-    // selo de preço (círculo amarelo)
+    // selo de preço (círculo amarelo) — canto superior direito da foto, sem encostar no texto
     if (curProd) {
       const v = curProd.variants[state.precoIdx] || curProd.variants[0];
-      const cx = state.formato === 'story' ? W - 230 : W - 200;
-      const cy = state.formato === 'story' ? H - 430 : H - 350;
-      ctx.beginPath(); ctx.arc(cx, cy, 130, 0, Math.PI * 2);
+      const cx = W - pad - 60;
+      const cy = photoY + 76;
+      ctx.beginPath(); ctx.arc(cx, cy, 112, 0, Math.PI * 2);
       ctx.fillStyle = YELLOW; ctx.fill();
+      ctx.lineWidth = 7; ctx.strokeStyle = RED; ctx.stroke();
       ctx.fillStyle = DARK; ctx.textAlign = 'center';
-      ctx.font = '600 24px Arial'; ctx.fillText('A partir de', cx, cy - 42);
-      ctx.font = '800 58px Arial'; ctx.fillText('R$ ' + Math.round(v.price), cx, cy + 14);
-      ctx.font = '700 26px Arial'; ctx.fillText(v.units + ' unidades', cx, cy + 56);
+      ctx.font = '600 22px Arial'; ctx.fillText('A partir de', cx, cy - 36);
+      ctx.font = '800 52px Arial'; ctx.fillText('R$ ' + Math.round(v.price), cx, cy + 12);
+      ctx.font = '700 23px Arial'; ctx.fillText(v.units + ' unidades', cx, cy + 46);
     }
 
     // rodapé
@@ -107,7 +108,7 @@
     ctx.font = '700 30px Arial';
     ctx.fillText('topfoodembalagens.com.br', W / 2, H - 90);
     ctx.font = '600 28px Arial';
-    ctx.fillText('📱 (11) 98885-6367', W / 2, H - 48);
+    ctx.fillText('WhatsApp (11) 98885-6367', W / 2, H - 48);
   }
 
   function wrapText(text, x, y, maxW, lh) {
