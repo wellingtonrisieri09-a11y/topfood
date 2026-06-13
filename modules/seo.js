@@ -44,7 +44,7 @@ function cardHTML(p) {
   const precoFmt = 'R$ ' + Number(minPrice).toFixed(2).replace('.', ',');
   return '\n      <div class="product-card" id="' + id + '">'
     + '<a href="/produto/' + id + '" class="product-img" style="display:block;text-decoration:none">'
-    + (imgEsc ? '<img src="' + imgEsc + '" alt="' + name + '" loading="lazy" />' : '') + '</a>'
+    + (imgEsc ? '<img src="' + imgEsc + '" alt="' + name + ' para delivery — embalagem food service TopFood" loading="lazy" />' : '') + '</a>'
     + '<div class="product-body">'
     + (cat ? '<div class="product-cat">' + cat + '</div>' : '')
     + '<h3><a href="/produto/' + id + '" style="color:inherit;text-decoration:none">' + name + '</a></h3>'
