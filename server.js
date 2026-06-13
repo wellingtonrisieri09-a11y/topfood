@@ -2,7 +2,7 @@ require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
 const { readData, writeData, readSettings, db, auditLog, blacklistToken, isTokenBlacklisted, releaseExpiredReservations, cleanBlacklist } = require('./db');
-const { registerSeoRoutes, seoTitle } = require('./modules/seo');
+const { registerSeoRoutes, seoTitle, seoContent } = require('./modules/seo');
 const { registerAuthRoutes, requireAuth, requireOwner, requireAdminPlus } = require('./modules/auth');
 const { registerFeedRoutes }   = require('./modules/feeds');
 const { registerBudgetRoutes } = require('./modules/budget');
@@ -1435,6 +1435,9 @@ app.get('/produto/:slug', function(req, res) {
       '</head>',
       '<script type="application/ld+json">' + schema + '</script>\n</head>'
     );
+    var _seoBlock = seoContent(product);
+    html = html.replace('<section class="related-section"', _seoBlock.html + '\n<section class="related-section"');
+    html = html.replace('</head>', _seoBlock.faqSchema + '\n</head>');
     res.send(html);
   } catch(e) {
     console.error('Erro ao injetar OG tags:', e.message);
