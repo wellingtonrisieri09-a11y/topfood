@@ -214,6 +214,7 @@
     showToast(`✅ ${name} adicionado!`);
     // 📊 Tracking
     if (window.TFTrack) TFTrack.addToCart({ id: key, name, price, qty, pack, category: key });
+    if (window.TFInsights) TFInsights.track('add_cart', key);
   }
 
   function removeFromCart(id) {
@@ -300,6 +301,8 @@
   function filterProductsGrid() {
     const q   = (document.getElementById('product-search')?.value || '').toLowerCase();
     const cat = document.getElementById('category-filter')?.value || '';
+    clearTimeout(window._searchTrackT);
+    if (q && q.length >= 3 && window.TFInsights) window._searchTrackT = setTimeout(function(){ TFInsights.track('search', q); }, 900);
     const cards = document.querySelectorAll('#products-grid .product-card');
     let shown = 0;
     cards.forEach(card => {

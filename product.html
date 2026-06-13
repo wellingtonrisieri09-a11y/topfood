@@ -773,6 +773,7 @@ ttq.page();
   async function loadProduct() {
     var parts = window.location.pathname.split('/'); var slugIdx = parts.indexOf('produto'); var id = slugIdx >= 0 && parts[slugIdx+1] ? parts[slugIdx+1] : new URLSearchParams(window.location.search).get('id');
     if (!id) { showError('Nenhum produto especificado.'); return; }
+    if (window.TFInsights) TFInsights.track('view', id);
     try {
       // Busca todos os produtos de uma vez (reutiliza para o "Veja também")
       const r = await fetch('/api/products');
@@ -897,6 +898,7 @@ ttq.page();
     <div class="lightbox-hint">Clique na foto para ampliar · ESC para fechar</div>
     <div class="lightbox-counter" id="lbCounter"></div>
   </div>
+<script src="/track.js" defer></script>
 <script src="/online.js" defer></script>
 </body>
 </html>
