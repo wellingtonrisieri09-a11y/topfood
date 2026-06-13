@@ -124,6 +124,16 @@ function seoContent(product) {
   return { html: html, faqSchema: '<script type="application/ld+json">' + faqSchema + '</script>' };
 }
 
+// Bloco de conteúdo SEO da home (texto rico em palavras-chave, aprovado pelo Wellington)
+function homeContent() {
+  return '\n<section class="home-seo" style="max-width:1000px;margin:24px auto;padding:28px 20px;line-height:1.7;color:#333">'
+    + '<h2 style="font-size:1.4rem;margin-bottom:12px;color:#1a1a1a">Embalagens food service para delivery — com design exclusivo</h2>'
+    + '<p>A TopFood Embalagens produz embalagens para delivery e food service pensadas para <strong>hamburguerias, pastelarias, lanchonetes, food trucks e restaurantes</strong>. Trabalhamos com <strong>papel duplex 250g e impressão offset</strong> de alta definição — embalagens resistentes, bonitas e que valorizam o seu produto na entrega.</p>'
+    + '<p>Nossa linha cobre os principais segmentos: <strong>embalagem para hambúrguer</strong> (caixa delivery), <strong>embalagem para pastel</strong> (pillow box), <strong>embalagem para churros</strong> (caixa tubular) e <strong>embalagem para batata frita</strong> (caixa e cone) — todas com design chalk art exclusivo, em pacotes a partir de 50 unidades e envio para todo o Brasil.</p>'
+    + '<p>Compre no <strong>atacado</strong> direto do site, com pagamento via PIX. Pedido mínimo de 50 unidades.</p>'
+    + '</section>\n';
+}
+
 // Registra a rota da home com SSR. DEVE ser chamada ANTES do express.static.
 function registerSeoRoutes(app, readData) {
   app.get('/', function (req, res, next) {
@@ -138,6 +148,8 @@ function registerSeoRoutes(app, readData) {
       // injeta os cards ANTES do spinner (Google lê; JS depois substitui o grid)
       const cards = products.map(cardHTML).join('');
       html = html.replace(anchor, cards + '\n    <div id="products-loading"');
+      // injeta a seção de conteúdo SEO antes do rodapé
+      if (html.indexOf('<footer>') !== -1) html = html.replace('<footer>', homeContent() + '<footer>');
       res.set('Content-Type', 'text/html; charset=utf-8');
       res.send(html);
     } catch (e) {
