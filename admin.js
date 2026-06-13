@@ -4,8 +4,8 @@
 ══════════════════════════════════════════════════════ */
 // Permissões espelhadas do servidor (para UI)
 const ROLE_PERMISSIONS = {
-  owner:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','newsletter','contact','settings','users'], canDelete: true  },
-  admin:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','contact','settings','users'], canDelete: true  },
+  owner:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','criativos','insights','campaigns','newsletter','contact','settings','users'], canDelete: true  },
+  admin:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','criativos','insights','campaigns','contact','settings','users'], canDelete: true  },
   socio:      { pages: ['overview','orders','reports','adcenter','campaigns'],                                                                 canDelete: true  },
   secretaria: { pages: ['orders','customers','abandoned','contact'],                                                                canDelete: false },
   designer:   { pages: ['orders'],                                                                                                  canDelete: false },
@@ -191,6 +191,7 @@ async function loadAll() {
 ══════════════════════════════════════════════════════ */
 const PAGE_TITLES = {
   atendente:'IA Atendente',
+  criativos:'Criativos',
   insights:'Inteligência',
   overview:'Visão Geral', orders:'Pedidos', products:'Produtos',
   customers:'Clientes', abandoned:'Carrinhos Abandonados',
@@ -218,6 +219,7 @@ function navigate(page) {
   if(page==='reports')   renderReports();
   if(page==='adcenter')   loadAdCenter();
   if(page==='atendente')  loadAtendente();
+  if(page==='criativos')  loadCriativos();
   if(page==='insights')   loadInsights();
     if(page==='campaigns')  loadCampaigns();
   if(page==='newsletter') loadNewsletterLeads();
@@ -2740,4 +2742,16 @@ function askIAFromBox() {
   const q = document.getElementById('in-pergunta').value.trim();
   if (!q) { toast('Escreva uma pergunta', 'error'); return; }
   askIA(q);
+}
+
+
+/* ══════════════════════════════════════════════════════
+   M13 — GERADOR DE CRIATIVOS
+══════════════════════════════════════════════════════ */
+async function loadCriativos() {
+  try {
+    let prods = (STATE.products && STATE.products.length) ? STATE.products : await api('/api/products');
+    window.ALL_PRODUCTS = prods;
+    if (window.Criativos) Criativos.init();
+  } catch(e) { toast('Erro ao carregar produtos', 'error'); }
 }
