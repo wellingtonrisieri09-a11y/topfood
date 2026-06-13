@@ -1377,6 +1377,7 @@ app.get('/produto/:slug', function(req, res) {
   const imgUrl  = img ? (img.startsWith('http') ? img : baseUrl + '/' + img) : '';
   const desc    = (product.description || product.name || '').replace(/"/g, '&quot;').slice(0, 160);
   const title   = (product.name || 'Produto').replace(/"/g, '&quot;');
+  const metaDesc = (product.name + ': ' + (product.description || '')).replace(/"/g, '&quot;').replace(/\s+/g, ' ').slice(0, 158);
 
   try {
     let html = fs.readFileSync(path.join(__dirname, 'product.html'), 'utf8');
@@ -1384,6 +1385,10 @@ app.get('/produto/:slug', function(req, res) {
     html = html.replace(
       '<title>Produto — TopFood Embalagens</title>',
       '<title>' + title + ' — TopFood Embalagens</title>'
+    );
+    html = html.replace(
+      'content="Compre embalagens food service de qualidade para pastel, churros, hamburguer e fritas. Embalagens kraft impermeabilizadas para restaurantes e delivery. TopFood Embalagens - São Paulo."',
+      'content="' + metaDesc + '"'
     );
     // OG title
     html = html.replace(
