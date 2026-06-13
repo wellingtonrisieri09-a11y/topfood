@@ -2,6 +2,7 @@ require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
 const { readData, writeData, readSettings, db, auditLog, blacklistToken, isTokenBlacklisted, releaseExpiredReservations, cleanBlacklist } = require('./db');
+const { registerSeoRoutes } = require('./modules/seo');
 const { registerAuthRoutes, requireAuth, requireOwner, requireAdminPlus } = require('./modules/auth');
 const { registerFeedRoutes }   = require('./modules/feeds');
 const { registerBudgetRoutes } = require('./modules/budget');
@@ -286,6 +287,7 @@ app.use(express.json({ limit: '15mb' }));        // Permite imagens em base64 (a
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.get('/admin', (req, res) => res.redirect(301, '/admin.html'));
 app.get('/product.html', function(req, res, next) { var id = req.query.id; if (id) { return res.redirect(301, '/produto/' + encodeURIComponent(id)); } next(); });
+registerSeoRoutes(app, readData);
 app.use(express.static(path.join(__dirname)));
 
 // ============================================================
