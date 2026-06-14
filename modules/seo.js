@@ -124,14 +124,25 @@ function seoContent(product) {
   return { html: html, faqSchema: '<script type="application/ld+json">' + faqSchema + '</script>' };
 }
 
-// Bloco de conteúdo SEO da home (texto rico em palavras-chave, aprovado pelo Wellington)
+// Bloco de conteúdo SEO da home — card elegante e centralizado (aprovado pelo Wellington)
 function homeContent() {
-  return '\n<section class="home-seo" style="max-width:1000px;margin:24px auto;padding:28px 20px;line-height:1.7;color:#333">'
-    + '<h2 style="font-size:1.4rem;margin-bottom:12px;color:#1a1a1a">Embalagens food service para delivery — com design exclusivo</h2>'
-    + '<p>A TopFood Embalagens produz embalagens para delivery e food service pensadas para <strong>hamburguerias, pastelarias, lanchonetes, food trucks e restaurantes</strong>. Trabalhamos com <strong>papel duplex 250g e impressão offset</strong> de alta definição — embalagens resistentes, bonitas e que valorizam o seu produto na entrega.</p>'
-    + '<p>Nossa linha cobre os principais segmentos: <strong>embalagem para hambúrguer</strong> (caixa delivery), <strong>embalagem para pastel</strong> (pillow box), <strong>embalagem para churros</strong> (caixa tubular) e <strong>embalagem para batata frita</strong> (caixa e cone) — todas com design chalk art exclusivo, em pacotes a partir de 50 unidades e envio para todo o Brasil.</p>'
-    + '<p>Compre no <strong>atacado</strong> direto do site, com pagamento via PIX. Pedido mínimo de 50 unidades.</p>'
-    + '</section>\n';
+  const chip = (icone, texto) =>
+    '<span style="display:inline-flex;align-items:center;gap:7px;background:#FFF6E5;color:#1a1a1a;'
+    + 'border:1px solid #FFD699;border-radius:24px;padding:9px 18px;font-weight:600;font-size:.92rem">'
+    + icone + ' ' + texto + '</span>';
+  return '\n<section class="home-seo" style="max-width:1000px;margin:36px auto;padding:0 20px">'
+    + '<div style="background:#fff;border-radius:18px;box-shadow:0 8px 32px rgba(0,0,0,.08);'
+    + 'padding:44px 32px;text-align:center;line-height:1.75;color:#444">'
+    + '<h2 style="font-size:1.65rem;font-weight:800;color:#1a1a1a;margin:0">Embalagens food service para delivery</h2>'
+    + '<div style="width:66px;height:4px;background:#CC0000;border-radius:2px;margin:14px auto 24px"></div>'
+    + '<p style="max-width:760px;margin:0 auto 14px">A <strong>TopFood Embalagens</strong> produz embalagens para delivery e food service pensadas para <strong>hamburguerias, pastelarias, lanchonetes, food trucks e restaurantes</strong>. Trabalhamos com <strong>papel duplex 250g e impressão offset</strong> de alta definição — embalagens resistentes, bonitas e que valorizam o seu produto na entrega.</p>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:26px auto 22px">'
+    + chip('🍔', 'Embalagem para Hambúrguer') + chip('🥟', 'Embalagem para Pastel')
+    + chip('🌭', 'Embalagem para Churros') + chip('🍟', 'Embalagem para Batata Frita')
+    + '</div>'
+    + '<p style="max-width:760px;margin:0 auto 16px">Todos os modelos com <strong>design chalk art exclusivo</strong>, em pacotes a partir de 50 unidades e envio para todo o Brasil.</p>'
+    + '<p style="max-width:760px;margin:0 auto;font-weight:700;color:#CC0000;font-size:1.02rem">Compre no atacado direto do site, com pagamento via PIX · Pedido mínimo de 50 unidades</p>'
+    + '</div></section>\n';
 }
 
 // Registra a rota da home com SSR. DEVE ser chamada ANTES do express.static.
