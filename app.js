@@ -139,6 +139,40 @@
       variants:[{units:50,price:38},{units:100,price:72},{units:250,price:168}] },
   ];
 
+  // Lê link de orçamento da IA (?orcar=produto:pacote:qtd,...&cep=) e monta o carrinho
+  function aplicarOrcamentoURL() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var orcar = params.get('orcar');
+      if (!orcar) return;
+      var cep = (params.get('cep') || '').replace(/\D/g, '');
+      var add = 0;
+      orcar.split(',').forEach(function(tok) {
+        var parts = tok.split(':');
+        var pid = parts[0], pacote = parseInt(parts[1]), qtd = Math.max(1, parseInt(parts[2]) || 1);
+        var prod = (ALL_PRODUCTS || []).find(function(p) { return p.id === pid; });
+        if (!prod || !prod.variants) return;
+        var idx = prod.variants.findIndex(function(v) { return Number(v.units) === pacote; });
+        if (idx < 0) return;
+        var v = prod.variants[idx];
+        var id = 'sel-' + pid + '-' + idx;
+        var ex = cart.find(function(c) { return c.id === id; });
+        if (ex) { ex.qty += qtd; ex.total = ex.price * ex.qty; }
+        else cart.push({ id: id, name: prod.name, img: prod.image, pack: v.units, qty: qtd, price: v.price, total: v.price * qtd });
+        add++;
+      });
+      if (!add) return;
+      saveCartLocal();
+      renderCart();
+      openCart();
+      if (cep && cep.length === 8) {
+        var inp = document.getElementById('cartCepInput');
+        if (inp) { inp.value = cep; if (typeof calcularFrete === 'function') calcularFrete('cart'); }
+      }
+      if (window.history && history.replaceState) history.replaceState(null, '', window.location.pathname);
+    } catch (e) {}
+  }
+
   async function loadProducts() {
     try {
       const [productsRes, settingsRes] = await Promise.all([
@@ -169,6 +203,7 @@
       if (window._prodRetry <= 3) { setTimeout(loadProducts, 2500); return; }
       renderProducts(PRODUCTS_FALLBACK);
     }
+    aplicarOrcamentoURL();
     // Após carregar: rola para âncora do hash se existir (#pastel, #churros, etc.)
     const hash = window.location.hash;
     if (hash && hash !== '#cart') {
