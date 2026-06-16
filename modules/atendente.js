@@ -145,51 +145,114 @@ function getFichaCliente(jid) {
 }
 
 // ------------------------------------------------------------
-// Claude
+// Lista de produtos (para a IA montar orçamento com ids/pacotes certos)
 // ------------------------------------------------------------
+function getProdutosLista() {
+  try {
+    const { readData } = require('../db');
+    return (readData('products.json') || []).filter(p => p.active !== false);
+  } catch { return []; }
+}
+
+// ------------------------------------------------------------
+// Claude (com ferramenta de orçamento — tool use)
+// ------------------------------------------------------------
+const { montarOrcamento } = require('./frete');
+
 async function askClaude(jid, userText) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY ausente no .env');
 
   const catalog = await getCatalogText();
   const ficha = getFichaCliente(jid);
+  const produtos = getProdutosLista();
+  const listaProdutos = produtos.map(p => {
+    const pacs = (p.variants || []).map(v => v.units + ' un = R$ ' + v.price).join(' · ');
+    return `- id "${p.id}" (${p.name}): ${pacs}`;
+  }).join('\n');
+
   const system = [
     'Você é a atendente virtual da TopFood Embalagens (embalagens food service: pastel, churros, hambúrguer, batata frita).',
     `Site e checkout: ${SITE} — WhatsApp humano: (11) 98885-6367.`,
     'Endereço: R. Reinaldo Teixeira, 85 — Alvarenga, São Bernardo do Campo — SP.',
-    'Responda SEMPRE em português do Brasil, tom simpático e direto, mensagens curtas (estilo WhatsApp, máx ~4 linhas), pode usar 1 emoji.',
+    'Responda SEMPRE em português do Brasil, tom simpático e direto, mensagens curtas (estilo WhatsApp, máx ~5 linhas), pode usar 1 emoji.',
     '',
     'CATÁLOGO ATUAL:', catalog, '',
+    'PRODUTOS (use estes ids e pacotes ao montar orçamento):', listaProdutos, '',
     'REGRAS OBRIGATÓRIAS:',
     '1. NUNCA confirme pagamentos, NUNCA dê desconto, NUNCA negocie preço. Preço é o do catálogo.',
-    `2. Para comprar: sempre direcione para o site ${SITE} (lá tem PIX e o pedido cai direto no sistema).`,
-    '3. Se não souber a resposta, se o cliente reclamar, pedir orçamento personalizado/arte/quantidade fora do catálogo, ou pedir para falar com uma pessoa: responda EXATAMENTE começando com [HUMANO] seguido de uma frase educada avisando que vai chamar um atendente.',
-    '4. Não invente prazos de entrega nem fretes — diga que o frete é calculado no site pelo CEP.',
-    '5. Não fale sobre assuntos fora da TopFood.',
+    '2. QUANTIDADES PERSONALIZADAS (350, 500, 750, 800 un etc.): NUNCA chame humano por causa de quantidade. Qualquer quantidade é atendida combinando pacotes (50, 100 e 250 un). Use a combinação mais econômica. Exemplos: 350 = 1×250 + 1×100 | 500 = 2×250 | 750 = 3×250 | 800 = 3×250 + 1×50 | 600 = 2×250 + 1×100 | 150 = 1×100 + 1×50. Some os preços de cada pacote e apresente o total claramente.',
+    '3. ORÇAMENTO COMPLETO (com frete): quando o cliente disser O QUE quer comprar E informar o CEP, use a ferramenta "montar_orcamento". Para quantidades personalizadas, decomponha nos pacotes necessários ao chamar a ferramenta (ex: 350 pastéis = pacote 250 qtd 1 + pacote 100 qtd 1). Se faltar CEP ou itens, peça antes de usar a ferramenta.',
+    '4. Ao receber o resultado da ferramenta: apresente o resumo (itens, frete PAC e SEDEX, total) de forma curta e clara, e mande o link de checkout para o cliente finalizar e pagar (PIX no site).',
+    '4. Se não souber a resposta, se o cliente reclamar, pedir arte/quantidade fora do catálogo, ou pedir para falar com uma pessoa: responda EXATAMENTE começando com [HUMANO] seguido de uma frase educada avisando que vai chamar um atendente.',
+    '5. Não invente fretes nem prazos — use SEMPRE a ferramenta para calcular. Não fale sobre assuntos fora da TopFood.',
     '6. Se o cliente disser o nome dele, passe a usá-lo naturalmente.',
     ficha ? '\n' + ficha : '',
     cfg.promptExtra ? `\nINSTRUÇÕES EXTRAS DO DONO:\n${cfg.promptExtra}` : ''
   ].join('\n');
 
-  const ctx = chatContext.get(jid) || [];
-  ctx.push({ role: 'user', content: userText });
-  while (ctx.length > MAX_CTX) ctx.shift();
+  const tools = [{
+    name: 'montar_orcamento',
+    description: 'Calcula o orçamento completo (produtos + frete pelo CEP) e gera um link de checkout pré-preenchido para o cliente pagar no site. Use SOMENTE quando souber os itens E o CEP do cliente.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        cep: { type: 'string', description: 'CEP do cliente (com ou sem traço)' },
+        itens: {
+          type: 'array', description: 'Itens do pedido',
+          items: {
+            type: 'object',
+            properties: {
+              produto_id: { type: 'string', description: 'id exato do produto da lista PRODUTOS (ex: pastel, burger, churros, fritas)' },
+              pacote: { type: 'integer', description: 'tamanho do pacote em unidades: 50, 100 ou 250' },
+              quantidade: { type: 'integer', description: 'quantos pacotes desse item' }
+            },
+            required: ['produto_id', 'pacote', 'quantidade']
+          }
+        }
+      },
+      required: ['cep', 'itens']
+    }
+  }];
 
-  const r = await fetch(CLAUDE_URL, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 400, system, messages: ctx })
-  });
-  if (!r.ok) throw new Error(`Claude API ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  const data = await r.json();
-  const reply = (data.content || []).map(b => b.text || '').join('').trim();
-  ctx.push({ role: 'assistant', content: reply });
-  chatContext.set(jid, ctx);
-  mem.contexts[jid] = ctx; saveMem(); // M8: memória sobrevive a reinícios
+  // histórico persistente é só-texto; o loop de tool use usa uma cópia de trabalho
+  const hist = chatContext.get(jid) || [];
+  const work = hist.concat([{ role: 'user', content: userText }]);
+  while (work.length > MAX_CTX) work.shift();
+
+  let reply = '';
+  for (let i = 0; i < 4; i++) {
+    const r = await fetch(CLAUDE_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 700, system, tools, messages: work })
+    });
+    if (!r.ok) throw new Error(`Claude API ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    const data = await r.json();
+    work.push({ role: 'assistant', content: data.content });
+
+    if (data.stop_reason === 'tool_use') {
+      const results = [];
+      for (const block of data.content) {
+        if (block.type === 'tool_use' && block.name === 'montar_orcamento') {
+          let out;
+          try { out = await montarOrcamento(block.input.cep, block.input.itens, produtos); }
+          catch (e) { out = { ok: false, erro: e.message }; }
+          results.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(out) });
+        }
+      }
+      work.push({ role: 'user', content: results });
+      continue;
+    }
+    reply = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    break;
+  }
+
+  // salva no histórico só o texto (mantém memória limpa e evita quebrar tool blocks)
+  const novoHist = hist.concat([{ role: 'user', content: userText }, { role: 'assistant', content: reply }]);
+  while (novoHist.length > MAX_CTX) novoHist.shift();
+  chatContext.set(jid, novoHist);
+  mem.contexts[jid] = novoHist; saveMem();
   return reply;
 }
 
