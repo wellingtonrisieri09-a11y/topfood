@@ -333,6 +333,7 @@
       <div class="nav-item" data-page="contact" onclick="navigate('contact')"><i class="fa fa-envelope nav-icon"></i><span>Mensagens</span><span class="nav-badge" id="badge-contact" style="display:none">0</span></div>
       <div class="nav-label">Sistema</div>
       <div class="nav-item" data-page="settings" onclick="navigate('settings')"><i class="fa fa-gear nav-icon"></i><span>Configurações</span></div>
+      <div class="nav-item" data-page="nfe" onclick="navigate('nfe')"><i class="fa fa-file-invoice-dollar nav-icon"></i><span>Nota Fiscal</span></div>
       <div class="nav-item" data-page="users" onclick="navigate('users')"><i class="fa fa-user-shield nav-icon"></i><span>Usuários</span></div>
     </nav>
     <div class="sidebar-footer">
@@ -1076,6 +1077,39 @@
 
       <!-- ── USUÁRIOS ───────────────────────────── -->
             <!-- M5: IA ATENDENTE -->
+      <section id="page-nfe" class="page">
+        <div class="page-header"><h1><i class="fa fa-file-invoice-dollar"></i> Nota Fiscal (NF-e)</h1></div>
+        <div id="nfe-status" style="margin-bottom:16px"></div>
+        <div style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:24px;max-width:780px">
+          <p style="color:#6b7280;font-size:.9rem;margin-top:0">Em <strong>homologacao</strong> as notas sao de teste (nao valem fiscalmente). So mude para <strong>producao</strong> apos validar uma nota de teste.</p>
+          <h3 style="margin:18px 0 4px">Focus NFe (emissor)</h3>
+          <label style="font-weight:600;font-size:.85rem;color:#374151;display:block">Ambiente</label>
+          <select id="nfe-ambiente" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;margin:4px 0 12px;font-size:.92rem"><option value="homologacao">Homologacao (teste)</option><option value="producao">Producao (vale fiscal)</option></select>
+          <label style="font-weight:600;font-size:.85rem;color:#374151;display:block">Token Focus NFe &mdash; Homologacao</label>
+          <input id="nfe-token-homologacao" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;margin:4px 0 12px;font-size:.92rem" placeholder="cole o token de teste">
+          <label style="font-weight:600;font-size:.85rem;color:#374151;display:block">Token Focus NFe &mdash; Producao</label>
+          <input id="nfe-token-producao" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;margin:4px 0 12px;font-size:.92rem" placeholder="cole o token de producao">
+          <h3 style="margin:18px 0 4px">Empresa (dados do contador)</h3>
+          <label style="font-weight:600;font-size:.85rem;color:#374151;display:block">Inscricao Estadual</label>
+          <input id="nfe-ie" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;margin:4px 0 12px;font-size:.92rem" placeholder="ex: 123.456.789.000">
+          <label style="font-weight:600;font-size:.85rem;color:#374151;display:block">Regime tributario</label>
+          <select id="nfe-regime" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;margin:4px 0 12px;font-size:.92rem"><option value="1">Simples Nacional</option><option value="3">Regime Normal</option></select>
+          <h3 style="margin:18px 0 4px">Classificacao dos produtos (contador)</h3>
+          <label style="font-weight:600;font-size:.85rem;color:#374151;display:block">NCM (8 digitos)</label>
+          <input id="nfe-ncm" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;margin:4px 0 12px;font-size:.92rem" placeholder="ex: 48191000">
+          <label style="font-weight:600;font-size:.85rem;color:#374151;display:block">CEST (se houver)</label>
+          <input id="nfe-cest" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;margin:4px 0 12px;font-size:.92rem" placeholder="deixe vazio se nao tiver">
+          <label style="font-weight:600;font-size:.85rem;color:#374151;display:block">CFOP dentro de SP</label>
+          <input id="nfe-cfop-dentro" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;margin:4px 0 12px;font-size:.92rem" value="5102">
+          <label style="font-weight:600;font-size:.85rem;color:#374151;display:block">CFOP fora de SP</label>
+          <input id="nfe-cfop-fora" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;margin:4px 0 12px;font-size:.92rem" value="6102">
+          <label style="font-weight:600;font-size:.85rem;color:#374151;display:block">CSOSN</label>
+          <input id="nfe-csosn" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;margin:4px 0 12px;font-size:.92rem" value="102">
+          <label style="font-weight:600;font-size:.85rem;color:#374151;display:block">Unidade</label>
+          <input id="nfe-unidade" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;margin:4px 0 12px;font-size:.92rem" value="UN">
+          <button onclick="saveNfeConfig()" style="margin-top:10px;background:#CC0000;color:#fff;border:0;border-radius:8px;padding:12px 28px;font-weight:700;cursor:pointer">Salvar configuracao</button>
+        </div>
+      </section>
       <section id="page-atendente" class="page">
         <div class="page-header">
           <div><h2>🤖 IA Atendente WhatsApp</h2></div>

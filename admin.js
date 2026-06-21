@@ -4,8 +4,8 @@
 ══════════════════════════════════════════════════════ */
 // Permissões espelhadas do servidor (para UI)
 const ROLE_PERMISSIONS = {
-  owner:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','newsletter','contact','settings','users'], canDelete: true  },
-  admin:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','contact','settings','users'], canDelete: true  },
+  owner:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','newsletter','contact','settings','nfe','users'], canDelete: true  },
+  admin:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','contact','settings','nfe','users'], canDelete: true  },
   socio:      { pages: ['overview','orders','reports','adcenter','campaigns'],                                                                 canDelete: true  },
   secretaria: { pages: ['orders','customers','abandoned','contact'],                                                                canDelete: false },
   designer:   { pages: ['orders'],                                                                                                  canDelete: false },
@@ -223,6 +223,7 @@ function navigate(page) {
   if(page==='newsletter') loadNewsletterLeads();
   if(page==='contact')    loadContactMessages();
   if(page==='settings')   loadSettingsForm();
+  if(page==='nfe')        loadNfeConfig();
   if(page==='users')     loadUsers();
 }
 function refreshPage() { navigate(STATE.currentPage); toast('Dados atualizados!'); }
@@ -2272,6 +2273,46 @@ function closeModal(e) {
 /* ══════════════════════════════════════════════════════
    TOAST
 ══════════════════════════════════════════════════════ */
+
+/* ── Nota Fiscal (NF-e) ───────────────────────────────── */
+function nfeVal(id){ const e=document.getElementById(id); return e? e.value.trim() : ''; }
+async function loadNfeConfig(){
+  try{
+    const c = await api('/api/eco/nfe/config');
+    const st = document.getElementById('nfe-status');
+    if(st){
+      if(c.configurado) st.innerHTML = '<div style="background:#dcfce7;color:#166534;padding:12px 16px;border-radius:8px;font-weight:600">Configuracao completa &mdash; pronto para emitir ('+c.ambiente+')</div>';
+      else st.innerHTML = '<div style="background:#fef9c3;color:#854d0e;padding:12px 16px;border-radius:8px">Ainda falta preencher: <strong>'+((c.faltam||[]).join(', ')||'-')+'</strong></div>';
+    }
+    if(c.ambiente) document.getElementById('nfe-ambiente').value=c.ambiente;
+    if(c.ncm) document.getElementById('nfe-ncm').value=c.ncm;
+    if(c.cfop_dentro) document.getElementById('nfe-cfop-dentro').value=c.cfop_dentro;
+    if(c.cfop_fora) document.getElementById('nfe-cfop-fora').value=c.cfop_fora;
+    if(c.csosn) document.getElementById('nfe-csosn').value=c.csosn;
+    const th=document.getElementById('nfe-token-homologacao'); if(th&&c.tem_token_homologacao) th.placeholder='(token ja salvo — deixe em branco p/ manter)';
+    const tp=document.getElementById('nfe-token-producao');   if(tp&&c.tem_token_producao)   tp.placeholder='(token ja salvo — deixe em branco p/ manter)';
+  }catch(e){ toast('Erro ao carregar config fiscal','error'); }
+}
+async function saveNfeConfig(){
+  const body = {
+    ambiente: nfeVal('nfe-ambiente'),
+    token_homologacao: nfeVal('nfe-token-homologacao'),
+    token_producao: nfeVal('nfe-token-producao'),
+    inscricao_estadual: nfeVal('nfe-ie'),
+    regime_tributario: parseInt(nfeVal('nfe-regime'))||1,
+    ncm: nfeVal('nfe-ncm'), cest: nfeVal('nfe-cest'),
+    cfop_dentro: nfeVal('nfe-cfop-dentro'), cfop_fora: nfeVal('nfe-cfop-fora'),
+    csosn: nfeVal('nfe-csosn'), unidade: nfeVal('nfe-unidade')
+  };
+  if(!body.token_homologacao) delete body.token_homologacao;
+  if(!body.token_producao) delete body.token_producao;
+  try{
+    const r = await api('/api/eco/nfe/config',{method:'POST',body:JSON.stringify(body)});
+    toast(r.configurado ? 'Salvo! Configuracao completa.' : 'Salvo. Falta: '+((r.faltam||[]).join(', ')||'-'));
+    loadNfeConfig();
+  }catch(e){ toast('Erro ao salvar configuracao','error'); }
+}
+
 function toast(msg, type='success') {
   const icons = {success:'fa-circle-check',error:'fa-circle-xmark',info:'fa-circle-info'};
   const t = document.createElement('div');

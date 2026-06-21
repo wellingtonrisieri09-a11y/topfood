@@ -4,8 +4,10 @@
 // Ambiente de homologação (teste, grátis) ou produção (vale fiscal).
 // ============================================================
 
+const axios = require('axios');
+
 const ENDPOINTS = {
-  homologacao: 'https://homologacao.api.focusnfe.com.br/v2/nfe',
+  homologacao: 'https://homologacao.focusnfe.com.br/v2/nfe',
   producao:    'https://api.focusnfe.com.br/v2/nfe'
 };
 
@@ -187,15 +189,15 @@ async function emitirNFe(order, readData, writeData) {
   const ref = 'topfood-' + (order.id || order.order_id || Date.now());
   const url = ENDPOINTS[cfg.ambiente] + '?ref=' + encodeURIComponent(ref);
 
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'Authorization': 'Basic ' + Buffer.from(token + ':').toString('base64')
-    },
-    body: JSON.stringify(payload)
-  });
-  const data = await r.json().catch(() => ({}));
+  let r;
+  try {
+    r = await axios.post(url, payload, {
+      headers: { 'content-type': 'application/json' },
+      auth: { username: token, password: '' },
+      timeout: 25000, maxRedirects: 0, validateStatus: () => true
+    });
+  } catch (e) { return { ok: false, erro: 'Falha de conexão com a Focus NFe: ' + e.message }; }
+  const data = r.data || {};
 
   if (r.status === 201 || r.status === 202) {
     // grava a referência no pedido para consulta posterior
@@ -216,8 +218,13 @@ async function emitirNFe(order, readData, writeData) {
 async function consultarNFe(ref, cfg) {
   const token = cfg.ambiente === 'producao' ? cfg.token_producao : cfg.token_homologacao;
   const url = ENDPOINTS[cfg.ambiente] + '/' + encodeURIComponent(ref);
-  const r = await fetch(url, { headers: { 'Authorization': 'Basic ' + Buffer.from(token + ':').toString('base64') } });
-  return r.json().catch(() => ({}));
+  try {
+    const r = await axios.get(url, {
+      auth: { username: token, password: '' },
+      timeout: 20000, maxRedirects: 0, validateStatus: () => true
+    });
+    return r.data || {};
+  } catch (e) { return { erro: e.message }; }
 }
 
 function registerNfeRoutes(app, readData, writeData, requireAuth) {
@@ -235,6 +242,23 @@ function registerNfeRoutes(app, readData, writeData, requireAuth) {
       ncm: cfg.ncm, cfop_dentro: cfg.cfop_dentro, cfop_fora: cfg.cfop_fora,
       csosn: cfg.csosn, inscricao_estadual: cfg.inscricao_estadual ? '***' : ''
     });
+  });
+
+  // salvar configuração fiscal (admin) — token Focus + dados do contador
+  app.post('/api/eco/nfe/config', requireAuth, (req, res) => {
+    try {
+      const b = req.body || {};
+      const s = readData('settings.json') || {};
+      const f = s.fiscal || {};
+      const campos = ['inscricao_estadual', 'regime_tributario', 'ncm', 'cest',
+        'cfop_dentro', 'cfop_fora', 'csosn', 'origem', 'unidade', 'natureza_operacao',
+        'token_homologacao', 'token_producao', 'ambiente'];
+      campos.forEach(k => { if (b[k] !== undefined && b[k] !== null && b[k] !== '') f[k] = b[k]; });
+      s.fiscal = f;
+      writeData('settings.json', s);
+      const cfg = getFiscalConfig(readData);
+      res.json({ ok: true, configurado: checarConfig(cfg).length === 0, faltam: checarConfig(cfg) });
+    } catch (e) { res.status(500).json({ ok: false, erro: e.message }); }
   });
 
   // emitir NF-e de um pedido (admin)
