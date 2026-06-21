@@ -101,6 +101,11 @@ function buildNfePayload(order, cfg) {
   const customer = order.customer || {};
   const { dest, erros, ehCNPJ } = montarDestinatario(customer);
 
+  // Regra da SEFAZ: em homologação o nome do destinatário é fixo (nota sem valor fiscal)
+  if (cfg.ambiente === 'homologacao') {
+    dest.nome_destinatario = 'NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL';
+  }
+
   const ufDest = dest.uf_destinatario;
   const cfop = (ufDest && ufDest !== EMITENTE_BASE.uf) ? cfop_outroEstado(cfg) : cfg.cfop_dentro;
 
