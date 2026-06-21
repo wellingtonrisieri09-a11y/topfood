@@ -53,7 +53,7 @@ async function buscarCEP(cep) {
     const r = await fetch('https://viacep.com.br/ws/' + c + '/json/');
     const d = await r.json();
     if (d.erro) return null;
-    return { uf: d.uf, cidade: d.localidade, bairro: d.bairro || '', cep: c };
+    return { uf: d.uf, cidade: d.localidade, bairro: d.bairro || '', logradouro: d.logradouro || '', cep: c };
   } catch { return null; }
 }
 

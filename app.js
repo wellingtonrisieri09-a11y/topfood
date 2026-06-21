@@ -93,7 +93,7 @@
       <div class="product-card" id="${key}">
         ${badgeHtml}
         <a href="/produto/${key}" class="product-img" style="display:block;text-decoration:none">
-          <img src="${p.image}" alt="${p.name}" loading="lazy" />
+          <img src="/${p.image.startsWith("/") ? p.image.slice(1) : p.image}" alt="${p.name}" loading="lazy" />
         </a>
         <div class="product-body">
           <div class="product-cat">${catLabel}</div>
@@ -1914,7 +1914,7 @@
   // Abre carrinho automaticamente se vier de outra pagina com #cart
   if (window.location.hash === '#cart') {
     history.replaceState(null, '', window.location.pathname);
-    setTimeout(() => openCart(), 600);
+    setTimeout(() => openCart(), 300);
   }
   // Trata retorno do Mercado Pago (?payment=success/failure/pending)
   (function() {

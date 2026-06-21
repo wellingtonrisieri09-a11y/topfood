@@ -77,7 +77,7 @@ function montarDestinatario(customer) {
   const dest = {
     nome_destinatario: customer.name || customer.razao_social || '',
     logradouro_destinatario: customer.logradouro || customer.address || '',
-    numero_destinatario: customer.numero || 'S/N',
+    numero_destinatario: customer.numero || customer.addrNum || 'S/N',
     bairro_destinatario: customer.bairro || 'Centro',
     municipio_destinatario: customer.city || '',
     uf_destinatario: (customer.state || '').toUpperCase(),
@@ -182,12 +182,34 @@ function buildNfePayload(order, cfg) {
 function cfop_outroEstado(cfg) { return cfg.cfop_fora; }
 function arred(v, casas) { const p = Math.pow(10, casas || 2); return Math.round(Number(v || 0) * p) / p; }
 
+// Completa o endereço do cliente pelo CEP (cidade/UF/rua/bairro) — o checkout
+// coleta CEP + número + CPF; o resto vem do ViaCEP. Não sobrescreve o que já veio.
+async function enriquecerEndereco(order) {
+  const c = Object.assign({}, order.customer || {});
+  c.numero = c.numero || c.addrNum;
+  const precisa = !c.city || !c.state || !(c.address || c.logradouro);
+  if (precisa && c.cep) {
+    try {
+      const { buscarCEP } = require('./frete');
+      const loc = await buscarCEP(c.cep);
+      if (loc) {
+        c.city = c.city || loc.cidade;
+        c.state = c.state || loc.uf;
+        c.logradouro = c.logradouro || c.address || loc.logradouro;
+        c.bairro = c.bairro || loc.bairro;
+      }
+    } catch (e) { /* mantém o que tiver; buildNfePayload reporta o que faltar */ }
+  }
+  return Object.assign({}, order, { customer: c });
+}
+
 // Chama a Focus NFe para emitir (precisa de token configurado)
 async function emitirNFe(order, readData, writeData) {
   const cfg = getFiscalConfig(readData);
   const faltam = checarConfig(cfg);
   if (faltam.length) return { ok: false, erro: 'Configuração fiscal incompleta: ' + faltam.join('; ') };
 
+  order = await enriquecerEndereco(order);
   const { payload, erros } = buildNfePayload(order, cfg);
   if (erros.length) return { ok: false, erro: 'Dados do cliente incompletos: ' + erros.join('; ') };
 
