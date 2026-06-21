@@ -146,7 +146,8 @@ function buildNfePayload(order, cfg) {
 
   const payload = Object.assign({
     natureza_operacao: cfg.natureza_operacao,
-    data_emissao: new Date().toISOString().replace('Z', '-03:00'),
+    // horário de Brasília (-03:00): subtrai 3h do instante UTC e marca o offset
+    data_emissao: new Date(Date.now() - 3 * 3600 * 1000).toISOString().replace(/\.\d{3}Z$/, '-03:00'),
     tipo_documento: 1,           // 1 = saída
     finalidade_emissao: 1,       // 1 = normal
     consumidor_final: ehCNPJ ? 0 : 1,
