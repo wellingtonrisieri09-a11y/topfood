@@ -437,6 +437,7 @@ function viewOrder(id) {
         </button>
         <div style="font-size:.71rem;color:#166534;margin-top:6px;text-align:center">Clique após verificar o recebimento no seu banco</div>
       </div>` : ''}
+      ${nfeBox(o)}
       <div>
         <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;font-weight:600;display:block;margin-bottom:6px">Atualizar status</label>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -459,6 +460,66 @@ function viewOrder(id) {
     <button class="btn btn-secondary" onclick="closeModal()">Fechar</button>`;
   showModal();
 }
+function nfeBox(o) {
+  const n = o.nfe;
+  let inner;
+  if (n && n.status === 'autorizado') {
+    inner = `<p style="font-size:.78rem;color:#15803D;font-weight:600;margin-bottom:4px">Autorizada - no ${n.numero||''} / serie ${n.serie||'1'}</p>`
+      + `<p style="font-size:.64rem;color:var(--muted);word-break:break-all;margin-bottom:8px">${n.chave||''}</p>`
+      + `<button class="btn" style="background:#2563EB;color:#fff;border:none;width:100%;padding:10px;border-radius:8px;font-weight:700;font-size:.85rem" onclick="baixarDanfe('${o.id}')">Baixar DANFE (PDF)</button>`;
+  } else if (n && (n.status === 'processando_autorizacao' || !n.status)) {
+    inner = `<p style="font-size:.8rem;color:#B45309;margin-bottom:8px">Processando autorizacao na SEFAZ...</p>`
+      + `<button class="btn btn-secondary" style="width:100%" onclick="pollNfe('${o.id}')">Verificar status</button>`;
+  } else if (n && (n.status === 'erro_autorizacao' || n.status === 'cancelado')) {
+    inner = `<p style="font-size:.76rem;color:var(--red);margin-bottom:8px">${n.status==='cancelado'?'Cancelada':'Rejeitada'}: ${n.erro||''}</p>`
+      + `<button class="btn" style="background:#2563EB;color:#fff;border:none;width:100%;padding:10px;border-radius:8px;font-weight:700" onclick="emitirNF('${o.id}')">Tentar novamente</button>`;
+  } else {
+    inner = `<button class="btn" style="background:#2563EB;color:#fff;border:none;width:100%;padding:11px;border-radius:8px;font-weight:700;font-size:.9rem" onclick="emitirNF('${o.id}')">Emitir NF-e</button>`
+      + `<div style="font-size:.71rem;color:#1E40AF;margin-top:6px;text-align:center">Gera a nota fiscal do pedido na SEFAZ</div>`;
+  }
+  return `<div style="background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:10px;padding:14px">`
+    + `<div style="font-size:.75rem;font-weight:700;color:#1D4ED8;margin-bottom:8px">Nota Fiscal eletronica</div>${inner}</div>`;
+}
+
+async function emitirNF(id) {
+  if (!confirm('Emitir NF-e para o pedido ' + id + '? Isso gera a nota fiscal na SEFAZ.')) return;
+  toast('Emitindo NF-e... aguarde');
+  try {
+    const r = await api('/api/eco/nfe/emitir/' + id, { method: 'POST' });
+    if (r.ok) {
+      toast('NF-e enviada! Aguardando autorizacao...');
+      const o = STATE.orders.find(x => x.id === id);
+      if (o) o.nfe = { ref: r.ref, status: r.status };
+      setTimeout(() => pollNfe(id), 4000);
+    } else { toast('Erro: ' + (r.erro || 'falha na emissao'), 'error'); }
+  } catch (e) { toast('Erro ao emitir: ' + e.message, 'error'); }
+}
+
+async function pollNfe(id) {
+  try {
+    const r = await api('/api/eco/nfe/status/' + id);
+    const d = r.nfe || {};
+    const st = d.status;
+    const o = STATE.orders.find(x => x.id === id);
+    if (o) o.nfe = Object.assign(o.nfe || {}, { status: st, chave: d.chave_nfe, numero: d.numero, serie: d.serie, caminho_danfe: d.caminho_danfe, erro: d.mensagem_sefaz || d.mensagem });
+    if (st === 'autorizado') { toast('NF-e autorizada!'); viewOrder(id); }
+    else if (st === 'erro_autorizacao' || st === 'cancelado') { toast('NF-e ' + (st==='cancelado'?'cancelada':'rejeitada') + ': ' + (d.mensagem_sefaz||''), 'error'); viewOrder(id); }
+    else { toast('Ainda processando... aguarde'); setTimeout(() => pollNfe(id), 6000); }
+  } catch (e) { toast('Erro ao consultar NF-e: ' + e.message, 'error'); }
+}
+
+async function baixarDanfe(id) {
+  toast('Baixando DANFE...');
+  try {
+    const res = await fetch('/api/eco/nfe/danfe/' + id, { headers: { 'Authorization': 'Bearer ' + token() } });
+    if (!res.ok) { toast('DANFE indisponivel ainda', 'error'); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  } catch (e) { toast('Erro ao baixar DANFE: ' + e.message, 'error'); }
+}
+
 function confirmPix(id) {
   const o = STATE.orders.find(x => x.id === id);
   if (!o) return;

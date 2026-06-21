@@ -300,15 +300,48 @@ function registerNfeRoutes(app, readData, writeData, requireAuth) {
     } catch (e) { res.status(500).json({ ok: false, erro: e.message }); }
   });
 
-  // consultar status da nota de um pedido (admin)
+  // consultar status da nota de um pedido (admin) — persiste chave/DANFE quando autorizada
   app.get('/api/eco/nfe/status/:orderId', requireAuth, async (req, res) => {
     try {
       const orders = readData('orders.json') || [];
-      const order = orders.find(o => (o.id || o.order_id) === req.params.orderId);
-      if (!order || !order.nfe) return res.status(404).json({ ok: false, erro: 'Pedido sem NF-e emitida' });
-      const data = await consultarNFe(order.nfe.ref, getFiscalConfig(readData));
+      const idx = orders.findIndex(o => (o.id || o.order_id) === req.params.orderId);
+      if (idx < 0 || !orders[idx].nfe) return res.status(404).json({ ok: false, erro: 'Pedido sem NF-e emitida' });
+      const data = await consultarNFe(orders[idx].nfe.ref, getFiscalConfig(readData));
+      if (data && data.status) {
+        orders[idx].nfe.status = data.status;
+        if (data.status === 'autorizado') {
+          orders[idx].nfe.chave = data.chave_nfe;
+          orders[idx].nfe.numero = data.numero;
+          orders[idx].nfe.serie = data.serie;
+          orders[idx].nfe.caminho_danfe = data.caminho_danfe;
+          orders[idx].nfe.caminho_xml = data.caminho_xml_nota_fiscal;
+        } else if (data.status === 'erro_autorizacao' || data.status === 'cancelado') {
+          orders[idx].nfe.erro = data.mensagem_sefaz || data.mensagem || '';
+        }
+        writeData('orders.json', orders);
+      }
       res.json({ ok: true, nfe: data });
     } catch (e) { res.status(500).json({ ok: false, erro: e.message }); }
+  });
+
+  // baixar DANFE (PDF) — servidor busca na Focus com autenticação e entrega ao admin
+  app.get('/api/eco/nfe/danfe/:orderId', requireAuth, async (req, res) => {
+    try {
+      const orders = readData('orders.json') || [];
+      const order = orders.find(o => (o.id || o.order_id) === req.params.orderId);
+      if (!order || !order.nfe) return res.status(404).send('Pedido sem NF-e');
+      const cfg = getFiscalConfig(readData);
+      let caminho = order.nfe.caminho_danfe;
+      if (!caminho) { const d = await consultarNFe(order.nfe.ref, cfg); caminho = d && d.caminho_danfe; }
+      if (!caminho) return res.status(404).send('DANFE ainda não disponível (nota em processamento)');
+      const base = cfg.ambiente === 'producao' ? 'https://api.focusnfe.com.br' : 'https://homologacao.focusnfe.com.br';
+      const token = cfg.ambiente === 'producao' ? cfg.token_producao : cfg.token_homologacao;
+      const pdf = await axios.get(base + caminho, { auth: { username: token, password: '' }, responseType: 'arraybuffer', validateStatus: () => true });
+      if (pdf.status !== 200) return res.status(502).send('DANFE indisponível na Focus');
+      res.set('Content-Type', 'application/pdf');
+      res.set('Content-Disposition', 'inline; filename="DANFE-' + req.params.orderId + '.pdf"');
+      res.send(Buffer.from(pdf.data));
+    } catch (e) { res.status(500).send('Erro: ' + e.message); }
   });
 
   console.log('[M11] Rotas de NF-e (Focus NFe) registradas');
