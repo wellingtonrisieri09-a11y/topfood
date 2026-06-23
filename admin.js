@@ -1065,23 +1065,25 @@ function printLabel(id) {
 </body>
 </html>`;
 
-  // abre a etiqueta em nova aba (voce VE a etiqueta + botao Imprimir).
-  // Fallback: iframe fora da tela (com tamanho real, senao o navegador nao imprime).
-  const _blob = new Blob([labelHTML], { type: 'text/html' });
-  const _url = URL.createObjectURL(_blob);
-  const _win = window.open(_url, '_blank');
-  if (!_win) {
-    let _lf = document.getElementById('tf-label-iframe');
-    if (_lf) _lf.remove();
-    _lf = document.createElement('iframe');
-    _lf.id = 'tf-label-iframe';
-    _lf.style.cssText = 'position:fixed;left:-10000px;top:0;width:120mm;height:160mm;border:0';
-    _lf.srcdoc = labelHTML;
-    _lf.onload = () => { try { _lf.contentWindow.focus(); _lf.contentWindow.print(); } catch (e) {} };
-    document.body.appendChild(_lf);
-    toast('Etiqueta enviada para impressao (a aba foi bloqueada pelo navegador).');
-  }
-  setTimeout(() => { try { URL.revokeObjectURL(_url); } catch (e) {} }, 60000);
+  // mostra a etiqueta num overlay DENTRO do painel (nao abre janela/aba = nada pra bloquear).
+  let _ov = document.getElementById('tf-label-overlay');
+  if (_ov) _ov.remove();
+  _ov = document.createElement('div');
+  _ov.id = 'tf-label-overlay';
+  _ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.65);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:18px;overflow:auto';
+  _ov.innerHTML =
+    '<div style="display:flex;gap:10px;margin-bottom:12px">'
+    + '<button id="tf-lbl-print" style="background:#CC0000;color:#fff;border:none;padding:11px 26px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer">Imprimir etiqueta</button>'
+    + '<button id="tf-lbl-close" style="background:#fff;color:#111;border:none;padding:11px 26px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer">Fechar</button>'
+    + '</div>'
+    + '<iframe id="tf-lbl-frame" style="width:100mm;height:150mm;max-width:96vw;background:#fff;border:0;border-radius:4px;box-shadow:0 8px 30px rgba(0,0,0,.4)"></iframe>';
+  document.body.appendChild(_ov);
+  const _fr = document.getElementById('tf-lbl-frame');
+  const _fd = _fr.contentWindow.document;
+  _fd.open(); _fd.write(labelHTML); _fd.close();
+  document.getElementById('tf-lbl-print').onclick = function(){ try { _fr.contentWindow.focus(); _fr.contentWindow.print(); } catch (e) { toast('Nao foi possivel imprimir: ' + e.message, 'error'); } };
+  document.getElementById('tf-lbl-close').onclick = function(){ _ov.remove(); };
+  _ov.addEventListener('click', function(e){ if (e.target === _ov) _ov.remove(); });
 }
 
 /* ══════════════════════════════════════════════════════
