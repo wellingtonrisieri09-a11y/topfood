@@ -1065,18 +1065,23 @@ function printLabel(id) {
 </body>
 </html>`;
 
-  // iframe invisivel: imprime sem abrir janela (nao e bloqueado por popup)
-  let _lf = document.getElementById('tf-label-iframe');
-  if (_lf) _lf.remove();
-  _lf = document.createElement('iframe');
-  _lf.id = 'tf-label-iframe';
-  _lf.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
-  document.body.appendChild(_lf);
-  const _d = _lf.contentWindow.document;
-  _d.open(); _d.write(labelHTML); _d.close();
-  const _print = () => { try { _lf.contentWindow.focus(); _lf.contentWindow.print(); } catch (e) {} };
-  _lf.onload = _print;
-  setTimeout(_print, 700);
+  // abre a etiqueta em nova aba (voce VE a etiqueta + botao Imprimir).
+  // Fallback: iframe fora da tela (com tamanho real, senao o navegador nao imprime).
+  const _blob = new Blob([labelHTML], { type: 'text/html' });
+  const _url = URL.createObjectURL(_blob);
+  const _win = window.open(_url, '_blank');
+  if (!_win) {
+    let _lf = document.getElementById('tf-label-iframe');
+    if (_lf) _lf.remove();
+    _lf = document.createElement('iframe');
+    _lf.id = 'tf-label-iframe';
+    _lf.style.cssText = 'position:fixed;left:-10000px;top:0;width:120mm;height:160mm;border:0';
+    _lf.srcdoc = labelHTML;
+    _lf.onload = () => { try { _lf.contentWindow.focus(); _lf.contentWindow.print(); } catch (e) {} };
+    document.body.appendChild(_lf);
+    toast('Etiqueta enviada para impressao (a aba foi bloqueada pelo navegador).');
+  }
+  setTimeout(() => { try { URL.revokeObjectURL(_url); } catch (e) {} }, 60000);
 }
 
 /* ══════════════════════════════════════════════════════
