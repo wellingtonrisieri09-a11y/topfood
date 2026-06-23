@@ -99,6 +99,7 @@ function montarDestinatario(customer) {
 // Monta o payload completo da NF-e no formato Focus NFe (função pura, testável)
 function buildNfePayload(order, cfg) {
   const customer = order.customer || {};
+  const pesoKg = Number(order._pesoKg || 0);
   const { dest, erros, ehCNPJ } = montarDestinatario(customer);
 
   // Regra da SEFAZ: em homologação o nome do destinatário é fixo (nota sem valor fiscal)
@@ -183,7 +184,9 @@ function buildNfePayload(order, cfg) {
     valor_produtos: arred(valorProdutos),
     valor_total: valorTotal,
 
-    items: items
+    items: items,
+    // Volumes/peso para a transportadora (ex: Melhor Envio). Peso em kg dos produtos.
+    volumes: pesoKg > 0 ? [{ quantidade: 1, especie: 'Volume', peso_liquido: arred(pesoKg, 3), peso_bruto: arred(pesoKg, 3) }] : undefined
   }, dest);
 
   return { payload, erros };
@@ -191,6 +194,20 @@ function buildNfePayload(order, cfg) {
 
 function cfop_outroEstado(cfg) { return cfg.cfop_fora; }
 function arred(v, casas) { const p = Math.pow(10, casas || 2); return Math.round(Number(v || 0) * p) / p; }
+
+// Calcula o peso total do pedido em kg (usa weight_per_unit dos produtos)
+function calcularPesoKg(order, readData) {
+  let produtos = [];
+  try { produtos = readData('products.json') || []; } catch (e) {}
+  let g = 0;
+  (order.items || []).forEach(it => {
+    const p = produtos.find(x => x.id === (it.id || it.produto_id));
+    const wUnit = (p && p.weight_per_unit) || 15;
+    const unidades = Number(it.qty || it.quantity || 1) * Number(it.pack || 1);
+    g += unidades * wUnit;
+  });
+  return Math.max(0.1, Math.round(g) / 1000);
+}
 
 // Completa o endereço do cliente pelo CEP (cidade/UF/rua/bairro) — o checkout
 // coleta CEP + número + CPF; o resto vem do ViaCEP. Não sobrescreve o que já veio.
@@ -220,6 +237,7 @@ async function emitirNFe(order, readData, writeData) {
   if (faltam.length) return { ok: false, erro: 'Configuração fiscal incompleta: ' + faltam.join('; ') };
 
   order = await enriquecerEndereco(order);
+  order._pesoKg = calcularPesoKg(order, readData);
   const { payload, erros } = buildNfePayload(order, cfg);
   if (erros.length) return { ok: false, erro: 'Dados do cliente incompletos: ' + erros.join('; ') };
 
@@ -357,4 +375,4 @@ function registerNfeRoutes(app, readData, writeData, requireAuth) {
   console.log('[M11] Rotas de NF-e (Focus NFe) registradas');
 }
 
-module.exports = { getFiscalConfig, buildNfePayload, emitirNFe, consultarNFe, registerNfeRoutes };
+module.exports = { getFiscalConfig, buildNfePayload, emitirNFe, consultarNFe, calcularPesoKg, registerNfeRoutes };
