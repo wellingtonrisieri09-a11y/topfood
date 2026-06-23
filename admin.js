@@ -515,8 +515,11 @@ async function baixarDanfe(id) {
     if (!res.ok) { toast('DANFE indisponivel ainda', 'error'); return; }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+    const a = document.createElement('a');
+    a.href = url; a.download = 'DANFE-' + id + '.pdf';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 30000);
+    toast('DANFE baixado! Abra o arquivo na pasta de downloads.');
   } catch (e) { toast('Erro ao baixar DANFE: ' + e.message, 'error'); }
 }
 
