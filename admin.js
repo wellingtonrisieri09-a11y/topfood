@@ -1061,19 +1061,22 @@ function printLabel(id) {
 
 </div>
 
-<scr` + `ipt>
-  window.addEventListener('load', () => {
-    setTimeout(() => window.print(), 400);
-  });
-</scr` + `ipt>
+
 </body>
 </html>`;
 
-  const win = window.open('', '_blank', 'width=900,height=700,scrollbars=yes');
-  if (!win) { toast('❌ Popup bloqueado! Permita popups para este site.', 'error'); return; }
-  win.document.open();
-  win.document.write(labelHTML);
-  win.document.close();
+  // iframe invisivel: imprime sem abrir janela (nao e bloqueado por popup)
+  let _lf = document.getElementById('tf-label-iframe');
+  if (_lf) _lf.remove();
+  _lf = document.createElement('iframe');
+  _lf.id = 'tf-label-iframe';
+  _lf.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(_lf);
+  const _d = _lf.contentWindow.document;
+  _d.open(); _d.write(labelHTML); _d.close();
+  const _print = () => { try { _lf.contentWindow.focus(); _lf.contentWindow.print(); } catch (e) {} };
+  _lf.onload = _print;
+  setTimeout(_print, 700);
 }
 
 /* ══════════════════════════════════════════════════════
