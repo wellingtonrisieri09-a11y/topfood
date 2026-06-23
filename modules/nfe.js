@@ -141,6 +141,16 @@ function buildNfePayload(order, cfg) {
   });
 
   const frete = Number((order.shipping && order.shipping.price) || 0);
+  // SEFAZ (rej. 535): a soma do frete dos itens deve bater com o frete total.
+  // Rateia o frete proporcional ao valor de cada item; o último item fecha a conta.
+  if (frete > 0 && valorProdutos > 0) {
+    let acum = 0;
+    items.forEach((item, i) => {
+      const v = (i === items.length - 1) ? arred(frete - acum) : arred(frete * (item.valor_bruto / valorProdutos));
+      if (i !== items.length - 1) acum += v;
+      item.valor_frete = v;
+    });
+  }
   const desconto = Number(order.discount || 0);
   const valorTotal = arred(valorProdutos + frete - desconto);
 
