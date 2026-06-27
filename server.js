@@ -1413,28 +1413,68 @@ app.get('/produto/:slug', function(req, res) {
         '<meta property="og:type" content="website" />\n  <meta property="og:image" content="' + imgUrl + '" />\n  <meta property="og:image:width" content="800" />\n  <meta property="og:image:height" content="800" />'
       );
     }
-    // Schema.org JSON-LD (injeta antes de </head>)
-    const minPrice = product.variants && product.variants.length
-      ? Math.min(...product.variants.map(v => v.price))
-      : 0;
+    // Canonical próprio da página de produto (evita conteúdo duplicado no Google)
+    html = html.replace(
+      '<link rel="canonical" href="https://topfoodembalagens.com.br/produto/" id="canonicalLink" />',
+      '<link rel="canonical" href="' + baseUrl + '/produto/' + slug + '" id="canonicalLink" />'
+    );
+
+    // Schema.org JSON-LD (injeta antes de </head>) — Product + Offer completo p/ resultados ricos
+    const precos    = (product.variants || []).map(v => v.price).filter(n => n > 0);
+    const lowPrice  = precos.length ? Math.min(...precos) : 0;
+    const highPrice = precos.length ? Math.max(...precos) : lowPrice;
+    const priceValidUntil = new Date(Date.now() + 365 * 864e5).toISOString().split('T')[0];
+    const offerComum = {
+      "priceCurrency": "BRL",
+      "availability": "https://schema.org/InStock",
+      "itemCondition": "https://schema.org/NewCondition",
+      "priceValidUntil": priceValidUntil,
+      "seller": { "@type": "Organization", "name": "TopFood Embalagens" },
+      "hasMerchantReturnPolicy": {
+        "@type": "MerchantReturnPolicy",
+        "applicableCountry": "BR",
+        "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+        "merchantReturnDays": 7,
+        "returnMethod": "https://schema.org/ReturnByMail",
+        "returnFees": "https://schema.org/FreeReturn"
+      },
+      "shippingDetails": {
+        "@type": "OfferShippingDetails",
+        "shippingDestination": { "@type": "DefinedRegion", "addressCountry": "BR" },
+        "shippingRate": { "@type": "MonetaryAmount", "value": "18.90", "currency": "BRL" },
+        "deliveryTime": {
+          "@type": "ShippingDeliveryTime",
+          "handlingTime": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 2, "unitCode": "DAY" },
+          "transitTime": { "@type": "QuantitativeValue", "minValue": 3, "maxValue": 8, "unitCode": "DAY" }
+        }
+      }
+    };
+    const offers = precos.length > 1
+      ? Object.assign({ "@type": "AggregateOffer", "lowPrice": String(lowPrice), "highPrice": String(highPrice), "offerCount": precos.length }, offerComum)
+      : Object.assign({ "@type": "Offer", "price": String(lowPrice) }, offerComum);
     const schema = JSON.stringify({
       "@context": "https://schema.org",
       "@type": "Product",
       "name": product.name,
       "description": product.description || product.name,
       "image": imgUrl || undefined,
+      "sku": String(product.id),
       "brand": { "@type": "Brand", "name": "TopFood Embalagens" },
-      "offers": {
-        "@type": "Offer",
-        "priceCurrency": "BRL",
-        "price": String(minPrice),
-        "availability": "https://schema.org/InStock",
-        "seller": { "@type": "Organization", "name": "TopFood Embalagens" }
-      }
+      "offers": offers
+    });
+    const breadcrumb = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Início",   "item": baseUrl + '/' },
+        { "@type": "ListItem", "position": 2, "name": "Produtos",  "item": baseUrl + '/#produtos' },
+        { "@type": "ListItem", "position": 3, "name": product.name, "item": baseUrl + '/produto/' + slug }
+      ]
     });
     html = html.replace(
       '</head>',
-      '<script type="application/ld+json">' + schema + '</script>\n</head>'
+      '<script type="application/ld+json">' + schema + '</script>\n'
+      + '<script type="application/ld+json">' + breadcrumb + '</script>\n</head>'
     );
     var _seoBlock = seoContent(product);
     html = html.replace('<section class="related-section"', _seoBlock.html + '\n<section class="related-section"');
@@ -1486,6 +1526,7 @@ app.get('/sitemap.xml', (req, res) => {
   urls.push(urlTag({ loc: baseUrl + '/',              changefreq: 'weekly',  priority: '1.0' }));
   urls.push(urlTag({ loc: baseUrl + '/sobre.html',    changefreq: 'monthly', priority: '0.5' }));
   urls.push(urlTag({ loc: baseUrl + '/contato.html',  changefreq: 'monthly', priority: '0.5' }));
+  urls.push(urlTag({ loc: baseUrl + '/faq.html',      changefreq: 'monthly', priority: '0.6' }));
   urls.push(urlTag({ loc: baseUrl + '/entrega.html',  changefreq: 'monthly', priority: '0.5' }));
   urls.push(urlTag({ loc: baseUrl + '/privacidade.html', changefreq: 'yearly', priority: '0.3' }));
   urls.push(urlTag({ loc: baseUrl + '/termos.html',   changefreq: 'yearly',  priority: '0.3' }));
