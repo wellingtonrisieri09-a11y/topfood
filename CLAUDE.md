@@ -129,8 +129,11 @@ Pacotes: 50, 100 e 250 unidades. Preços: R$30–R$220.
 - E-mail de confirmação ao cliente (nodemailer)
 - Página de produto individual, páginas institucionais (sobre, contato, faq, entrega, privacidade, termos)
 - Radar de concorrência Mercado Livre, gestor de verbas, insights do site
+- **Hospedagem em produção: site no ar em `https://topfoodembalagens.com.br`**
 
 ## Pendente
-- Hospedagem em servidor público com o domínio `topfoodembalagens.com.br`
-- Após hospedar: apontar os webhooks (Asaas / OpenPix / Mercado Pago) para a URL pública
-- Configurar variáveis sensíveis no `.env` do servidor de produção
+- **Apontar os webhooks de pagamento (Asaas / OpenPix / Mercado Pago) para a URL pública**
+  — sem isso, a confirmação automática de PIX/cartão não chega; o admin ainda
+  precisa confirmar pagamento manualmente. Configurar a URL do webhook no painel
+  de cada provedor: `https://topfoodembalagens.com.br/api/asaas/webhook`,
+  `/api/pix-webhook` (OpenPix) e `/api/webhook` (Mercado Pago).
