@@ -133,9 +133,9 @@ function homeContent() {
   return '\n<section class="home-seo" style="max-width:1000px;margin:36px auto;padding:0 20px">'
     + '<div style="background:#fff;border-radius:18px;box-shadow:0 8px 32px rgba(0,0,0,.08);'
     + 'padding:44px 32px;text-align:center;line-height:1.75;color:#444">'
-    + '<h2 style="font-size:1.65rem;font-weight:800;color:#1a1a1a;margin:0">Embalagens food service para delivery</h2>'
+    + '<h2 style="font-size:1.65rem;font-weight:800;color:#1a1a1a;margin:0">Embalagens para fast food e delivery</h2>'
     + '<div style="width:66px;height:4px;background:#CC0000;border-radius:2px;margin:14px auto 24px"></div>'
-    + '<p style="max-width:760px;margin:0 auto 14px">A <strong>TopFood Embalagens</strong> produz embalagens para delivery e food service pensadas para <strong>hamburguerias, pastelarias, lanchonetes, food trucks e restaurantes</strong>. Trabalhamos com <strong>papel triplex 250g e impressão offset</strong> de alta definição — embalagens resistentes, bonitas e que valorizam o seu produto na entrega.</p>'
+    + '<p style="max-width:760px;margin:0 auto 14px">A <strong>TopFood Embalagens</strong> produz <strong>embalagens para fast food, delivery e food service</strong> pensadas para <strong>hamburguerias, pastelarias, lanchonetes, food trucks e restaurantes</strong>. Trabalhamos com <strong>papel triplex 250g e impressão offset</strong> de alta definição — embalagens resistentes, bonitas e que valorizam o seu produto na entrega.</p>'
     + '<div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:26px auto 22px">'
     + chip('🍔', 'Embalagem para Hambúrguer') + chip('🥟', 'Embalagem para Pastel')
     + chip('🌭', 'Embalagem para Churros') + chip('🍟', 'Embalagem para Batata Frita')
