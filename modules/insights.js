@@ -116,11 +116,19 @@ async function perguntarIA(payload, days) {
   // Monta as mensagens: histórico de chat ou pergunta única
   let messages;
   if (Array.isArray(payload)) {
-    messages = payload
+    const limpos = payload
       .filter(m => m && (m.role === 'user' || m.role === 'assistant') && m.content)
       .map(m => ({ role: m.role, content: String(m.content).slice(0, 4000) }))
       .slice(-20);                       // só as últimas 20 trocas (limita custo)
-    while (messages.length && messages[0].role !== 'user') messages.shift(); // Claude exige começar com 'user'
+    // Claude exige alternância estrita user/assistant — junta papéis repetidos
+    // seguidos (acontece se uma resposta veio vazia e foi filtrada).
+    messages = [];
+    for (const m of limpos) {
+      const ult = messages[messages.length - 1];
+      if (ult && ult.role === m.role) ult.content += '\n' + m.content;
+      else messages.push({ role: m.role, content: m.content });
+    }
+    while (messages.length && messages[0].role !== 'user') messages.shift(); // e começar em 'user'
   } else {
     messages = [{ role: 'user', content: String(payload || 'Faça um resumo do que está acontecendo no site e o que devo priorizar.') }];
   }
