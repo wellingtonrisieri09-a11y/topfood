@@ -13,6 +13,7 @@ const { registerOnlineRoutes } = require('./modules/online');
 const { registerMlRoutes } = require('./modules/ml');
 const { registerInsightsRoutes } = require('./modules/insights');
 const { registerNfeRoutes } = require('./modules/nfe');
+const { registerGuiaRoutes, guiaSlugs } = require('./modules/guias');
 const express = require('express');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 const cors       = require('cors');
@@ -1531,6 +1532,10 @@ app.get('/sitemap.xml', (req, res) => {
   urls.push(urlTag({ loc: baseUrl + '/privacidade.html', changefreq: 'yearly', priority: '0.3' }));
   urls.push(urlTag({ loc: baseUrl + '/termos.html',   changefreq: 'yearly',  priority: '0.3' }));
 
+  // ── Guias de conteúdo SEO ──
+  urls.push(urlTag({ loc: baseUrl + '/guias', changefreq: 'monthly', priority: '0.6' }));
+  guiaSlugs().forEach(s => urls.push(urlTag({ loc: baseUrl + '/guia/' + s, changefreq: 'monthly', priority: '0.7' })));
+
   // ── Produtos dinâmicos (lidos do products.json em tempo real) ──
   products.forEach(p => {
     const imgs = [];
@@ -1616,6 +1621,7 @@ registerOnlineRoutes(app, requireAuth);
 registerMlRoutes(app, requireAuth);
 registerInsightsRoutes(app, requireAuth);
 registerNfeRoutes(app, readData, writeData, requireAuth);
+registerGuiaRoutes(app);
 
 // Limpar blacklist e reservas expiradas a cada 30min
 setInterval(() => { try { cleanBlacklist(); releaseExpiredReservations(); } catch(e){} }, 30 * 60 * 1000);
