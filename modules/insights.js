@@ -94,12 +94,15 @@ function getDossie(days = 30, force = false) {
 }
 
 // ── Cérebro: Claude conversa sobre o dossiê (rápido pq o dossiê já está pronto) ──
-async function perguntarIA(pergunta, days) {
+// Aceita o histórico da conversa (array {role,content}) OU uma pergunta única
+// (string, modo legado). Com o histórico, a IA lembra do que já foi dito.
+async function perguntarIA(payload, days) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('SEM_CREDITO_OU_CHAVE');
   const dossie = getDossie(days || 30);
   const system = [
     'Você é a IA Gestora de Marketing da TopFood Embalagens (embalagens food service: pastel, churros, hambúrguer, batata frita).',
+    'Você está num CHAT com o dono (Wellington): a conversa tem histórico, então leve em conta o que já foi dito e responda de forma encadeada, sem repetir o que já explicou.',
     'Responda em português do Brasil, DIRETO e prático, com dados e recomendações acionáveis. Use listas curtas e números quando ajudar.',
     'Verba de marketing aprovada: R$ 3.000/mês (~R$ 100/dia) somando Google + Meta + TikTok.',
     'Estratégia de verba: fase de teste (espalhar pouco, achar o que converte) → concentrar no que traz cliente mais barato.',
@@ -110,6 +113,29 @@ async function perguntarIA(pergunta, days) {
     JSON.stringify(dossie)
   ].join('\n');
 
+  // Monta as mensagens: histórico de chat ou pergunta única
+  let messages;
+  if (Array.isArray(payload)) {
+    const limpos = payload
+      .filter(m => m && (m.role === 'user' || m.role === 'assistant') && m.content)
+      .map(m => ({ role: m.role, content: String(m.content).slice(0, 4000) }))
+      .slice(-20);                       // só as últimas 20 trocas (limita custo)
+    // Claude exige alternância estrita user/assistant — junta papéis repetidos
+    // seguidos (acontece se uma resposta veio vazia e foi filtrada).
+    messages = [];
+    for (const m of limpos) {
+      const ult = messages[messages.length - 1];
+      if (ult && ult.role === m.role) ult.content += '\n' + m.content;
+      else messages.push({ role: m.role, content: m.content });
+    }
+    while (messages.length && messages[0].role !== 'user') messages.shift(); // e começar em 'user'
+  } else {
+    messages = [{ role: 'user', content: String(payload || 'Faça um resumo do que está acontecendo no site e o que devo priorizar.') }];
+  }
+  if (!messages.length || messages[messages.length - 1].role !== 'user') {
+    messages.push({ role: 'user', content: 'Continue.' });
+  }
+
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
@@ -117,7 +143,7 @@ async function perguntarIA(pergunta, days) {
       model: 'claude-haiku-4-5',
       max_tokens: 800,
       system,
-      messages: [{ role: 'user', content: String(pergunta || 'Faça um resumo do que está acontecendo no site e o que devo priorizar.') }]
+      messages
     })
   });
   if (!r.ok) {
@@ -158,7 +184,10 @@ function registerInsightsRoutes(app, requireAuth) {
   // Painel — pergunta livre à IA Gestora (responde com base no dossiê)
   app.post('/api/eco/insights/perguntar', requireAuth, async (req, res) => {
     try {
-      const resposta = await perguntarIA((req.body && req.body.pergunta) || '', (req.body && req.body.days) || 30);
+      const body = req.body || {};
+      // chat: manda o histórico em body.messages; legado: body.pergunta (string)
+      const payload = Array.isArray(body.messages) ? body.messages : (body.pergunta || '');
+      const resposta = await perguntarIA(payload, body.days || 30);
       res.json({ ok: true, resposta });
     } catch (e) {
       if (e.message === 'SEM_CREDITO_OU_CHAVE') {

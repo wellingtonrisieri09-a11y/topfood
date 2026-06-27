@@ -2841,18 +2841,68 @@ async function loadInsights() {
     inList('in-carts', d.produtos_add_carrinho, function(x){ return '<span>'+x.ref+'</span><b>'+x.n+'</b>'; });
     inList('in-oport', d.oportunidades, function(o){ return '<span>'+o.id+'</span><b>'+o.views+' views · '+o.conversao+'% carrinho</b>'; });
   } catch(e) { toast('Erro ao carregar inteligência', 'error'); }
+  iaRender();   // inicializa/mostra o chat da IA Gestora
 }
 
-async function askIA(pergunta) {
-  const box = document.getElementById('in-resposta');
-  box.textContent = '🤔 Analisando os dados do site...';
+/* ── Chat com a IA Gestora (conversa com histórico) ── */
+var iaChatHistory = [];   // [{role:'user'|'assistant', content:'...'}]
+var iaChatBusy = false;
+
+function iaEscape(s){ return String(s).replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+function iaMarkdown(s){
+  return iaEscape(s)
+    .replace(/^###\s+(.+)$/gm, '<b style="font-size:1.02em">$1</b>')
+    .replace(/^##\s+(.+)$/gm,  '<b style="font-size:1.05em">$1</b>')
+    .replace(/^#\s+(.+)$/gm,   '<b style="font-size:1.1em">$1</b>')
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/^\s*[-*]\s+(.+)$/gm, '• $1')
+    .replace(/\n/g, '<br>');
+}
+function iaRender(){
+  var box = document.getElementById('in-chat');
+  if (!box) return;
+  if (!iaChatHistory.length && !iaChatBusy){
+    box.innerHTML = '<p style="opacity:.55;margin:auto;text-align:center;max-width:420px">Pergunte qualquer coisa sobre o site: o que estão buscando, qual produto anunciar primeiro, onde está perdendo cliente… A conversa fica salva enquanto você estiver aqui.</p>';
+    return;
+  }
+  var html = iaChatHistory.map(function(m){
+    var mine = m.role === 'user';
+    var style = mine
+      ? 'align-self:flex-end;background:var(--primary,#e11d2a);color:#fff;border-bottom-right-radius:4px'
+      : 'align-self:flex-start;background:#fff;color:#111;border:1px solid rgba(128,128,128,.2);border-bottom-left-radius:4px';
+    var body = mine ? iaEscape(m.content) : iaMarkdown(m.content);
+    return '<div style="max-width:82%;padding:10px 13px;border-radius:14px;line-height:1.5;'+style+'">'+body+'</div>';
+  }).join('');
+  if (iaChatBusy) html += '<div style="align-self:flex-start;opacity:.6;font-style:italic;padding:6px 4px">🤔 Analisando os dados do site…</div>';
+  box.innerHTML = html;
+  box.scrollTop = box.scrollHeight;
+}
+async function iaSend(pergunta){
+  if (iaChatBusy) return;
+  pergunta = (pergunta || '').trim();
+  if (!pergunta) return;
+  iaChatHistory.push({ role:'user', content: pergunta });
+  iaChatBusy = true; iaRender();
+  document.getElementById('in-send').disabled = true;
   try {
-    const r = await api('/api/eco/insights/perguntar', { method:'POST', body: JSON.stringify({ pergunta: pergunta }) });
-    box.textContent = r.resposta || r.error || 'Sem resposta.';
-  } catch(e) { box.textContent = 'Erro: ' + e.message; }
+    var r = await api('/api/eco/insights/perguntar', { method:'POST', body: JSON.stringify({ messages: iaChatHistory }) });
+    iaChatHistory.push({ role:'assistant', content: r.resposta || r.error || 'Sem resposta.' });
+  } catch(e) {
+    iaChatHistory.push({ role:'assistant', content: 'Erro: ' + e.message });
+  }
+  iaChatBusy = false;
+  document.getElementById('in-send').disabled = false;
+  iaRender();
 }
-function askIAFromBox() {
-  const q = document.getElementById('in-pergunta').value.trim();
-  if (!q) { toast('Escreva uma pergunta', 'error'); return; }
-  askIA(q);
+function askIAFromBox(){
+  var ta = document.getElementById('in-pergunta');
+  var q = ta.value.trim();
+  if (!q) { toast('Escreva uma mensagem', 'error'); return; }
+  ta.value = ''; iaAutoGrow(ta);
+  iaSend(q);
 }
+function iaQuick(q){ iaSend(q); }
+function askIA(q){ iaSend(q); }   // compat: chamadas antigas
+function iaChatReset(){ iaChatHistory = []; iaChatBusy = false; iaRender(); }
+function iaChatKey(ev){ if (ev.key === 'Enter' && !ev.shiftKey){ ev.preventDefault(); askIAFromBox(); } }
+function iaAutoGrow(el){ el.style.height='auto'; el.style.height=Math.min(120, el.scrollHeight)+'px'; }
