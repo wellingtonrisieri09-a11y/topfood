@@ -1,34 +1,32 @@
 # Deploy — TopFood Embalagens (VPS Hostinger)
 
-O site roda numa VPS Hostinger. O código fica no GitHub (branch `main`).
+O site roda numa VPS Hostinger (`/var/www/topfood`), gerenciado pelo **pm2**
+(processo `topfood`), atrás do nginx. Código no GitHub, branch `main`.
 
-## Deploy automático (configurado em `.github/workflows/deploy.yml`)
-Todo push/merge na `main` faz o GitHub entrar na VPS por SSH, rodar
-`git pull` + `npm install` e reiniciar o app. **Sobe sozinho.**
+## Auto-deploy (na própria VPS, via cron — sem secrets)
+O script `deploy.sh` roda na VPS a cada 2 minutos: checa se há push novo na
+`main` e, se houver, atualiza o site e reinicia só o `topfood`.
+Usa a chave SSH que a VPS já tem pro GitHub — **não precisa de GitHub Actions
+nem cadastrar secrets**.
 
-### Passo único (uma vez): cadastrar os Secrets no GitHub
-No GitHub do projeto → **Settings → Secrets and variables → Actions → New repository secret**.
-Crie:
-
-| Secret | O que é | Exemplo |
-|--------|---------|---------|
-| `VPS_HOST` | IP ou domínio da VPS | `123.45.67.89` |
-| `VPS_USER` | usuário SSH | `root` |
-| `VPS_SSH_KEY` | **chave SSH privada** com acesso à VPS | conteúdo do arquivo `id_rsa` |
-| `VPS_PATH` | (opcional) caminho do projeto na VPS | `/root/topfood` |
-| `VPS_PORT` | (opcional) porta SSH, se não for a 22 | `22` |
-
-> A chave/credencial fica guardada **só no GitHub** (criptografada). Não vai pro código.
-
-Depois de cadastrar, é só mexer no código que o deploy roda sozinho. Dá pra
-disparar manualmente também em **Actions → Deploy para a VPS Hostinger → Run workflow**.
-
-## Deploy manual (enquanto os secrets não estão cadastrados)
-Entre na VPS por SSH (hPanel → Terminal) e rode:
-
+### Ativar (uma vez só) — cole na VPS:
 ```bash
-cd ~/topfood            # ajuste pro caminho real do projeto
-git pull origin main
-npm install --legacy-peer-deps
-pm2 restart all         # ou o jeito que você reinicia o node
+chmod +x /var/www/topfood/deploy.sh
+( crontab -l 2>/dev/null | grep -v 'topfood/deploy.sh'; \
+  echo '*/2 * * * * /var/www/topfood/deploy.sh >> /var/log/topfood-deploy.log 2>&1' ) | crontab -
+crontab -l   # confere se a linha entrou
 ```
+Pronto. A partir daí, todo push na `main` entra no ar sozinho em até 2 min.
+
+### Acompanhar / depurar
+```bash
+tail -f /var/log/topfood-deploy.log   # ver os deploys acontecendo
+/var/www/topfood/deploy.sh            # forçar um deploy na hora
+```
+
+## Deploy manual (quando quiser subir na hora)
+```bash
+cd /var/www/topfood && git pull origin main && pm2 restart topfood
+```
+
+> O banco de dados (`data/topfood.db`) é gitignored — nenhum deploy o altera.
