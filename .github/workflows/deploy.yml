@@ -1,0 +1,33 @@
+name: Deploy para a VPS Hostinger
+
+# Toda vez que algo entra na branch main, o GitHub entra na VPS por SSH,
+# puxa o código novo, instala dependências e reinicia o site. Sobe sozinho.
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:        # permite disparar manualmente pelo botão "Run workflow"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conectar na VPS e atualizar o site
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}          # IP ou domínio da VPS
+          username: ${{ secrets.VPS_USER }}        # usuário SSH (ex: root)
+          key: ${{ secrets.VPS_SSH_KEY }}          # chave SSH privada
+          port: ${{ secrets.VPS_PORT || 22 }}      # porta SSH (22 por padrão)
+          script: |
+            set -e
+            # Caminho do projeto na VPS (defina o secret VPS_PATH; senão usa ~/topfood)
+            cd "${{ secrets.VPS_PATH }}" 2>/dev/null || cd ~/topfood
+            echo ">> Pasta: $(pwd)"
+            git fetch origin main
+            git reset --hard origin/main          # garante igual ao GitHub (sem conflito local)
+            npm install --legacy-peer-deps --no-audit --no-fund
+            # Reinicia o app: tenta pm2; se não houver, tenta o serviço systemd; nunca falha o deploy por isso
+            (pm2 restart all && pm2 save) \
+              || sudo systemctl restart topfood \
+              || echo "ATENCAO: reinicie o node manualmente — pm2/systemd nao encontrados"
+            echo ">> Deploy concluido em $(date)"
