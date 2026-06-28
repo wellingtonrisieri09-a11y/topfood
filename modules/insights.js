@@ -9,6 +9,11 @@
 
 const { db } = require('../db');
 
+// Métricas reais de marketing (Search Console + Meu Negócio via Windsor).
+// require defensivo: se o módulo falhar, a IA segue funcionando só com o site.
+let getMarketingDossie = null;
+try { getMarketingDossie = require('./marketing').getMarketingDossie; } catch (_) {}
+
 // ── Tabela de eventos de comportamento ──────────────────────
 db.exec(`CREATE TABLE IF NOT EXISTS behavior_events (
   id   INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,17 +105,28 @@ async function perguntarIA(payload, days) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('SEM_CREDITO_OU_CHAVE');
   const dossie = getDossie(days || 30);
+
+  // Métricas reais de marketing (Google Search Console + Meu Negócio).
+  // Cacheadas; se indisponível, a IA segue só com o dossiê do site.
+  let marketing = null;
+  if (getMarketingDossie) { try { marketing = await getMarketingDossie(); } catch (_) {} }
+
   const system = [
     'Você é a IA Gestora de Marketing da TopFood Embalagens (embalagens food service: pastel, churros, hambúrguer, batata frita).',
     'Você está num CHAT com o dono (Wellington): a conversa tem histórico, então leve em conta o que já foi dito e responda de forma encadeada, sem repetir o que já explicou.',
     'Responda em português do Brasil, DIRETO e prático, com dados e recomendações acionáveis. Use listas curtas e números quando ajudar.',
     'Verba de marketing aprovada: R$ 3.000/mês (~R$ 100/dia) somando Google + Meta + TikTok.',
     'Estratégia de verba: fase de teste (espalhar pouco, achar o que converte) → concentrar no que traz cliente mais barato.',
-    'IMPORTANTE: baseie-se SOMENTE no dossiê abaixo (comportamento real do site nos últimos dias). Se ainda não houver dados de anúncios, deixe claro que as campanhas ainda não rodaram e foque no que dá pra ver do site.',
-    'Nunca invente números que não estão no dossiê.',
+    'Você tem DUAS fontes de dados reais: (1) o COMPORTAMENTO do site (buscas, vistos, carrinho, pedidos) e (2) as MÉTRICAS DE MARKETING do Google (Search Console = tráfego orgânico, e Meu Negócio = local). Para perguntas sobre tráfego/orgânico/SEO/posições no Google, use as MÉTRICAS DE MARKETING. Para comportamento de quem já está no site, use o DOSSIÊ DO SITE.',
+    'Ao analisar o orgânico, foque nas "oportunidades_pagina2a4": termos que já têm impressão mas estão na página 2-4 — são os ganhos mais rápidos (empurrar para a página 1).',
+    'IMPORTANTE: baseie-se SOMENTE nos dados reais abaixo. Nunca invente números. Se uma fonte estiver "indisponivel" ou ausente (ex.: ainda não ligamos Google/Meta Ads), diga isso com franqueza em vez de supor.',
     '',
-    'DOSSIÊ ATUAL (JSON):',
-    JSON.stringify(dossie)
+    'DOSSIÊ DO SITE (comportamento interno, JSON):',
+    JSON.stringify(dossie),
+    '',
+    marketing
+      ? 'MÉTRICAS DE MARKETING REAIS (Google Search Console + Meu Negócio, via Windsor, JSON):\n' + JSON.stringify(marketing)
+      : 'MÉTRICAS DE MARKETING: ainda não conectadas (WINDSOR_API_KEY ausente ou indisponível) — não invente; foque no dossiê do site.'
   ].join('\n');
 
   // Monta as mensagens: histórico de chat ou pergunta única
