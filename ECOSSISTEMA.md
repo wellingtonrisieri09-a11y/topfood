@@ -86,7 +86,7 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 - **Criativo próprio automático nas 3** = precisa **aprovação de API de anúncios** (Meta → TikTok → Google), leva dias/semanas — começar cedo.
 
 **A fazer:**
-- [x] Página de política de troca/devolução (requisito Google) — _verificar: schema de devolução já incluído nas páginas de produto nesta sessão; confirmar se a página dedicada existe_
+- [x] Página de política de troca/devolução (requisito Google) — **feito (28/06): `/devolucao.html`** (arrependimento 7 dias com frete por nossa conta; defeito/avaria 48h sem custo) + no sitemap e no rodapé
 - [ ] Conectar feed ao Google Merchant Center + campanha Shopping (Claude guia, Wellington configura)
 - [ ] Repetir no Facebook Commerce e TikTok
 - [ ] Tela no painel p/ subir criativos + botão Publicar

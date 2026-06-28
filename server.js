@@ -1530,6 +1530,7 @@ app.get('/sitemap.xml', (req, res) => {
   urls.push(urlTag({ loc: baseUrl + '/contato.html',  changefreq: 'monthly', priority: '0.5' }));
   urls.push(urlTag({ loc: baseUrl + '/faq.html',      changefreq: 'monthly', priority: '0.6' }));
   urls.push(urlTag({ loc: baseUrl + '/entrega.html',  changefreq: 'monthly', priority: '0.5' }));
+  urls.push(urlTag({ loc: baseUrl + '/devolucao.html', changefreq: 'monthly', priority: '0.4' }));
   urls.push(urlTag({ loc: baseUrl + '/privacidade.html', changefreq: 'yearly', priority: '0.3' }));
   urls.push(urlTag({ loc: baseUrl + '/termos.html',   changefreq: 'yearly',  priority: '0.3' }));
 
