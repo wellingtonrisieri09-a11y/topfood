@@ -14,7 +14,8 @@ Itens deste documento que **avançaram ou foram concluídos** nesta sessão:
   - Extras: **canonical por produto** (corrige duplicação `/produto` vs `/product.html` confirmada no GSC), schema de produto completo (preço/frete/devolução), breadcrumb, faq no sitemap.
   - **NAP corrigido:** endereço unificado para **São Bernardo do Campo** em todo o site (batia "Santo André" na contato/sobre/admin — prejudica ranking local).
 - ✅ **M7 (Dashboard de Métricas) — DESBLOQUEADO:** chave da API Windsor configurada no servidor; módulo `marketing.js` puxa **Search Console + Meu Negócio + Meta/Google Ads** e entrega à IA Gestora. Endpoint `GET /api/eco/metrics`. _(Falta, se quiser, uma "tela" visual dedicada — hoje os dados saem pelo chat da IA Gestora.)_
-- ✅ **M15 (IA Gestora) — RESPONDENDO COM DADO REAL:** testada no painel, respondeu com orgânico real (GSC) **e** os anúncios (R$ 16,10 do Facebook, por campanha, com CPC e flag caro/eficiente). Camada 1 + métricas reais (orgânico e pago) ligadas. _Observação: o documento dizia "aguarda créditos p/ responder" — mas ela respondeu; confirmar com Wellington se os créditos Anthropic já entraram._
+- ✅ **M15 (IA Gestora) — RESPONDENDO COM DADO REAL:** testada no painel, respondeu com orgânico real (GSC) **e** os anúncios (R$ 16,10 do Facebook, por campanha, com CPC e flag caro/eficiente). Camada 1 + métricas reais (orgânico e pago) ligadas.
+- ✅ **Créditos Anthropic CONFIRMADOS (já entraram há tempo):** IA Atendente (M5) funcionando no WhatsApp e testada (busca dados, integrada ao Windsor); IA Gestora (M15) respondendo. Nada de esperar crédito.
 - ✅ **Infra:** **auto-deploy** (cron na VPS) — todo push entra no ar sozinho em ~2 min, reiniciando só o `topfood`. Documentado em `DEPLOY.md`.
 - 🔒 **Segurança:** rotacionar a chave do Windsor (apareceu em chat durante a configuração).
 
@@ -49,7 +50,7 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 | M3 | Gestão de Verba | Orçamento por plataforma | ✅ Pronto | — |
 | M4 | Rastreamento (pixels) | Meta, Google, GA4, TikTok no site | ✅ Pronto | — |
 | M4b | Rastreamento server-side (CAPI) | Rastreio à prova de bloqueador | ⏳ Bloqueado | Token da Meta (Wellington) |
-| M5 | IA Atendente WhatsApp 24h | Robô responde no WhatsApp | 🟡 Quase | Confirmar créditos Anthropic + ligar no painel |
+| M5 | IA Atendente WhatsApp 24h | Robô responde no WhatsApp | ✅ Pronto | — (créditos OK, WhatsApp conectado e testado, integrado ao Windsor) |
 | M6 | Retenção / E-mail | Sequências de e-mail automáticas | ⏳ Bloqueado | Boleto do e-mail Hostinger (Caio) |
 | M7 | Dashboard de Métricas | Visitas/anúncios/SEO no painel | 🟡→✅ Dados ligados | (Opcional) tela visual dedicada; dados já vêm pela IA Gestora |
 | M8 | Memória da IA | Atendente lembra de clientes/conversas | ✅ Pronto | — |
@@ -99,7 +100,7 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 **Conectadas (Windsor.ai):** GA4, Search Console, Google Ads, Facebook (2 contas), Instagram, Google Meu Negócio. **Windsor → servidor: chave configurada (28/06).**
 **Mercado Livre:** conta conectada.
 **Pagamento:** Asaas (PIX ✅; cartão aguarda docs do CNPJ).
-**IA (Anthropic):** chave no servidor — _confirmar créditos (IA Gestora já respondeu)_.
+**IA (Anthropic):** chave no servidor, **com créditos ativos** — IA Atendente (M5) e IA Gestora (M15) funcionando.
 
 ### Taxas Asaas (19/06)
 - Boleto R$ 0,99 (recebe em 1 dia útil) · Pix R$ 0,99 (segundos) · Cartão 1,99% + R$ 0,49 (recebe em 32 dias)
@@ -109,8 +110,7 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 ## 👥 PENDÊNCIAS POR RESPONSÁVEL
 
 ### Wellington
-- [ ] Confirmar/adicionar créditos Anthropic → IA Atendente (M5) + IA Gestora (M15)
-- [ ] Marcar "IA responde automaticamente" no painel (após créditos)
+- [x] ~~Créditos Anthropic~~ → **OK (já entraram há tempo)**; IA Atendente (M5) e IA Gestora (M15) funcionando
 - [ ] Token da Meta (CAPI) → destrava M4b
 - [x] ~~Chave Windsor.ai~~ → **feito (28/06)**, métricas ligadas na IA Gestora
 - [ ] Iniciar aprovações de API de anúncios (Meta → TikTok → Google) → M14
@@ -131,7 +131,7 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 
 ## ▶️ PRÓXIMOS PASSOS SUGERIDOS
 1. ~~SEO: home + blog/guias~~ ✅ **feito (28/06)** → agora: **indexação + avaliações** (Wellington)
-2. Confirmar créditos Anthropic → ligar IA Atendente + IA Gestora 100%
+2. ~~Créditos Anthropic~~ ✅ feito → IA Atendente + IA Gestora já 100% ligadas
 3. Anúncios de catálogo: política de devolução + Google Merchant Center (Claude guia)
 4. M14: tela de publicação + iniciar aprovações de API
 5. M15 Camada 2 / "Fase 3": IA Gestora **recomenda e executa** ajuste de campanha (Windsor já permite agir em Meta/Google Ads) com aprovação do Wellington
