@@ -27,6 +27,25 @@ async function win(connector, fields, datePreset) {
 
 const num = (r, k) => Number(r && r[k]) || 0;
 const r1  = (n) => Math.round(n * 10) / 10;
+const r2  = (n) => Math.round(n * 100) / 100;
+
+// Agrega totais de uma lista de linhas de anúncios (Google/Meta)
+function sumAds(rows) {
+  const gasto   = rows.reduce((a, r) => a + num(r, 'spend'), 0);
+  const cliques = rows.reduce((a, r) => a + num(r, 'clicks'), 0);
+  const impr    = rows.reduce((a, r) => a + num(r, 'impressions'), 0);
+  return {
+    gasto: r2(gasto), cliques, impressoes: impr,
+    cpc_medio: cliques ? r2(gasto / cliques) : 0,
+    ctr: impr ? r1(cliques / impr * 100) + '%' : '0%'
+  };
+}
+// Maiores campanhas por gasto (até 8)
+function topCampaigns(rows) {
+  return rows.slice().sort((a, b) => num(b, 'spend') - num(a, 'spend')).slice(0, 8)
+    .map(r => ({ campanha: r.campaign, gasto: r2(num(r, 'spend')), cliques: num(r, 'clicks'),
+      impressoes: num(r, 'impressions'), cpc: r2(num(r, 'cpc')) }));
+}
 
 // Cache curto (o dossiê é caro: 2-3 chamadas externas)
 let cache = { ts: 0, data: null };
@@ -69,6 +88,26 @@ async function buildDossie() {
       nota_media: num(rev, 'review_average_rating_total')
     };
   } catch (e) { d.fontes.google_meu_negocio = { indisponivel: e.message }; }
+
+  // ── Anúncios pagos (Meta Ads + Google Ads) ──
+  const ads = {};
+  try {
+    const rows = await win('facebook', ['campaign', 'spend', 'clicks', 'impressions', 'cpc', 'ctr'], 'last_30d');
+    ads.meta_ads = rows.length ? Object.assign(sumAds(rows), { campanhas: topCampaigns(rows) })
+                               : { sem_dados: true };
+  } catch (e) { ads.meta_ads = { indisponivel: e.message }; }
+  try {
+    const rows = await win('google_ads', ['campaign', 'spend', 'clicks', 'impressions', 'conversions', 'cpc', 'cost_per_conversion'], 'last_30d');
+    if (rows.length) {
+      const g = sumAds(rows);
+      g.conversoes = rows.reduce((a, r) => a + num(r, 'conversions'), 0);
+      g.custo_por_conversao = g.conversoes ? r2(g.gasto / g.conversoes) : 0;
+      ads.google_ads = Object.assign(g, { campanhas: topCampaigns(rows) });
+    } else {
+      ads.google_ads = { sem_dados: true, nota: 'Google Ads ainda não sincronizou no Windsor (costuma levar ~1 dia após a campanha começar a rodar).' };
+    }
+  } catch (e) { ads.google_ads = { indisponivel: e.message }; }
+  d.fontes.anuncios_pagos = ads;
 
   return d;
 }

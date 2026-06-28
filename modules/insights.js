@@ -117,15 +117,16 @@ async function perguntarIA(payload, days) {
     'Responda em português do Brasil, DIRETO e prático, com dados e recomendações acionáveis. Use listas curtas e números quando ajudar.',
     'Verba de marketing aprovada: R$ 3.000/mês (~R$ 100/dia) somando Google + Meta + TikTok.',
     'Estratégia de verba: fase de teste (espalhar pouco, achar o que converte) → concentrar no que traz cliente mais barato.',
-    'Você tem DUAS fontes de dados reais: (1) o COMPORTAMENTO do site (buscas, vistos, carrinho, pedidos) e (2) as MÉTRICAS DE MARKETING do Google (Search Console = tráfego orgânico, e Meu Negócio = local). Para perguntas sobre tráfego/orgânico/SEO/posições no Google, use as MÉTRICAS DE MARKETING. Para comportamento de quem já está no site, use o DOSSIÊ DO SITE.',
-    'Ao analisar o orgânico, foque nas "oportunidades_pagina2a4": termos que já têm impressão mas estão na página 2-4 — são os ganhos mais rápidos (empurrar para a página 1).',
-    'IMPORTANTE: baseie-se SOMENTE nos dados reais abaixo. Nunca invente números. Se uma fonte estiver "indisponivel" ou ausente (ex.: ainda não ligamos Google/Meta Ads), diga isso com franqueza em vez de supor.',
+    'Você tem fontes de dados reais: (1) o COMPORTAMENTO do site (buscas, vistos, carrinho, pedidos); (2) ORGÂNICO/LOCAL (Search Console = tráfego orgânico, Meu Negócio = local); (3) ANÚNCIOS PAGOS (Meta Ads e Google Ads: gasto, cliques, CPC, CTR, conversões). Use a fonte certa para cada pergunta.',
+    'Ao analisar o orgânico, foque nas "oportunidades_pagina2a4": termos que já têm impressão mas estão na página 2-4 — ganhos mais rápidos (empurrar para a página 1).',
+    'Ao analisar o pago: olhe gasto, CPC e CTR por campanha; aponte qual rende mais barato e qual está caro. Quando houver conversões, calcule o CPA (gasto ÷ conversões). Se quiser falar de retorno, cruze o gasto dos anúncios com os PEDIDOS do dossiê do site — mas deixe claro que a atribuição é aproximada.',
+    'IMPORTANTE: baseie-se SOMENTE nos dados reais abaixo. Nunca invente números. Se uma fonte estiver "indisponivel", "sem_dados" ou ausente, diga isso com franqueza em vez de supor (ex.: "o Google Ads ainda não sincronizou").',
     '',
     'DOSSIÊ DO SITE (comportamento interno, JSON):',
     JSON.stringify(dossie),
     '',
     marketing
-      ? 'MÉTRICAS DE MARKETING REAIS (Google Search Console + Meu Negócio, via Windsor, JSON):\n' + JSON.stringify(marketing)
+      ? 'MÉTRICAS DE MARKETING REAIS (Search Console + Meu Negócio + Anúncios Meta/Google, via Windsor, JSON):\n' + JSON.stringify(marketing)
       : 'MÉTRICAS DE MARKETING: ainda não conectadas (WINDSOR_API_KEY ausente ou indisponível) — não invente; foque no dossiê do site.'
   ].join('\n');
 
