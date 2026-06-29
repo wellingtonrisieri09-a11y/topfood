@@ -108,6 +108,8 @@ function processWebhook(event) {
   db.prepare("UPDATE orders SET raw_data=?, status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?")
     .run(JSON.stringify(raw), raw.status, externalRef);
 
+  try { require("./capi").sendPurchase(raw); } catch(_) {} // M4b: conversão server-side (Meta CAPI)
+
   auditLog("system", "asaas-webhook", "payment_confirmed", "orders", externalRef,
     `PIX confirmado: ${paymentId}`, "webhook");
   console.log(`[asaas] Pagamento confirmado: pedido ${externalRef}`);
@@ -134,6 +136,7 @@ async function pollPendingPayments() {
         raw.status         = "paid";
         db.prepare("UPDATE orders SET raw_data=?, status='paid', updated_at=CURRENT_TIMESTAMP WHERE id=?")
           .run(JSON.stringify(raw), row.id);
+        try { require("./capi").sendPurchase(raw); } catch(_) {} // M4b: conversão server-side (Meta CAPI)
         console.log(`[asaas] Polling confirmou pagamento: pedido ${row.id}`);
       }
     } catch(e) { /* ignora erros individuais */ }

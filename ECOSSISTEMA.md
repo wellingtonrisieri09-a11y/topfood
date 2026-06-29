@@ -49,7 +49,7 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 | M2 | Ad Center | Pixels + medição de conversão | ✅ Pronto | — |
 | M3 | Gestão de Verba | Orçamento por plataforma | ✅ Pronto | — |
 | M4 | Rastreamento (pixels) | Meta, Google, GA4, TikTok no site | ✅ Pronto | — |
-| M4b | Rastreamento server-side (CAPI) | Rastreio à prova de bloqueador | ⏳ Bloqueado | **Token da Conversions API** (Gerenciador de Eventos da Meta) — separado de rodar campanha. Pixel (M4) e campanha já funcionam. Melhoria de precisão, não urgente |
+| M4b | Rastreamento server-side (CAPI) | Rastreio à prova de bloqueador | 🟡 **Código pronto** | **Falta só o token** da Conversions API (Gerenciador de Eventos da Meta). Motor `modules/capi.js` envia "Purchase" server-side ao confirmar pagamento (dedup com o pixel por event_id). Cole `META_CAPI_TOKEN` no `.env` e está no ar. **← prioridade nº1** |
 | M5 | IA Atendente WhatsApp 24h | Robô responde no WhatsApp | ✅ Pronto | — (créditos OK, WhatsApp conectado e testado, integrado ao Windsor) |
 | M6 | Retenção / E-mail | Sequências de e-mail automáticas | 🟡 Quase | Boleto Hostinger pago + servidor atualizado ✅; falta **criar as contas de e-mail** (acesso ao painel registro.br — Wellington pega com o Caio) |
 | M7 | Dashboard de Métricas | Visitas/anúncios/SEO no painel | ✅ Pronto | Tela visual no admin (Inteligência) com orgânico + local + anúncios, via `/api/eco/metrics` — _28/06_ |

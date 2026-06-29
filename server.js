@@ -414,9 +414,10 @@ app.put('/api/admin/orders/:id', requireAuth, (req, res) => {
   orders[idx] = { ...orders[idx], ...req.body };
   writeData('orders.json', orders);
   res.json(orders[idx]);
-  // Envia e-mail de PIX confirmado quando admin muda status para 'paid'
-  if (wasNotPaid && orders[idx].status === 'paid' && orders[idx].payment_method === 'pix') {
-    sendPixConfirmedEmail(orders[idx]);
+  // Quando admin confirma pagamento: e-mail (PIX) + conversão server-side (Meta CAPI / M4b)
+  if (wasNotPaid && orders[idx].status === 'paid') {
+    if (orders[idx].payment_method === 'pix') sendPixConfirmedEmail(orders[idx]);
+    try { require('./modules/capi').sendPurchase(orders[idx]); } catch(_) {}
   }
 });
 app.delete('/api/admin/orders/:id', requireAuth, requireRole('canDelete'), (req, res) => {
