@@ -1744,7 +1744,7 @@
       <label>Digite seu CEP</label>
       <div class="frete-input-row">
         <input class="frete-input" id="mainCepInput" type="text" placeholder="00000-000" maxlength="9"
-          oninput="maskCep(this)" onkeydown="if(event.key==='Enter') calcularFrete('main')" />
+          oninput="maskCep(this); if(this.value.replace(/\D/g,'').length===8) calcularFrete('main')" onkeydown="if(event.key==='Enter') calcularFrete('main')" />
         <button class="frete-calc-btn" id="mainCalcBtn" onclick="calcularFrete('main')">Calcular</button>
       </div>
       <a href="https://buscacepinter.correios.com.br" target="_blank" class="frete-cep-link">Não sei meu CEP</a>

@@ -442,11 +442,11 @@
     if (isMain) {
       document.getElementById('mainFreteLoading').classList.add('show');
       document.getElementById('mainFreteResult').classList.remove('show');
-      const btn = document.getElementById('mainCalcBtn'); btn.textContent = '...'; btn.disabled = true;
+      const btn = document.getElementById('mainCalcBtn'); btn.textContent = 'Calculando…'; btn.disabled = true;
     }
     if (isCheckout) {
       const btn = document.getElementById('ckFreteBtn');
-      if (btn) { btn.textContent = '...'; btn.disabled = true; }
+      if (btn) { btn.textContent = 'Calculando…'; btn.disabled = true; }
     }
     try {
       const res  = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
@@ -1298,8 +1298,12 @@
     if (phoneDigits.length < 10) {
       showToast('⚠️ Informe seu telefone com DDD'); return;
     }
-    if (!validarCPF(checkoutData.cpf || '')) {
-      showToast('⚠️ CPF inválido — verifique os números'); return;
+    const cpfDigits = (checkoutData.cpf || '').replace(/\D/g, '');
+    if (!cpfDigits) {
+      showToast('⚠️ Preencha o CPF (campo obrigatório para a nota)'); return;
+    }
+    if (!validarCPF(cpfDigits)) {
+      showToast('⚠️ CPF inválido — confira os números digitados'); return;
     }
     if (!checkoutData.addrNum) { showToast('⚠️ Informe o número do endereço'); return; }
     if (!checkoutData.cep)     { showToast('⚠️ Informe o CEP para calcular o frete'); return; }
