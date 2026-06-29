@@ -1060,6 +1060,14 @@
     renderCheckoutStep();
   }
 
+  // Clicar numa etapa concluída do stepper volta pra ela (só pra trás; nunca pula validação)
+  function goToStep(n) {
+    if (checkoutStep === 4) return;   // pedido concluído — não navega
+    if (n >= checkoutStep) return;    // só permite voltar a etapas já concluídas
+    checkoutStep = n;
+    renderCheckoutStep();
+  }
+
   function renderCheckoutStep() {
     const titles = { 1: 'Seu Carrinho', 2: 'Dados de Entrega', 3: 'Forma de Pagamento', 4: 'Pedido Enviado! 🎉' };
     const titleEl = document.getElementById('ckTitle');
@@ -1076,6 +1084,10 @@
         s.classList.remove('active', 'done');
         if (i < checkoutStep)      s.classList.add('done');
         else if (i === checkoutStep) s.classList.add('active');
+        // Etapas já concluídas (anteriores à atual) ficam clicáveis pra voltar — nunca no passo final
+        const canClick = (i < checkoutStep) && (checkoutStep !== 4);
+        s.style.cursor = canClick ? 'pointer' : '';
+        s.onclick = canClick ? function(){ goToStep(i); } : null;
       }
       if (i < 4) {
         const sep = document.getElementById(`ckSep${i}`);
