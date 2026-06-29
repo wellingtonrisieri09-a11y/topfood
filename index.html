@@ -140,6 +140,7 @@
     .search-btn:hover { background: var(--red-d); }
     /* Corrige o ponto de parada da rolagem por causa do cabeçalho fixo (busca + menu de categorias) */
     #produtos, .product-card { scroll-margin-top: 96px; }
+    .req { color: var(--red); font-weight: 700; }
 
     .header-contact {
       display: flex; flex-direction: column; align-items: center;
@@ -1515,6 +1516,8 @@
       <span class="cart-badge" id="cartCount">0</span>
     </button>
   </div>
+  <script>/* evita o "0" piscando no contador do carrinho antes do app.js carregar */
+  (function(){try{var c=JSON.parse(localStorage.getItem('tf-cart')||'[]');var n=c.reduce(function(s,i){return s+(+i.qty||0);},0);var b=document.getElementById('cartCount');var l=document.getElementById('cartLabel');if(b)b.textContent=n;if(l)l.textContent=(n===0?'Carrinho':n+' item'+(n>1?'s':''));}catch(e){}})();</script>
 </header>
 
 <!-- ▓▓▓ NAV ▓▓▓ -->

@@ -1187,31 +1187,31 @@
       <div class="ck-section">
         <div class="ck-section-title">👤 Seus Dados</div>
         <div class="ck-form-group">
-          <label>Nome completo *</label>
+          <label>Nome completo <span class="req">*</span></label>
           <input class="ck-input" id="ckNome" type="text" placeholder="Seu nome completo"
             value="${escHtml(checkoutData.nome || '')}" />
         </div>
         <div class="ck-row">
           <div class="ck-form-group">
-            <label>E-mail *</label>
+            <label>E-mail <span class="req">*</span></label>
             <input class="ck-input" id="ckEmail" type="email" placeholder="seu@email.com"
               value="${escHtml(checkoutData.email || '')}" />
           </div>
           <div class="ck-form-group">
-            <label>Telefone *</label>
+            <label>Telefone <span class="req">*</span></label>
             <input class="ck-input" id="ckPhone" type="tel" placeholder="(11) 99999-9999"
               value="${escHtml(checkoutData.phone || '')}" maxlength="15" oninput="maskPhone(this)" />
           </div>
         </div>
         <div class="ck-row">
           <div class="ck-form-group">
-            <label>CPF *</label>
+            <label>CPF <span class="req">*</span></label>
             <input class="ck-input" id="ckCpf" type="text" placeholder="000.000.000-00"
               maxlength="14" oninput="fmtCpf(this)"
               value="${escHtml(checkoutData.cpf || '')}" />
           </div>
           <div class="ck-form-group">
-            <label>Número do endereço *</label>
+            <label>Número do endereço <span class="req">*</span></label>
             <input class="ck-input" id="ckAddrNum" type="text" placeholder="Ex: 123"
               value="${escHtml(checkoutData.addrNum || '')}" />
           </div>
@@ -1220,7 +1220,7 @@
       <div class="ck-section">
         <div class="ck-section-title">🚚 Endereço de Entrega</div>
         <div class="ck-form-group">
-          <label>CEP *</label>
+          <label>CEP <span class="req">*</span></label>
           <div class="ck-cep-row">
             <input class="ck-input" id="ckCepInput" type="text" placeholder="00000-000" maxlength="9"
               value="${escHtml(cepVal)}"
