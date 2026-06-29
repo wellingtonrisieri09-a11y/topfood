@@ -355,6 +355,17 @@
     if (term)  term.textContent = q || cat;
   }
 
+  // Liga a barra de busca grande (topo) na busca que já filtra a grade de produtos
+  function heroSearch() {
+    var hero = document.getElementById('hero-search');
+    var grid = document.getElementById('product-search');
+    if (hero && grid) grid.value = hero.value;
+    if (typeof filterProductsGrid === 'function') filterProductsGrid();
+    var sec = document.getElementById('produtos');
+    if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  window.heroSearch = heroSearch;
+
   function fixImgPath(s) {
     if (!s) return '';
     if (s.startsWith('data:') || s.startsWith('http') || s.startsWith('/')) return s;

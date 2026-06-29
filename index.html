@@ -138,6 +138,8 @@
       font-size: 1rem; transition: background 0.2s; display: flex; align-items: center;
     }
     .search-btn:hover { background: var(--red-d); }
+    /* Corrige o ponto de parada da rolagem por causa do cabeçalho fixo (busca + menu de categorias) */
+    #produtos, .product-card { scroll-margin-top: 96px; }
 
     .header-contact {
       display: flex; flex-direction: column; align-items: center;
@@ -1494,8 +1496,8 @@
   </a>
 
   <div class="search-bar">
-    <input type="text" placeholder="Busque por tipo de embalagem (pastel, churros, hambúrguer...)" />
-    <button class="search-btn" aria-label="Buscar">🔍</button>
+    <input type="text" id="hero-search" placeholder="Busque por tipo de embalagem (pastel, churros, hambúrguer...)" onkeydown="if(event.key==='Enter'){event.preventDefault();heroSearch();}" />
+    <button class="search-btn" aria-label="Buscar" onclick="heroSearch()">🔍</button>
   </div>
 
   <div class="header-contact">
