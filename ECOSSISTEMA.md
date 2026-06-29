@@ -49,9 +49,9 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 | M2 | Ad Center | Pixels + medição de conversão | ✅ Pronto | — |
 | M3 | Gestão de Verba | Orçamento por plataforma | ✅ Pronto | — |
 | M4 | Rastreamento (pixels) | Meta, Google, GA4, TikTok no site | ✅ Pronto | — |
-| M4b | Rastreamento server-side (CAPI) | Rastreio à prova de bloqueador | ⏳ Bloqueado | Token da Meta (Wellington) |
+| M4b | Rastreamento server-side (CAPI) | Rastreio à prova de bloqueador | ⏳ Bloqueado | **Token da Conversions API** (Gerenciador de Eventos da Meta) — separado de rodar campanha. Pixel (M4) e campanha já funcionam. Melhoria de precisão, não urgente |
 | M5 | IA Atendente WhatsApp 24h | Robô responde no WhatsApp | ✅ Pronto | — (créditos OK, WhatsApp conectado e testado, integrado ao Windsor) |
-| M6 | Retenção / E-mail | Sequências de e-mail automáticas | ⏳ Bloqueado | Boleto do e-mail Hostinger (Caio) |
+| M6 | Retenção / E-mail | Sequências de e-mail automáticas | 🟡 Quase | Boleto Hostinger pago + servidor atualizado ✅; falta **criar as contas de e-mail** (acesso ao painel registro.br — Wellington pega com o Caio) |
 | M7 | Dashboard de Métricas | Visitas/anúncios/SEO no painel | ✅ Pronto | Tela visual no admin (Inteligência) com orgânico + local + anúncios, via `/api/eco/metrics` — _28/06_ |
 | M8 | Memória da IA | Atendente lembra de clientes/conversas | ✅ Pronto | — |
 | M9 | Controle de Acesso | Login seguro, perfis, 2FA | ✅ Pronto | (2FA opcional) |
@@ -111,7 +111,8 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 
 ### Wellington
 - [x] ~~Créditos Anthropic~~ → **OK (já entraram há tempo)**; IA Atendente (M5) e IA Gestora (M15) funcionando
-- [ ] Token da Meta (CAPI) → destrava M4b
+- [ ] Token da **Conversions API** da Meta (no Gerenciador de Eventos) → destrava M4b _(opcional/melhoria; pixel e campanha já funcionam)_
+- [ ] Pegar com o Caio o acesso ao **painel registro.br** → criar contas de e-mail (M6)
 - [x] ~~Chave Windsor.ai~~ → **feito (28/06)**, métricas ligadas na IA Gestora
 - [ ] Iniciar aprovações de API de anúncios (Meta → TikTok → Google) → M14
 - [ ] Adicionar fundos no Facebook Ads (campanha parou por pagamento — R$16 de R$20)
@@ -121,8 +122,9 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 
 ### Caio
 - [ ] Asaas: docs do CNPJ → libera cartão
-- [ ] Hostinger: boleto do e-mail profissional → libera M6
-- [ ] Hostinger: boleto do upgrade do servidor (VPS)
+- [x] ~~Hostinger: boleto do e-mail~~ → **pago** ✅
+- [x] ~~Hostinger: boleto do upgrade do servidor (VPS)~~ → **feito** ✅ (servidor atualizado)
+- [ ] Passar ao Wellington o **acesso ao painel registro.br** → criar as contas de e-mail (M6)
 
 ### Contador
 - [ ] Certificado digital + credenciamento NF-e → libera M11
