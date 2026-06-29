@@ -2842,6 +2842,65 @@ async function loadInsights() {
     inList('in-oport', d.oportunidades, function(o){ return '<span>'+o.id+'</span><b>'+o.views+' views · '+o.conversao+'% carrinho</b>'; });
   } catch(e) { toast('Erro ao carregar inteligência', 'error'); }
   iaRender();   // inicializa/mostra o chat da IA Gestora
+  loadMetrics(); // M7: dashboard de métricas reais (Windsor)
+}
+
+/* ── M7: Dashboard de Métricas de Marketing (via Windsor) ── */
+async function loadMetrics(force) {
+  const box = document.getElementById('mkt-metrics');
+  if (!box) return;
+  box.innerHTML = '<p style="opacity:.6">Carregando métricas reais…</p>';
+  try {
+    const r = await api('/api/eco/metrics' + (force ? '?force=1' : ''));
+    if (!r || !r.ok || !r.configured) {
+      box.innerHTML = '<p style="opacity:.7">Métricas de marketing ainda não conectadas (WINDSOR_API_KEY ausente no servidor).</p>';
+      return;
+    }
+    const f = (r.data && r.data.fontes) || {};
+    box.innerHTML = mktOrganico(f.busca_google) + mktLocal(f.google_meu_negocio) + mktAds(f.anuncios_pagos);
+  } catch (e) {
+    box.innerHTML = '<p style="color:#CC0000">Erro ao carregar métricas: ' + (e.message || e) + '</p>';
+  }
+}
+function mktStat(label, val) {
+  return '<div style="background:rgba(128,128,128,.08);border-radius:8px;padding:9px 14px;min-width:110px">'
+    + '<div style="font-size:1.2rem;font-weight:800">' + val + '</div>'
+    + '<div style="font-size:.7rem;opacity:.65">' + label + '</div></div>';
+}
+function mktRow(items) { return '<div style="display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 4px">' + items.join('') + '</div>'; }
+function mktBlock(title, inner) {
+  return '<div style="border-top:1px solid rgba(128,128,128,.15);padding:12px 0"><div style="font-weight:700;margin-bottom:6px">' + title + '</div>' + inner + '</div>';
+}
+function mktOrganico(g) {
+  if (!g || g.indisponivel) return mktBlock('🔍 Orgânico (Google)', '<p style="opacity:.6">' + ((g && g.indisponivel) || 'sem dados') + '</p>');
+  const stats = mktRow([ mktStat('Impressões', g.total_impressoes || 0), mktStat('Cliques', g.total_cliques || 0), mktStat('CTR', g.ctr || '0%') ]);
+  const op = (g.oportunidades_pagina2a4 || []).slice(0, 6).map(function (o) {
+    return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(128,128,128,.12);font-size:.84rem"><span>' + o.termo + '</span><b>pos ' + o.posicao + ' · ' + o.impressoes + ' impr</b></div>';
+  }).join('');
+  return mktBlock('🔍 Orgânico (Google Search Console)', stats + (op ? '<div style="font-size:.78rem;opacity:.7;margin:10px 0 4px">⭐ Oportunidades (página 2-4 — empurrar p/ a 1ª):</div>' + op : ''));
+}
+function mktLocal(l) {
+  if (!l || l.indisponivel) return mktBlock('📍 Local (Meu Negócio)', '<p style="opacity:.6">' + ((l && l.indisponivel) || 'sem dados') + '</p>');
+  return mktBlock('📍 Local (Google Meu Negócio)', mktRow([
+    mktStat('Aparições', l.aparicoes_maps_busca || 0), mktStat('Cliques no site', l.cliques_site || 0),
+    mktStat('Pedidos de rota', l.pedidos_rota || 0), mktStat('Avaliações', (l.avaliacoes || 0) + ' (' + (l.nota_media || 0) + '★)')
+  ]));
+}
+function mktAds(a) {
+  if (!a) return mktBlock('📢 Anúncios pagos', '<p style="opacity:.6">sem dados</p>');
+  return mktBlock('📢 Anúncios pagos', mktAdsOne('Meta (Facebook/Instagram)', a.meta_ads) + mktAdsOne('Google Ads', a.google_ads));
+}
+function mktAdsOne(nome, x) {
+  if (!x) return '';
+  if (x.sem_dados)    return '<div style="margin:6px 0;font-size:.85rem"><b>' + nome + ':</b> <span style="opacity:.6">' + (x.nota || 'sem dados ainda') + '</span></div>';
+  if (x.indisponivel) return '<div style="margin:6px 0;font-size:.85rem"><b>' + nome + ':</b> <span style="opacity:.6">' + x.indisponivel + '</span></div>';
+  const camp = (x.campanhas || []).slice(0, 5).map(function (c) {
+    const caro = Number(c.cpc) >= 0.40;
+    return '<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid rgba(128,128,128,.1);font-size:.8rem"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">' + c.campanha + '</span><b>R$ ' + c.gasto + ' · CPC R$ ' + c.cpc + (caro ? ' 🔴' : ' ✅') + '</b></div>';
+  }).join('');
+  return '<div style="margin:10px 0"><div style="font-weight:700;margin-bottom:4px">' + nome + '</div>'
+    + mktRow([ mktStat('Gasto', 'R$ ' + (x.gasto || 0)), mktStat('Cliques', x.cliques || 0), mktStat('CPC médio', 'R$ ' + (x.cpc_medio || 0)), mktStat('CTR', x.ctr || '0%') ])
+    + camp + '</div>';
 }
 
 /* ── Chat com a IA Gestora (conversa com histórico) ── */

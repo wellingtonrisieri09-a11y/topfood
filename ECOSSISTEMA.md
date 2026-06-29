@@ -52,7 +52,7 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 | M4b | Rastreamento server-side (CAPI) | Rastreio à prova de bloqueador | ⏳ Bloqueado | Token da Meta (Wellington) |
 | M5 | IA Atendente WhatsApp 24h | Robô responde no WhatsApp | ✅ Pronto | — (créditos OK, WhatsApp conectado e testado, integrado ao Windsor) |
 | M6 | Retenção / E-mail | Sequências de e-mail automáticas | ⏳ Bloqueado | Boleto do e-mail Hostinger (Caio) |
-| M7 | Dashboard de Métricas | Visitas/anúncios/SEO no painel | 🟡→✅ Dados ligados | (Opcional) tela visual dedicada; dados já vêm pela IA Gestora |
+| M7 | Dashboard de Métricas | Visitas/anúncios/SEO no painel | ✅ Pronto | Tela visual no admin (Inteligência) com orgânico + local + anúncios, via `/api/eco/metrics` — _28/06_ |
 | M8 | Memória da IA | Atendente lembra de clientes/conversas | ✅ Pronto | — |
 | M9 | Controle de Acesso | Login seguro, perfis, 2FA | ✅ Pronto | (2FA opcional) |
 | M10 | Marketplace Hub | Vender em ML/Shopee/Amazon | 🟡 Reavaliar | ML conectado; publicar é burocrático; foco mudou p/ anúncios |
