@@ -76,6 +76,7 @@
         values: p.variants.map(v => v.price),
         units:  p.variants.map(v => v.units),
         weight_per_unit: p.weight_per_unit || 15,
+        no_frete: p.no_frete || false,
       };
     });
     ALL_PRODUCTS = active;
@@ -161,7 +162,7 @@
         var id = 'sel-' + pid + '-' + idx;
         var ex = cart.find(function(c) { return c.id === id; });
         if (ex) { ex.qty += qtd; ex.total = ex.price * ex.qty; }
-        else cart.push({ id: id, name: prod.name, img: prod.image, pack: v.units, qty: qtd, price: v.price, total: v.price * qtd });
+        else cart.push({ id: id, name: prod.name, img: prod.image, pack: v.units, qty: qtd, price: v.price, total: v.price * qtd, no_frete: !!(PRICES[pid] && PRICES[pid].no_frete) });
         add++;
       });
       if (!add) return;
@@ -246,7 +247,7 @@
     const id = selId + '-' + idx;
     const ex = cart.find(c => c.id === id);
     if (ex) { ex.qty += qty; ex.total = ex.price * ex.qty; }
-    else cart.push({ id, name, img, pack, qty, price, total: price * qty });
+    else cart.push({ id, name, img, pack, qty, price, total: price * qty, no_frete: !!(PRICES[key] && PRICES[key].no_frete) });
     saveCartLocal();
     renderCart();
     showToast(`✅ ${name} adicionado!`);
@@ -1231,6 +1232,10 @@
 
   // ── Step 2: Entrega ──────────────────────────
   function renderCKStep2(body, footer) {
+    const noFrete = cartAllNoFrete();
+    if (noFrete && !selectedShipping) {
+      selectedShipping = { nome: 'Sem frete', preco: 0, dias: '—' };
+    }
     const cepVal = checkoutData.cep
       ? checkoutData.cep.replace(/(\d{5})(\d{3})/, '$1-$2')
       : '';
@@ -1247,7 +1252,7 @@
       : `<div style="font-size:.82rem;color:var(--gray);padding:6px 0">👆 Calcule o frete acima para ver as opções de entrega</div>`;
     body.innerHTML = `
       <div style="background:#EFF8FF;border:1px solid #BAE6FD;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:.8rem;color:#0369A1">
-        📍 Informe seus dados e o CEP para calcular o frete. Depois é só escolher a opção de entrega e avançar.
+        ${noFrete ? '✅ Este produto não precisa de frete — preencha seus dados e avance.' : '📍 Informe seus dados e o CEP para calcular o frete. Depois é só escolher a opção de entrega e avançar.'}
       </div>
       <div class="ck-section">
         <div class="ck-section-title">👤 Seus Dados</div>
@@ -1311,9 +1316,9 @@
     footer.innerHTML = `
       <div class="ck-footer-subtotal">
         <span>Frete</span>
-        <strong>${ready ? `R$ ${selectedShipping.preco.toFixed(2).replace('.', ',')} · ${selectedShipping.nome}` : '— selecione acima'}</strong>
+        <strong>${noFrete ? 'Grátis' : (ready ? `R$ ${selectedShipping.preco.toFixed(2).replace('.', ',')} · ${selectedShipping.nome}` : '— selecione acima')}</strong>
       </div>
-      <button class="ck-btn-next" id="ckStep2Btn" onclick="ckGoStep3()" ${ready ? '' : 'disabled'}>
+      <button class="ck-btn-next" id="ckStep2Btn" onclick="ckGoStep3()" ${(noFrete || ready) ? '' : 'disabled'}>
         Continuar para Pagamento →
       </button>`;
   }
@@ -1370,9 +1375,11 @@
     if (!validarCPF(cpfDigits)) {
       showToast('⚠️ CPF inválido — confira os números digitados'); return;
     }
-    if (!checkoutData.addrNum) { showToast('⚠️ Informe o número do endereço'); return; }
-    if (!checkoutData.cep)     { showToast('⚠️ Informe o CEP para calcular o frete'); return; }
-    if (!selectedShipping)     { showToast('⚠️ Selecione uma opção de frete'); return; }
+    if (!cartAllNoFrete()) {
+      if (!checkoutData.addrNum) { showToast('⚠️ Informe o número do endereço'); return; }
+      if (!checkoutData.cep)     { showToast('⚠️ Informe o CEP para calcular o frete'); return; }
+      if (!selectedShipping)     { showToast('⚠️ Selecione uma opção de frete'); return; }
+    }
     captureAbandonedCart();
     checkoutStep = 3;
     renderCheckoutStep();
