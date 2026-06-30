@@ -1204,14 +1204,13 @@ app.post('/api/asaas/credit-card', async (req, res) => {
     }
 
     const dueDate = new Date().toISOString().split('T')[0];
+    const nInstall = parseInt(installments || 1);
     const payload = {
       customer:    customerId,
       billingType: 'CREDIT_CARD',
-      value:       parseFloat(total),
       dueDate,
       description: 'Pedido ' + orderId + ' — TopFood Embalagens',
       externalReference: orderId,
-      installmentCount: parseInt(installments || 1),
       creditCard: {
         holderName:  card.holderName,
         number:      card.number.replace(/\s/g, ''),
@@ -1228,6 +1227,15 @@ app.post('/api/asaas/credit-card', async (req, res) => {
         phone:         (customer.phone || '').replace(/\D/g, ''),
       },
     };
+
+    // À vista (1x): manda só o valor. Parcelado (2x+): manda o total e o Asaas
+    // divide automaticamente — assim nunca pede "valor da parcela" ao cliente.
+    if (nInstall > 1) {
+      payload.installmentCount = nInstall;
+      payload.totalValue       = parseFloat(total);
+    } else {
+      payload.value = parseFloat(total);
+    }
 
     const r = await asaasApi.post('/payments', payload);
     const payment = r.data;
