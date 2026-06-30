@@ -5,6 +5,21 @@ _Documento-mestre. Versionado no Git para nunca mais se perder (o PC com o hist�
 
 ---
 
+## 🔄 ATUALIZAÇÃO — sessão de 30/06 (Claude Code)
+**Loja agora vende e recebe sozinha — checkout fechado de ponta a ponta:**
+
+- ✅ **Login do cliente CONSERTADO:** botão "Minha Conta" não abria (funções `openAccount`/`closeAccount`/`showAccountPanel`/`updateAccountHeader` eram chamadas mas nunca existiram). Cliente e dono já entram com e-mail/senha e veem seus pedidos.
+- ✅ **Pagamentos TESTADOS EM PRODUÇÃO:** **Cartão de crédito** (liberado — docs do CNPJ aprovadas no Asaas) **e PIX** aprovados em compra real.
+- ✅ **PIX com confirmação automática (webhook) FUNCIONANDO:** pedido vira "pago" sozinho — _este era o último pendente documentado do projeto._ 🏆
+- ✅ **Bug do cartão à vista:** mandava `installmentCount` sempre (até 1x) e o Asaas exigia "valor da parcela". Agora 1x = pagamento único; 2x+ = Asaas divide sozinho.
+- ✅ **Bug do checkout corrigido:** `cartAllNoFrete()` era usada no passo de Entrega mas nunca foi definida (quebraria o checkout). Definida + produto de teste dispensa frete.
+- ✅ **E-mail de confirmação de pedido FUNCIONANDO:** cliente recebe "Pedido recebido" na hora (nodemailer no ar).
+- ✅ **Auto-deploy CONFIRMADO LIGADO:** cron na VPS ativo; push no Git entra no ar sozinho em ~2 min. Wellington trabalha só pelo chat — sem terminal.
+- 🔜 **Boleto:** adiado de propósito para o **B2B (M11)**, onde é mais necessário.
+- 🔒 **Segurança:** rotacionar a senha de e-mail (`EMAIL_PASS`) — apareceu em chat e parece pessoal.
+
+---
+
 ## 🔄 ATUALIZAÇÃO — sessão de 28/06 (Claude Code)
 Itens deste documento que **avançaram ou foram concluídos** nesta sessão:
 
@@ -34,7 +49,8 @@ Ecossistema digital completo: site/loja online + painel que automatiza **marketi
 - [x] Painel administrativo (pedidos, produtos, clientes, relatórios, configurações)
 - [x] Banco de dados, backup diário automático + backup externo
 - [x] Segurança reforçada (login protegido, firewall, anti-ataque)
-- [x] Pagamento PIX funcionando (confirmação automática via Asaas)
+- [x] Pagamento **PIX e Cartão** funcionando (PIX com confirmação automática via Asaas) — _testado 30/06_
+- [x] Login do cliente + e-mail de confirmação de pedido — _30/06_
 - [x] 6 produtos cadastrados com fotos
 - [x] **Auto-deploy** (push no Git → no ar em ~2 min) — _novo, 28/06_
 
@@ -51,7 +67,7 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 | M4 | Rastreamento (pixels) | Meta, Google, GA4, TikTok no site | ✅ Pronto | — |
 | M4b | Rastreamento server-side (CAPI) | Rastreio à prova de bloqueador | 🟡 **Código pronto** | **Falta só o token** da Conversions API (Gerenciador de Eventos da Meta). Motor `modules/capi.js` envia "Purchase" server-side ao confirmar pagamento (dedup com o pixel por event_id). Cole `META_CAPI_TOKEN` no `.env` e está no ar. **← prioridade nº1** |
 | M5 | IA Atendente WhatsApp 24h | Robô responde no WhatsApp | ✅ Pronto | — (créditos OK, WhatsApp conectado e testado, integrado ao Windsor) |
-| M6 | Retenção / E-mail | Sequências de e-mail automáticas | 🟡 Quase | Boleto Hostinger pago + servidor atualizado ✅; falta **criar as contas de e-mail** (acesso ao painel registro.br — Wellington pega com o Caio) |
+| M6 | Retenção / E-mail | Sequências de e-mail automáticas | 🟡 Quase | **E-mail transacional de confirmação de pedido ✅ funcionando (testado 30/06)**; falta **criar as contas de e-mail @topfoodembalagens.com.br** (acesso registro.br — Wellington pega com o Caio) + **sequências de retenção** (carrinho abandonado já existe; falta automação de pós-venda) |
 | M7 | Dashboard de Métricas | Visitas/anúncios/SEO no painel | ✅ Pronto | Tela visual no admin (Inteligência) com orgânico + local + anúncios, via `/api/eco/metrics` — _28/06_ |
 | M8 | Memória da IA | Atendente lembra de clientes/conversas | ✅ Pronto | — |
 | M9 | Controle de Acesso | Login seguro, perfis, 2FA | ✅ Pronto | (2FA opcional) |
@@ -99,7 +115,7 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 ## 🔌 CONTAS E INTEGRAÇÕES
 **Conectadas (Windsor.ai):** GA4, Search Console, Google Ads, Facebook (2 contas), Instagram, Google Meu Negócio. **Windsor → servidor: chave configurada (28/06).**
 **Mercado Livre:** conta conectada.
-**Pagamento:** Asaas (PIX ✅; cartão aguarda docs do CNPJ).
+**Pagamento:** Asaas — **PIX ✅ (confirmação automática), Cartão ✅ (testado 30/06)**; boleto reservado p/ B2B (M11).
 **IA (Anthropic):** chave no servidor, **com créditos ativos** — IA Atendente (M5) e IA Gestora (M15) funcionando.
 
 ### Taxas Asaas (19/06)
@@ -121,7 +137,7 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 - [ ] (Opcional) 2FA · fotos/vídeos profissionais
 
 ### Caio
-- [ ] Asaas: docs do CNPJ → libera cartão
+- [x] ~~Asaas: docs do CNPJ → libera cartão~~ → **feito** ✅ (cartão liberado e testado 30/06)
 - [x] ~~Hostinger: boleto do e-mail~~ → **pago** ✅
 - [x] ~~Hostinger: boleto do upgrade do servidor (VPS)~~ → **feito** ✅ (servidor atualizado)
 - [ ] Passar ao Wellington o **acesso ao painel registro.br** → criar as contas de e-mail (M6)
