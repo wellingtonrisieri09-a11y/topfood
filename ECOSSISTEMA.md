@@ -67,7 +67,7 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 | M4 | Rastreamento (pixels) | Meta, Google, GA4, TikTok no site | ✅ Pronto | — |
 | M4b | Rastreamento server-side (CAPI) | Rastreio à prova de bloqueador | 🟡 **Código pronto** | **Falta só o token** da Conversions API (Gerenciador de Eventos da Meta). Motor `modules/capi.js` envia "Purchase" server-side ao confirmar pagamento (dedup com o pixel por event_id). Cole `META_CAPI_TOKEN` no `.env` e está no ar. **← prioridade nº1** |
 | M5 | IA Atendente WhatsApp 24h | Robô responde no WhatsApp | ✅ Pronto | — (créditos OK, WhatsApp conectado e testado, integrado ao Windsor) |
-| M6 | Retenção / E-mail | Sequências de e-mail automáticas | 🟡 Quase | **E-mail transacional de confirmação de pedido ✅ funcionando (testado 30/06)**; falta **criar as contas de e-mail @topfoodembalagens.com.br** (acesso registro.br — Wellington pega com o Caio) + **sequências de retenção** (carrinho abandonado já existe; falta automação de pós-venda) |
+| M6 | Retenção / E-mail | Sequências de e-mail automáticas | 🟡 Quase | **Conta do domínio (contato@) ✅ ligada + e-mail de confirmação ✅ funcionando (30/06)**; resta só (opcional) **automação de pós-venda/recompra** — carrinho abandonado já existe |
 | M7 | Dashboard de Métricas | Visitas/anúncios/SEO no painel | ✅ Pronto | Tela visual no admin (Inteligência) com orgânico + local + anúncios, via `/api/eco/metrics` — _28/06_ |
 | M8 | Memória da IA | Atendente lembra de clientes/conversas | ✅ Pronto | — |
 | M9 | Controle de Acesso | Login seguro, perfis, 2FA | ✅ Pronto | (2FA opcional) |
@@ -128,7 +128,7 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 ### Wellington
 - [x] ~~Créditos Anthropic~~ → **OK (já entraram há tempo)**; IA Atendente (M5) e IA Gestora (M15) funcionando
 - [ ] Token da **Conversions API** da Meta (no Gerenciador de Eventos) → destrava M4b _(opcional/melhoria; pixel e campanha já funcionam)_
-- [ ] Pegar com o Caio o acesso ao **painel registro.br** → criar contas de e-mail (M6)
+- [x] ~~Pegar com o Caio o acesso ao **painel registro.br** → criar contas de e-mail (M6)~~ → **feito** ✅ (contato@ ligado e funcionando)
 - [x] ~~Chave Windsor.ai~~ → **feito (28/06)**, métricas ligadas na IA Gestora
 - [ ] Iniciar aprovações de API de anúncios (Meta → TikTok → Google) → M14
 - [ ] Adicionar fundos no Facebook Ads (campanha parou por pagamento — R$16 de R$20)
@@ -140,7 +140,7 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 - [x] ~~Asaas: docs do CNPJ → libera cartão~~ → **feito** ✅ (cartão liberado e testado 30/06)
 - [x] ~~Hostinger: boleto do e-mail~~ → **pago** ✅
 - [x] ~~Hostinger: boleto do upgrade do servidor (VPS)~~ → **feito** ✅ (servidor atualizado)
-- [ ] Passar ao Wellington o **acesso ao painel registro.br** → criar as contas de e-mail (M6)
+- [x] ~~Passar ao Wellington o **acesso ao painel registro.br** → criar as contas de e-mail (M6)~~ → **feito** ✅
 
 ### Contador
 - [ ] Certificado digital + credenciamento NF-e → libera M11

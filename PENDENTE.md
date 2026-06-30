@@ -11,10 +11,8 @@ _Responsáveis: **[W]** Wellington · **[Caio]** · **[Contador]** · **[Claude]
 - [ ] **[W]** Gerar o `META_CAPI_TOKEN` no **Gerenciador de Eventos da Meta → Conversions API → Gerar token** e colar no `.env` do servidor.
 
 ### M6 — Retenção / E-mail
-> E-mail de confirmação de pedido já funciona. Falta o e-mail **oficial do domínio** + automações.
-- [ ] **[Caio]** Passar ao Wellington o acesso ao **painel registro.br**.
-- [ ] **[W]** Criar as contas `contato@topfoodembalagens.com.br` (e afins) no registro.br.
-- [ ] **[Claude]** Sequências automáticas de pós-venda (boas-vindas, pós-compra, recompra) — depois das contas prontas.
+> Conta do domínio (contato@topfoodembalagens.com.br) + e-mail de confirmação JÁ ligados e funcionando. Resta só automação (opcional).
+- [ ] **[Claude]** (Opcional) Sequências automáticas de pós-venda: boas-vindas, pós-compra, recompra. *(Carrinho abandonado já existe.)*
 
 ### SEO (prioridade máxima — não custa verba)
 - [ ] **[W]** Solicitar **indexação dos guias** no Google Search Console (acelera de semanas → dias).
