@@ -294,6 +294,15 @@
       return total + (item.qty * item.pack * w);
     }, 0);
   }
+  // Item dispensa frete se tem a flag no_frete (vinda do produto) ou é o produto
+  // interno de teste de pagamentos (detectado pelo nome, sem depender do banco).
+  function cartItemNoFrete(i) {
+    return !!(i && i.no_frete) || /produto de teste|teste\s*[—-]\s*pagamentos/i.test((i && i.name) || '');
+  }
+  // Carrinho inteiro dispensa frete? (usado pelo checkout p/ pular a etapa de frete)
+  function cartAllNoFrete() {
+    return cart.length > 0 && cart.every(cartItemNoFrete);
+  }
   function applyWeightMultiplier(preco, weightGrams) {
     if (weightGrams <= 500)   return preco;
     if (weightGrams <= 2000)  return preco * 1.15;
