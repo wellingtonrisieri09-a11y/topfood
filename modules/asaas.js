@@ -147,9 +147,12 @@ async function pollPendingPayments() {
 function registerAsaasRoutes(app, requireAuth, requireOwner) {
   // Webhook público (Asaas chama este endpoint)
   app.post("/api/asaas/webhook", (req, res) => {
-    const signature = req.headers["asaas-access-token"];
-    // Aceita mesmo sem validação de assinatura por enquanto
-    // (Asaas não usa HMAC — usa IP allowlist no painel deles)
+    const token = req.headers["asaas-access-token"];
+    const expected = process.env.ASAAS_WEBHOOK_TOKEN;
+    if (expected && token !== expected) {
+      console.warn("[asaas] webhook: token inválido rejeitado");
+      return res.status(401).json({ error: "unauthorized" });
+    }
     try {
       processWebhook(req.body);
       res.json({ received: true });
