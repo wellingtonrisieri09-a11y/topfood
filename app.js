@@ -15,6 +15,9 @@
   // ─── Todos os produtos (para busca e relacionados) ─────
   let ALL_PRODUCTS = [];
 
+  // ─── Cliente logado (em memória, espelha localStorage 'tf-customer') ─────
+  let currentCustomer = null;
+
   const FRETE_TABLE = {
     'SP':[{nome:'📦 PAC',dias:'3–5 dias úteis',preco:18.90},{nome:'✈️ SEDEX',dias:'1–2 dias úteis',preco:32.90}],
     'RJ':[{nome:'📦 PAC',dias:'4–6 dias úteis',preco:25.90},{nome:'✈️ SEDEX',dias:'2–3 dias úteis',preco:42.90}],
@@ -539,6 +542,56 @@
   // ─── Helper: cliente logado ───────────────
   function getLoggedCustomer() {
     try { return JSON.parse(localStorage.getItem('tf-customer') || 'null'); } catch { return null; }
+  }
+
+  // ─── Abre o modal "Minha Conta" ───────────
+  function openAccount() {
+    const overlay = document.getElementById('accountOverlay');
+    if (!overlay) return;
+    // Sincroniza o estado em memória com o localStorage (caso tenha logado em outra aba)
+    if (!currentCustomer) currentCustomer = getLoggedCustomer();
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    if (currentCustomer) {
+      showAccountPanel();        // já logado → vai direto para o painel da conta
+    } else {
+      switchAccTab('login');     // não logado → tela de entrar
+    }
+  }
+
+  // ─── Fecha o modal "Minha Conta" ──────────
+  function closeAccount() {
+    const overlay = document.getElementById('accountOverlay');
+    if (overlay) overlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // ─── Mostra o painel da conta (perfil + pedidos) ─────
+  function showAccountPanel() {
+    if (!currentCustomer) currentCustomer = getLoggedCustomer();
+    if (!currentCustomer) { switchAccTab('login'); return; }
+    switchAccTab('account');
+    const nome  = currentCustomer.name || 'Cliente';
+    const email = currentCustomer.email || '';
+    const avatar = document.getElementById('acc-avatar');
+    const nameEl = document.getElementById('acc-name');
+    const emailEl = document.getElementById('acc-email-display');
+    if (avatar)  avatar.textContent  = (nome.trim()[0] || '?').toUpperCase();
+    if (nameEl)  nameEl.textContent  = nome;
+    if (emailEl) emailEl.textContent = email;
+    updateAccountHeader();
+    loadCustomerOrders();
+  }
+
+  // ─── Atualiza o botão "Minha Conta" no cabeçalho ─────
+  function updateAccountHeader() {
+    if (!currentCustomer) currentCustomer = getLoggedCustomer();
+    const label = document.getElementById('accountHdrLabel');
+    if (label) {
+      label.textContent = currentCustomer
+        ? (currentCustomer.name || 'Minha Conta').split(' ')[0]
+        : 'Minha Conta';
+    }
   }
 
   // ─── Helper: salva pedido no servidor ────
