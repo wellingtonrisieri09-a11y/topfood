@@ -26,7 +26,7 @@ _Responsáveis: **[W]** Wellington · **[Caio]** · **[Contador]** · **[Claude]
 > Subir 1 criativo/produto e publicar no Google + Facebook/Instagram + TikTok.
 - [ ] **[W+Claude]** Conectar feed ao **Google Merchant Center** + campanha Shopping (Claude guia, Wellington configura).
 - [ ] **[W+Claude]** Repetir no **Facebook Commerce** e **TikTok Catalog**.
-- [ ] **[Claude]** Tela no painel pra subir criativo + botão **Publicar**.
+- [x] **[Claude]** ~~Tela no painel pra subir criativo + botão **Publicar**~~ → **feito (01/07)**: aba Campanhas → "Publicar Anúncio" (produto + plataformas + criativo + verba; Publicar gera o **pacote pronto**: link rastreável UTM + texto por plataforma). *Publicação 100% automática liga quando as APIs forem aprovadas.*
 - [ ] **[W]** Solicitar **aprovações de API de anúncios** (Meta → TikTok → Google) — leva dias/semanas, começar cedo.
 - [ ] **[Claude]** Controle de verba (teto diário, alerta, pausar) — verba aprovada R$ 3.000/mês.
 - [ ] **[W]** Repor fundos no **Facebook Ads** (campanha parou em R$16 de R$20).

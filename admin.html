@@ -771,6 +771,47 @@
           <div><h1>Campanhas & SEO</h1><p>Marketing, otimização e newsletter</p></div>
         </div>
         <div class="campaigns-grid">
+          <!-- 📢 PUBLICAR ANÚNCIO (M14) -->
+          <div class="campaign-card" style="grid-column:1/-1">
+            <h3><i class="fa fa-rocket" style="color:var(--red)"></i> Publicar Anúncio</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+              <!-- Formulário -->
+              <div>
+                <div style="font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Criar anúncio</div>
+                <input type="hidden" id="ad-id" />
+                <div class="form-row" style="margin:0 0 10px"><label>Produto</label>
+                  <select id="ad-produto"></select>
+                </div>
+                <div class="form-row" style="margin:0 0 10px"><label>Onde publicar</label>
+                  <div style="display:flex;gap:16px;flex-wrap:wrap;padding:4px 0">
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:500;cursor:pointer"><input type="checkbox" class="ad-plat" value="meta" checked /> <i class="fa-brands fa-facebook" style="color:#1877f2"></i> Meta (Face/Insta)</label>
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:500;cursor:pointer"><input type="checkbox" class="ad-plat" value="google" checked /> <i class="fa-brands fa-google" style="color:#ea4335"></i> Google</label>
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:500;cursor:pointer"><input type="checkbox" class="ad-plat" value="tiktok" /> <i class="fa-brands fa-tiktok"></i> TikTok</label>
+                  </div>
+                </div>
+                <div class="form-row" style="margin:0 0 10px"><label>Título do anúncio</label><input type="text" id="ad-titulo" maxlength="60" placeholder="Ex: Caixa de Batata Frita que mantém crocante" /></div>
+                <div class="form-row" style="margin:0 0 10px"><label>Texto / chamada</label><textarea id="ad-texto" rows="3" maxlength="300" placeholder="Resistente à gordura e ao calor. Entrega para todo o Brasil."></textarea></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                  <div class="form-row" style="margin:0"><label>Imagem (URL do criativo)</label><input type="text" id="ad-imagem" placeholder="https://..." /></div>
+                  <div class="form-row" style="margin:0"><label>Orçamento/dia (R$)</label><input type="number" id="ad-orcamento" min="0" step="1" placeholder="20" /></div>
+                </div>
+                <div class="form-row" style="margin:10px 0 0"><label>Público-alvo (opcional)</label><input type="text" id="ad-publico" placeholder="Ex: donos de lanchonete, 25-55, SP" /></div>
+                <div style="display:flex;gap:10px;margin-top:14px">
+                  <button class="btn btn-secondary" onclick="saveAnuncio(false)"><i class="fa fa-save"></i> Salvar rascunho</button>
+                  <button class="btn btn-primary" onclick="saveAnuncio(true)"><i class="fa fa-rocket"></i> Publicar</button>
+                </div>
+                <div style="margin-top:12px;padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:.74rem;color:#92400e">
+                  <i class="fa fa-circle-info"></i> Ao publicar, geramos o <b>pacote pronto</b> (link rastreável + texto) pra colar em cada plataforma. A publicação <b>100% automática</b> nas 3 é ligada assim que as APIs de anúncio forem aprovadas.
+                </div>
+              </div>
+              <!-- Lista de anúncios -->
+              <div>
+                <div style="font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Meus anúncios <span class="nav-badge" id="ads-count" style="background:var(--red)">0</span></div>
+                <div id="ads-list" style="display:flex;flex-direction:column;gap:10px;max-height:520px;overflow-y:auto"></div>
+              </div>
+            </div>
+          </div>
+
           <div class="campaign-card">
             <h3><i class="fa fa-magnifying-glass" style="color:var(--blue)"></i> SEO da Loja</h3>
             <div class="form-row"><label>Título da página</label><input type="text" id="seo-title" /></div>

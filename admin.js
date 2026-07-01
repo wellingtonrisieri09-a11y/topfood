@@ -116,6 +116,11 @@ function applyRoleUI() {
    API
 ══════════════════════════════════════════════════════ */
 function token() { return sessionStorage.getItem('admin-token')||''; }
+function escapeHtml(str) {
+  return String(str==null?'':str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 async function api(path, opts={}) {
   const headers = {'Authorization':'Bearer '+token(),'Content-Type':'application/json',...(opts.headers||{})};
   const r = await fetch(path, {...opts, headers});
@@ -2018,11 +2023,164 @@ function loadCampaigns() {
   document.getElementById('banner-text').value = STATE.settings.featured_banner||'';
   renderCoupons();
   renderUTMReport();
+  loadAnuncios();
   const emails = [...new Set(STATE.orders.filter(o=>o.customer?.email).map(o=>o.customer.email))];
   document.getElementById('newsletter-count').textContent = emails.length+' contatos';
   document.getElementById('newsletter-list').innerHTML = emails.length
     ? emails.map(e=>`<div class="newsletter-item"><span>${e}</span><button class="btn btn-ghost btn-icon" style="font-size:.75rem"><i class="fa fa-copy"></i></button></div>`).join('')
     : document.getElementById('newsletter-list').innerHTML;
+}
+
+/* ══════════════════════════════════════════════════════
+   M14 — PUBLICAR ANÚNCIO
+══════════════════════════════════════════════════════ */
+const PLAT_INFO = {
+  meta:   { nome:'Meta (Face/Insta)', icon:'fa-brands fa-facebook', cor:'#1877f2' },
+  google: { nome:'Google',            icon:'fa-brands fa-google',   cor:'#ea4335' },
+  tiktok: { nome:'TikTok',            icon:'fa-brands fa-tiktok',   cor:'#111' },
+};
+
+function loadAnuncios() {
+  const sel = document.getElementById('ad-produto');
+  if (sel) {
+    sel.innerHTML = '<option value="">— Selecione um produto —</option>' +
+      (STATE.products||[]).map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+  }
+  renderAnuncios();
+}
+
+async function renderAnuncios() {
+  const wrap = document.getElementById('ads-list');
+  const countEl = document.getElementById('ads-count');
+  if (!wrap) return;
+  let ads = [];
+  try { const r = await api('/api/eco/anuncios'); ads = r.ads || []; } catch(e){}
+  STATE.ads = ads;
+  if (countEl) countEl.textContent = ads.length;
+  if (!ads.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:28px;color:var(--muted);font-size:.85rem"><i class="fa fa-rocket" style="font-size:1.8rem;opacity:.3;display:block;margin-bottom:8px"></i>Nenhum anúncio ainda. Crie o primeiro ao lado.</div>';
+    return;
+  }
+  wrap.innerHTML = ads.map(adCardHtml).join('');
+}
+
+function adCardHtml(a) {
+  const pub = a.status === 'publicado';
+  const badge = pub
+    ? '<span style="background:#dcfce7;color:#15803d;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:20px">✅ Publicado</span>'
+    : '<span style="background:#fef9c3;color:#854d0e;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:20px">📝 Rascunho</span>';
+  const plats = (a.plataformas||[]).map(p=>{
+    const i = PLAT_INFO[p]||{icon:'fa fa-bullhorn',cor:'#666'};
+    return `<i class="${i.icon}" style="color:${i.cor}" title="${i.nome||p}"></i>`;
+  }).join(' ');
+  const pacote = (pub && Array.isArray(a.pacote)) ? a.pacote.map(pk=>`
+    <div style="background:var(--bg);border-radius:8px;padding:8px 10px;margin-top:6px">
+      <div style="font-size:.72rem;font-weight:700;color:${(PLAT_INFO[pk.plataforma]||{}).cor||'#333'};margin-bottom:4px"><i class="${(PLAT_INFO[pk.plataforma]||{}).icon||''}"></i> ${(PLAT_INFO[pk.plataforma]||{}).nome||pk.plataforma}</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="text" readonly value="${escapeHtml(pk.link)}" style="flex:1;font-size:.72rem;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text)" />
+        <button class="btn btn-secondary" style="padding:5px 9px;font-size:.72rem" onclick="copyAdLink(this,'${encodeURIComponent(pk.link)}')"><i class="fa fa-copy"></i></button>
+      </div>
+    </div>`).join('') : '';
+  return `
+    <div style="border:1px solid var(--border);border-radius:10px;padding:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="min-width:0">
+          <div style="font-weight:700;font-size:.9rem;overflow:hidden;text-overflow:ellipsis">${escapeHtml(a.titulo||'(sem título)')}</div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:2px">${escapeHtml(a.produto_nome||a.produto||'—')} · ${plats} ${a.orcamento_diario?('· R$ '+a.orcamento_diario+'/dia'):''}</div>
+        </div>
+        ${badge}
+      </div>
+      ${a.texto?`<div style="font-size:.76rem;color:var(--muted);margin-top:6px">${escapeHtml(a.texto)}</div>`:''}
+      ${pacote}
+      <div style="display:flex;gap:6px;margin-top:10px">
+        ${!pub?`<button class="btn btn-primary" style="padding:5px 10px;font-size:.74rem" onclick="publishAnuncio('${a.id}')"><i class="fa fa-rocket"></i> Publicar</button>`:''}
+        <button class="btn btn-secondary" style="padding:5px 10px;font-size:.74rem" onclick="editAnuncio('${a.id}')"><i class="fa fa-pen"></i> Editar</button>
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:.74rem;color:var(--red)" onclick="deleteAnuncio('${a.id}')"><i class="fa fa-trash"></i></button>
+      </div>
+    </div>`;
+}
+
+function adFormData() {
+  const sel = document.getElementById('ad-produto');
+  const produto = sel ? sel.value : '';
+  const produto_nome = (sel && sel.selectedIndex>0) ? sel.options[sel.selectedIndex].text : '';
+  const plataformas = Array.from(document.querySelectorAll('.ad-plat:checked')).map(c=>c.value);
+  return {
+    id: document.getElementById('ad-id').value || undefined,
+    produto, produto_nome, plataformas,
+    landing: produto ? '/#'+produto : '/',
+    titulo:  document.getElementById('ad-titulo').value.trim(),
+    texto:   document.getElementById('ad-texto').value.trim(),
+    imagem:  document.getElementById('ad-imagem').value.trim(),
+    orcamento_diario: document.getElementById('ad-orcamento').value,
+    publico: document.getElementById('ad-publico').value.trim(),
+  };
+}
+
+async function saveAnuncio(publish) {
+  const data = adFormData();
+  if (!data.titulo) { toast('Informe o título do anúncio.','error'); return; }
+  if (!data.plataformas.length) { toast('Escolha ao menos uma plataforma.','error'); return; }
+  try {
+    const r = await api('/api/eco/anuncios',{method:'POST',body:JSON.stringify(data)});
+    if (publish && r.ad) {
+      await api('/api/eco/anuncios/'+r.ad.id+'/publish',{method:'POST'});
+      toast('🚀 Anúncio publicado! Pacote pronto na lista.');
+    } else {
+      toast('📝 Rascunho salvo.');
+    }
+    resetAdForm();
+    renderAnuncios();
+  } catch(e) { toast('❌ Erro ao salvar anúncio.','error'); }
+}
+
+async function publishAnuncio(id) {
+  try {
+    await api('/api/eco/anuncios/'+id+'/publish',{method:'POST'});
+    toast('🚀 Anúncio publicado! Pacote pronto na lista.');
+    renderAnuncios();
+  } catch(e) { toast('❌ Erro ao publicar.','error'); }
+}
+
+function editAnuncio(id) {
+  const a = (STATE.ads||[]).find(x=>x.id===id);
+  if (!a) return;
+  document.getElementById('ad-id').value = a.id;
+  document.getElementById('ad-produto').value = a.produto||'';
+  document.getElementById('ad-titulo').value = a.titulo||'';
+  document.getElementById('ad-texto').value = a.texto||'';
+  document.getElementById('ad-imagem').value = a.imagem||'';
+  document.getElementById('ad-orcamento').value = a.orcamento_diario||'';
+  document.getElementById('ad-publico').value = a.publico||'';
+  document.querySelectorAll('.ad-plat').forEach(c=>{ c.checked = (a.plataformas||[]).includes(c.value); });
+  document.getElementById('ad-titulo').scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+async function deleteAnuncio(id) {
+  if (!confirm('Excluir este anúncio? Esta ação não pode ser desfeita.')) return;
+  try {
+    await api('/api/eco/anuncios/'+id,{method:'DELETE'});
+    toast('Anúncio excluído.');
+    renderAnuncios();
+  } catch(e) { toast('❌ Erro ao excluir.','error'); }
+}
+
+function resetAdForm() {
+  document.getElementById('ad-id').value = '';
+  document.getElementById('ad-produto').value = '';
+  document.getElementById('ad-titulo').value = '';
+  document.getElementById('ad-texto').value = '';
+  document.getElementById('ad-imagem').value = '';
+  document.getElementById('ad-orcamento').value = '';
+  document.getElementById('ad-publico').value = '';
+  document.querySelectorAll('.ad-plat').forEach(c=>{ c.checked = (c.value==='meta'||c.value==='google'); });
+}
+
+function copyAdLink(btn, encoded) {
+  const link = decodeURIComponent(encoded);
+  const done = ()=>{ const o=btn.innerHTML; btn.innerHTML='<i class="fa fa-check"></i>'; setTimeout(()=>btn.innerHTML=o,1200); };
+  if (navigator.clipboard) navigator.clipboard.writeText(link).then(done).catch(done);
+  else done();
 }
 
 /* ══════════════════════════════════════════════════════

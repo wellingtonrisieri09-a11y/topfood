@@ -15,6 +15,7 @@ const { registerInsightsRoutes } = require('./modules/insights');
 const { registerNfeRoutes } = require('./modules/nfe');
 const { registerGuiaRoutes, guiaSlugs } = require('./modules/guias');
 const { registerMarketingRoutes } = require('./modules/marketing');
+const { registerAnunciosRoutes } = require('./modules/anuncios');
 const express = require('express');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 const cors       = require('cors');
@@ -1634,6 +1635,7 @@ registerInsightsRoutes(app, requireAuth);
 registerNfeRoutes(app, readData, writeData, requireAuth);
 registerGuiaRoutes(app);
 registerMarketingRoutes(app, requireAuth);
+registerAnunciosRoutes(app, requireAuth);
 
 // Limpar blacklist e reservas expiradas a cada 30min
 setInterval(() => { try { cleanBlacklist(); releaseExpiredReservations(); } catch(e){} }, 30 * 60 * 1000);
