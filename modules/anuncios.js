@@ -4,8 +4,12 @@
 // Quando as APIs de anúncios forem aprovadas, o publish() liga a publicação
 // automática (Meta/Google via Windsor) sem mudar a tela.
 const { readSettings, writeData, auditLog } = require("../db");
+const fs   = require("fs");
+const path = require("path");
+const crypto = require("crypto");
 
 const PLATAFORMAS = ["meta", "google", "tiktok"];
+const UPLOAD_DIR = path.join(__dirname, "..", "uploads", "ads");
 const BASE_URL = () => (process.env.BASE_URL || "https://topfoodembalagens.com.br").replace(/\/$/, "");
 
 // ─── Armazenamento (usa a store de settings, sem migração de schema) ─────
@@ -88,6 +92,7 @@ function registerAnunciosRoutes(app, requireAuth) {
         titulo:           String(b.titulo).trim(),
         texto:            String(b.texto || "").trim(),
         imagem:           String(b.imagem || "").trim(),
+        artes:            Array.isArray(b.artes) ? b.artes.filter(a => a && a.url).slice(0, 6) : (ad.artes || []),
         landing:          String(b.landing || "/").trim() || "/",
         orcamento_diario: parseFloat(b.orcamento_diario) || 0,
         publico:          String(b.publico || "").trim(),
@@ -138,7 +143,57 @@ function registerAnunciosRoutes(app, requireAuth) {
     }
   });
 
-  console.log("✅ M14 Anúncios registrado: /api/eco/anuncios/*");
+  // Upload de arte (recebe base64 data URL, salva em /uploads/ads e devolve a URL pública)
+  app.post("/api/eco/anuncios/upload", requireAuth, (req, res) => {
+    try {
+      const { dataUrl, nome } = req.body || {};
+      const m = /^data:(image\/(png|jpe?g|webp|gif));base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl || "");
+      if (!m) return res.status(400).json({ ok: false, error: "Envie uma imagem válida (PNG, JPG, WEBP)." });
+      const ext = m[2] === "jpeg" ? "jpg" : m[2];
+      const buf = Buffer.from(m[3], "base64");
+      if (buf.length > 12 * 1024 * 1024) return res.status(400).json({ ok: false, error: "Imagem muito grande (máx. 12 MB)." });
+      fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+      const fname = "AD-" + Date.now() + "-" + crypto.randomBytes(4).toString("hex") + "." + ext;
+      fs.writeFileSync(path.join(UPLOAD_DIR, fname), buf);
+      const url = "/uploads/ads/" + fname;
+      auditLog(req.user?.id, req.user?.username, "ad-upload", "eco_ads", fname, nome || "", req.ip);
+      res.json({ ok: true, url, nome: nome || fname });
+    } catch (e) {
+      res.status(500).json({ ok: false, error: e.message });
+    }
+  });
+
+  seedPastelCampaign();
+  console.log("✅ M14 Anúncios registrado: /api/eco/anuncios/* (+ upload)");
+}
+
+// Semeia a 1ª campanha (Pastel) só se nunca houve anúncios — roda no boot do servidor
+function seedPastelCampaign() {
+  try {
+    if (readSettings().eco_ads !== undefined) return; // já inicializado, não mexe
+    const now = new Date().toISOString();
+    saveAds([{
+      id: "AD-PASTEL-001",
+      status: "rascunho",
+      created_at: now,
+      produto: "pastel",
+      produto_nome: "Embalagem de Pastel — Pillow Box",
+      plataformas: ["meta", "google", "tiktok"],
+      titulo: "A embalagem que destaca o seu pastel!",
+      texto: "Mais proteção, higiene e destaque para o seu produto. Crocante por fora, irresistível por dentro! Pacotes de 50, 100 e 250 un.",
+      imagem: "/assets/ads/pastel-quadrado.png",
+      artes: [
+        { url: "/assets/ads/pastel-quadrado.png",  nome: "Feed quadrado (1:1)" },
+        { url: "/assets/ads/pastel-vertical.png",   nome: "Stories/Reels/TikTok (9:16)" },
+        { url: "/assets/ads/pastel-horizontal.png", nome: "Horizontal (16:9)" },
+      ],
+      landing: "/#pastel",
+      orcamento_diario: 20,
+      publico: "Donos de lanchonete, pastelaria, food truck e delivery — 25 a 55 anos",
+      updated_at: now,
+    }]);
+    console.log("🌱 Campanha do Pastel semeada (1ª campanha).");
+  } catch (e) { console.error("[anuncios] seed erro:", e.message); }
 }
 
 module.exports = { registerAnunciosRoutes, buildPackage, buildTrackedLink };

@@ -2073,6 +2073,10 @@ function adCardHtml(a) {
     const i = PLAT_INFO[p]||{icon:'fa fa-bullhorn',cor:'#666'};
     return `<i class="${i.icon}" style="color:${i.cor}" title="${i.nome||p}"></i>`;
   }).join(' ');
+  const artes = (Array.isArray(a.artes) && a.artes.length) ? `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+      ${a.artes.map(art=>`<a href="${escapeHtml(art.url)}" target="_blank" title="${escapeHtml(art.nome||'')}"><img src="${escapeHtml(art.url)}" style="width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--border)" /></a>`).join('')}
+    </div>` : '';
   const pacote = (pub && Array.isArray(a.pacote)) ? a.pacote.map(pk=>`
     <div style="background:var(--bg);border-radius:8px;padding:8px 10px;margin-top:6px">
       <div style="font-size:.72rem;font-weight:700;color:${(PLAT_INFO[pk.plataforma]||{}).cor||'#333'};margin-bottom:4px"><i class="${(PLAT_INFO[pk.plataforma]||{}).icon||''}"></i> ${(PLAT_INFO[pk.plataforma]||{}).nome||pk.plataforma}</div>
@@ -2091,6 +2095,7 @@ function adCardHtml(a) {
         ${badge}
       </div>
       ${a.texto?`<div style="font-size:.76rem;color:var(--muted);margin-top:6px">${escapeHtml(a.texto)}</div>`:''}
+      ${artes}
       ${pacote}
       <div style="display:flex;gap:6px;margin-top:10px">
         ${!pub?`<button class="btn btn-primary" style="padding:5px 10px;font-size:.74rem" onclick="publishAnuncio('${a.id}')"><i class="fa fa-rocket"></i> Publicar</button>`:''}
@@ -2099,6 +2104,8 @@ function adCardHtml(a) {
       </div>
     </div>`;
 }
+
+let AD_ARTES = []; // artes carregadas no formulário: [{url, nome}]
 
 function adFormData() {
   const sel = document.getElementById('ad-produto');
@@ -2111,11 +2118,41 @@ function adFormData() {
     landing: produto ? '/#'+produto : '/',
     titulo:  document.getElementById('ad-titulo').value.trim(),
     texto:   document.getElementById('ad-texto').value.trim(),
-    imagem:  document.getElementById('ad-imagem').value.trim(),
+    artes:   AD_ARTES.slice(),
+    imagem:  AD_ARTES[0]?.url || '',
     orcamento_diario: document.getElementById('ad-orcamento').value,
     publico: document.getElementById('ad-publico').value.trim(),
   };
 }
+
+// Sobe as artes (arquivos) para o servidor e guarda as URLs
+async function uploadArtes(files) {
+  const list = Array.from(files||[]);
+  if (!list.length) return;
+  for (const file of list) {
+    if (!file.type.startsWith('image/')) { toast('Só imagens (PNG/JPG).','error'); continue; }
+    try {
+      const dataUrl = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
+      const resp = await api('/api/eco/anuncios/upload',{method:'POST',body:JSON.stringify({ dataUrl, nome: file.name })});
+      if (resp && resp.url) AD_ARTES.push({ url: resp.url, nome: file.name });
+    } catch(e) { toast('❌ Erro ao subir '+file.name,'error'); }
+  }
+  document.getElementById('ad-file').value = '';
+  renderArtesPreview();
+  toast('🎨 Arte(s) carregada(s)!');
+}
+
+function renderArtesPreview() {
+  const wrap = document.getElementById('ad-artes-preview');
+  if (!wrap) return;
+  wrap.innerHTML = AD_ARTES.map((a,i)=>`
+    <div style="position:relative;width:70px;height:70px;border-radius:8px;overflow:hidden;border:1px solid var(--border)">
+      <img src="${a.url}" style="width:100%;height:100%;object-fit:cover" />
+      <button onclick="removeArte(${i})" title="Remover" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.65);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.7rem;cursor:pointer;line-height:1">✕</button>
+    </div>`).join('');
+}
+
+function removeArte(i) { AD_ARTES.splice(i,1); renderArtesPreview(); }
 
 async function saveAnuncio(publish) {
   const data = adFormData();
@@ -2149,10 +2186,11 @@ function editAnuncio(id) {
   document.getElementById('ad-produto').value = a.produto||'';
   document.getElementById('ad-titulo').value = a.titulo||'';
   document.getElementById('ad-texto').value = a.texto||'';
-  document.getElementById('ad-imagem').value = a.imagem||'';
   document.getElementById('ad-orcamento').value = a.orcamento_diario||'';
   document.getElementById('ad-publico').value = a.publico||'';
   document.querySelectorAll('.ad-plat').forEach(c=>{ c.checked = (a.plataformas||[]).includes(c.value); });
+  AD_ARTES = Array.isArray(a.artes) ? a.artes.slice() : (a.imagem ? [{url:a.imagem,nome:'arte'}] : []);
+  renderArtesPreview();
   document.getElementById('ad-titulo').scrollIntoView({behavior:'smooth',block:'center'});
 }
 
@@ -2170,10 +2208,11 @@ function resetAdForm() {
   document.getElementById('ad-produto').value = '';
   document.getElementById('ad-titulo').value = '';
   document.getElementById('ad-texto').value = '';
-  document.getElementById('ad-imagem').value = '';
   document.getElementById('ad-orcamento').value = '';
   document.getElementById('ad-publico').value = '';
   document.querySelectorAll('.ad-plat').forEach(c=>{ c.checked = (c.value==='meta'||c.value==='google'); });
+  AD_ARTES = [];
+  renderArtesPreview();
 }
 
 function copyAdLink(btn, encoded) {

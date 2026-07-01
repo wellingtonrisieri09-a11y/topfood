@@ -5,3 +5,6 @@ npm-debug.log*
 data/
 *.bak
 index_backup_*.html
+
+# uploads de artes em runtime (nao versionar)
+/uploads/
