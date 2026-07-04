@@ -291,15 +291,25 @@ async function startSock() {
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
     let paired = !!(state.creds.registered || state.creds.me); // já pareou alguma vez?
 
-    // Versão atual do WA Web — sem isso o WhatsApp rejeita com 405
-    const { version } = await baileys.fetchLatestBaileysVersion();
+    // Versão atual do WA Web — busca online, mas NÃO pode travar a conexão.
+    // Se a busca falhar (rede/timeout), segue com a versão embutida do Baileys.
+    let version;
+    try {
+      const v = await baileys.fetchLatestBaileysVersion();
+      version = v.version;
+      console.log('[M5] WA version:', version);
+    } catch (e) {
+      console.error('[M5] fetchLatestBaileysVersion falhou — usando versão padrão do Baileys:', e.message);
+      version = undefined; // Baileys usa a versão embutida
+    }
 
-    sock = makeWASocket({
+    const sockOpts = {
       auth: state,
-      version,
       logger: pino({ level: 'warn' }),
       browser: ['TopFood Atendente', 'Chrome', '1.0']
-    });
+    };
+    if (version) sockOpts.version = version;
+    sock = makeWASocket(sockOpts);
     connState = 'aguardando_qr';
 
     sock.ev.on('creds.update', saveCreds);
@@ -456,7 +466,10 @@ function registerAtendenteRoutes(app, requireAuth) {
 
   app.post('/api/eco/atendente/start', guard, async (req, res) => {
     try { await startSock(); res.json({ ok: true, conexao: connState }); }
-    catch (e) { res.status(500).json({ error: e.message }); }
+    catch (e) {
+      console.error('[M5] Erro ao iniciar (startSock):', e.stack || e.message);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.post('/api/eco/atendente/stop', guard, async (req, res) => {
