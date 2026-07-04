@@ -59,15 +59,33 @@ async function createPixCharge(order) {
     const res = await api().post("/payments", payload);
     const payment = res.data;
 
-    // Buscar QR Code PIX
+    // Buscar QR Code PIX — com retry (às vezes o QR não fica pronto no 1º instante)
     let qrCode = null, qrCodeText = null;
-    try {
-      const qrRes = await api().get(`/payments/${payment.id}/pixQrCode`);
-      qrCode     = qrRes.data.encodedImage; // base64
-      qrCodeText = qrRes.data.payload;       // copia e cola
-    } catch(e) { console.error("[asaas] QR Code erro:", e.message); }
+    for (let tent = 0; tent < 3 && !qrCodeText; tent++) {
+      if (tent > 0) await new Promise(r => setTimeout(r, 900));
+      try {
+        const qrRes = await api().get(`/payments/${payment.id}/pixQrCode`);
+        qrCode     = qrRes.data.encodedImage; // base64
+        qrCodeText = qrRes.data.payload;       // copia e cola
+      } catch(e) {
+        console.error(`[asaas] QR Code tentativa ${tent+1}:`, e.response?.data?.errors?.[0]?.description || e.message);
+      }
+    }
 
-    // Salvar referência no pedido
+    // Sem QR do Asaas → NÃO deixar cobrança fantasma em aberto (evita pagamento
+    // no PIX estático sem confirmação + risco de negativação indevida do cliente).
+    // Cancela a cobrança e sinaliza falha: o site cai no estático de forma limpa.
+    if (!qrCodeText) {
+      try {
+        await api().delete(`/payments/${payment.id}`);
+        console.log(`[asaas] cobrança ${payment.id} cancelada (QR indisponível)`);
+      } catch(delErr) {
+        console.error("[asaas] falha ao cancelar cobrança fantasma:", delErr.response?.data || delErr.message);
+      }
+      return { ok: false, error: "QR PIX indisponível no momento" };
+    }
+
+    // Salvar referência no pedido (só quando temos QR válido do Asaas)
     const orders = db.prepare("SELECT raw_data FROM orders WHERE id=?").get(order.id);
     if (orders) {
       const raw = JSON.parse(orders.raw_data);
