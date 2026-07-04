@@ -320,7 +320,16 @@ async function startSock() {
         const restartRequired = code === DisconnectReason.restartRequired; // 515: WA exige reconectar p/ concluir pareamento
         console.log('[M5] Conexão fechada. code=', code, 'loggedOut=', loggedOut, 'pareado=', paired);
         sock = null;
-        if (loggedOut) return;
+        if (loggedOut) {
+          // Sessão morta (WhatsApp desvinculou o aparelho). Auto-cura:
+          // limpa a credencial inválida e reinicia limpo p/ gerar um QR novo,
+          // em vez de travar o botão Conectar com erro 500.
+          try { fs.rmSync(AUTH_DIR, { recursive: true, force: true }); } catch {}
+          lastQR = null; paired = false; connState = 'desconectado';
+          console.log('[M5] Sessão deslogada — credenciais limpas, gerando novo QR...');
+          setTimeout(() => startSock().catch(() => {}), 1500);
+          return;
+        }
         if (restartRequired) {
           // parte obrigatória do fluxo de pareamento — reconectar já
           setTimeout(() => startSock().catch(() => {}), 2000);
