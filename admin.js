@@ -2903,7 +2903,34 @@ async function resetBudgetMonth() {
 ══════════════════════════════════════════════════════ */
 let atQrTimer = null;
 
-function loadAtendente(){ atRefresh(); atLoadConversas(); atLoadPausados(); }
+function loadAtendente(){ atRefresh(); atLoadConversas(); atLoadPausados(); loadWaOficial(); }
+
+// ─── WhatsApp Oficial (Cloud API) ───
+async function loadWaOficial(){
+  try{
+    const s = await api('/api/eco/wa/status');
+    const url = document.getElementById('wa-webhook-url');
+    const vt  = document.getElementById('wa-verify-token');
+    const st  = document.getElementById('wa-oficial-status');
+    if(url) url.value = s.webhook_url || '';
+    if(vt)  vt.value  = s.verify_token || '';
+    if(st)  st.textContent = s.configurado ? ('✅ configurado ('+(s.phone_number_id||'')+')') : '⚠️ ainda não configurado';
+  }catch(e){}
+}
+async function saveWaOficial(){
+  const phone_number_id = (document.getElementById('wa-phone-id').value||'').trim();
+  const token = (document.getElementById('wa-token').value||'').trim();
+  const body = {};
+  if(phone_number_id) body.phone_number_id = phone_number_id;
+  if(token) body.token = token;
+  if(!Object.keys(body).length){ toast('Preencha o número ID e/ou cole o token.','error'); return; }
+  try{
+    await api('/api/eco/wa/config',{method:'PUT',body:JSON.stringify(body)});
+    document.getElementById('wa-token').value=''; // não deixa a senha na tela
+    toast('✅ Credenciais do WhatsApp oficial salvas!');
+    loadWaOficial();
+  }catch(e){ toast('❌ Erro ao salvar credenciais.','error'); }
+}
 
 async function atRefresh() {
   try {

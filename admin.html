@@ -1163,6 +1163,25 @@
           <button class="btn btn-secondary" onclick="loadAtendente()"><i class="fa fa-rotate"></i> Atualizar</button>
         </div>
 
+        <!-- ▓▓ WhatsApp OFICIAL (Cloud API) — método novo e estável ▓▓ -->
+        <div class="card" style="margin-bottom:16px;border:2px solid #16a34a">
+          <h3 style="margin-bottom:6px"><i class="fa-brands fa-whatsapp" style="color:#16a34a"></i> WhatsApp Oficial (Meta) — recomendado</h3>
+          <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">Canal oficial da Meta: estável, sem QR, não cai. Cole aqui os dados do app da Meta.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-row" style="margin:0"><label>Identificação do número (Phone Number ID)</label><input type="text" id="wa-phone-id" placeholder="ex: 1268899146299904" /></div>
+            <div class="form-row" style="margin:0"><label>Token de acesso (senha — fica só no servidor)</label><input type="password" id="wa-token" placeholder="cole o token gerado na Meta" /></div>
+          </div>
+          <div style="margin-top:12px;padding:12px;background:var(--bg);border-radius:8px;font-size:.8rem">
+            <div style="font-weight:700;margin-bottom:8px">📋 Para colar lá na Meta, na configuração do webhook:</div>
+            <div style="margin-bottom:8px">URL de retorno de chamada (Callback URL):<br><input type="text" id="wa-webhook-url" readonly style="width:100%;margin-top:4px;cursor:pointer" onclick="this.select()" /></div>
+            <div>Token de verificação (Verify token):<br><input type="text" id="wa-verify-token" readonly style="width:100%;margin-top:4px;cursor:pointer" onclick="this.select()" /></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="saveWaOficial()"><i class="fa fa-save"></i> Salvar credenciais</button>
+            <span id="wa-oficial-status" style="font-size:.8rem;color:var(--muted)"></span>
+          </div>
+        </div>
+
         <div class="card" style="margin-bottom:16px">
           <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center">
             <div><b>WhatsApp:</b> <span id="at-conexao">🔄 carregando…</span></div>
