@@ -282,22 +282,12 @@ async function startSock() {
   if (starting || (sock && connState === 'conectado')) return;
   starting = true;
   try {
-    // Baileys >= 6.7.19 é ES Module: require() quebra com ERR_REQUIRE_ESM.
-    // import() dinâmico funciona em CommonJS e cobre os dois formatos
-    // (exports nomeados OU pendurados no default, conforme a versão).
-    const mod = await import('@whiskeysockets/baileys');
-    const baileys = {
-      ...(mod.default && typeof mod.default === 'object' ? mod.default : {}),
-      ...mod,
-    };
-    const makeWASocket = baileys.makeWASocket
-      || (typeof mod.default === 'function' ? mod.default : null)
-      || mod.default?.makeWASocket;
-    const useMultiFileAuthState = baileys.useMultiFileAuthState;
-    const DisconnectReason      = baileys.DisconnectReason;
-    if (typeof makeWASocket !== 'function' || typeof useMultiFileAuthState !== 'function') {
-      throw new Error('Baileys carregou mas sem makeWASocket/useMultiFileAuthState — verificar versão instalada');
-    }
+    // Baileys 6.7.18 é CommonJS (compatível com Node 20 do servidor).
+    // NÃO subir para 6.7.19+ sem Node 22 — essas versões são ES Module e
+    // usam sintaxe (import attributes "with") que o Node 20 nem consegue ler.
+    const baileys = require('@whiskeysockets/baileys');
+    const makeWASocket = baileys.default || baileys.makeWASocket;
+    const { useMultiFileAuthState, DisconnectReason } = baileys;
     const pino = require('pino');
 
     fs.mkdirSync(AUTH_DIR, { recursive: true });
