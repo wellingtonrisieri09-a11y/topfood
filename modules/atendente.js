@@ -20,6 +20,12 @@
 const fs = require('fs');
 const path = require('path');
 
+// Web Crypto (globalThis.crypto) — alguns Node não expõem por padrão, e o
+// Baileys precisa de crypto.subtle. Garante o polyfill antes de qualquer coisa.
+if (!globalThis.crypto || !globalThis.crypto.subtle) {
+  try { globalThis.crypto = require('crypto').webcrypto; } catch (_) {}
+}
+
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const AUTH_DIR = path.join(DATA_DIR, 'wa_auth');          // credenciais Baileys
 const CFG_FILE = path.join(DATA_DIR, 'atendente.json');    // config persistente
