@@ -545,4 +545,6 @@ function registerAtendenteRoutes(app, requireAuth) {
   console.log('[M5] IA Atendente registrado (enabled=' + cfg.enabled + ')');
 }
 
-module.exports = { registerAtendenteRoutes };
+// askClaude é o "cérebro" (catálogo + orçamento + escalação). Exportado para
+// reuso pelo canal oficial (wa_cloud.js), sem depender do Baileys.
+module.exports = { registerAtendenteRoutes, askClaude };

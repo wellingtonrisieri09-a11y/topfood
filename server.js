@@ -16,6 +16,7 @@ const { registerNfeRoutes } = require('./modules/nfe');
 const { registerGuiaRoutes, guiaSlugs } = require('./modules/guias');
 const { registerMarketingRoutes } = require('./modules/marketing');
 const { registerAnunciosRoutes } = require('./modules/anuncios');
+const { registerWaCloudRoutes } = require('./modules/wa_cloud');
 const express = require('express');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 const cors       = require('cors');
@@ -1636,6 +1637,7 @@ registerNfeRoutes(app, readData, writeData, requireAuth);
 registerGuiaRoutes(app);
 registerMarketingRoutes(app, requireAuth);
 registerAnunciosRoutes(app, requireAuth);
+registerWaCloudRoutes(app, requireAuth, requireOwner);
 
 // Limpar blacklist e reservas expiradas a cada 30min
 setInterval(() => { try { cleanBlacklist(); releaseExpiredReservations(); } catch(e){} }, 30 * 60 * 1000);
