@@ -2957,7 +2957,17 @@ async function loadWaOficial(){
     const st  = document.getElementById('wa-oficial-status');
     if(url) url.value = s.webhook_url || '';
     if(vt)  vt.value  = s.verify_token || '';
-    if(st)  st.textContent = s.configurado ? ('✅ configurado ('+(s.phone_number_id||'')+')') : '⚠️ ainda não configurado';
+    if(st){
+      let base = s.configurado ? ('✅ configurado ('+(s.phone_number_id||'')+')') : '⚠️ ainda não configurado';
+      if(s.total_chamadas){
+        const u = s.ultima_chamada;
+        const q = u ? new Date(u.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+        base += ' · 📡 a Meta bateu no servidor '+s.total_chamadas+'x (última: '+q+', '+(u?u.mensagens:0)+' msg)';
+      } else {
+        base += ' · 📡 a Meta ainda NÃO bateu no servidor';
+      }
+      st.innerHTML = base;
+    }
   }catch(e){}
 }
 async function saveWaOficial(){

@@ -8,6 +8,10 @@ const { askClaude } = require("./atendente");
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
+// Diagnóstico: guarda as últimas batidas da Meta no webhook (visível no painel)
+const _hits = [];
+function registrarHit(info) { _hits.unshift({ ts: Date.now(), ...info }); if (_hits.length > 15) _hits.length = 15; }
+
 // ─── Config (env tem prioridade; senão vem das settings do painel) ──────────
 function cfg() {
   const s = readSettings();
@@ -82,6 +86,10 @@ function registerWaCloudRoutes(app, requireAuth, requireOwner) {
     res.sendStatus(200); // responde rápido; processa depois
     try {
       const value = req.body?.entry?.[0]?.changes?.[0]?.value;
+      const msgs = value?.messages;
+      registrarHit({ corpo: !!req.body, mensagens: Array.isArray(msgs) ? msgs.length : 0,
+                     tipo: !value ? "sem-corpo" : (Array.isArray(msgs) ? "mensagem" : (value.statuses ? "status" : "outro")) });
+      console.log("[wa_cloud] webhook POST | corpo:", !!req.body, "| mensagens:", Array.isArray(msgs) ? msgs.length : 0);
       if (!value || !Array.isArray(value.messages)) return;
       const name = value.contacts?.[0]?.profile?.name;
       for (const m of value.messages) {
@@ -113,7 +121,10 @@ function registerWaCloudRoutes(app, requireAuth, requireOwner) {
     res.json({ ok: true, configurado: configured(), enabled: c.enabled,
       phone_number_id: c.phoneNumberId ? "•••" + c.phoneNumberId.slice(-4) : "",
       webhook_url: (process.env.BASE_URL || "https://topfoodembalagens.com.br").replace(/\/$/, "") + "/api/wa/webhook",
-      verify_token: c.verifyToken });
+      verify_token: c.verifyToken,
+      total_chamadas: _hits.length,
+      ultima_chamada: _hits[0] || null,
+      chamadas: _hits.slice(0, 6) });
   });
 
   app.get("/api/eco/wa/conversas", requireAuth, (req, res) => {
