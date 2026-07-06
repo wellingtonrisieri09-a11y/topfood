@@ -118,10 +118,16 @@ function registerWaCloudRoutes(app, requireAuth, requireOwner) {
   // ── Painel (caixa de entrada) ──
   app.get("/api/eco/wa/status", requireAuth, (req, res) => {
     const c = cfg();
+    const s = readSettings();
     res.json({ ok: true, configurado: configured(), enabled: c.enabled,
       phone_number_id: c.phoneNumberId ? "•••" + c.phoneNumberId.slice(-4) : "",
       webhook_url: (process.env.BASE_URL || "https://topfoodembalagens.com.br").replace(/\/$/, "") + "/api/wa/webhook",
       verify_token: c.verifyToken,
+      diag: {
+        numero_salvo: !!s.wa_phone_number_id,
+        token_salvo:  !!s.wa_token,
+        token_tam:    s.wa_token ? String(s.wa_token).length : 0,
+      },
       total_chamadas: _hits.length,
       ultima_chamada: _hits[0] || null,
       chamadas: _hits.slice(0, 6) });
