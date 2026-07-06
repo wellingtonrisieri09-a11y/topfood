@@ -2903,7 +2903,50 @@ async function resetBudgetMonth() {
 ══════════════════════════════════════════════════════ */
 let atQrTimer = null;
 
-function loadAtendente(){ atRefresh(); atLoadConversas(); atLoadPausados(); loadWaOficial(); }
+function loadAtendente(){ atRefresh(); atLoadConversas(); atLoadPausados(); loadWaOficial(); waLoadConversas(); }
+
+// ─── Caixa de entrada do WhatsApp Oficial ───
+let WA_CURRENT_PHONE = null;
+async function waLoadConversas(){
+  const list = document.getElementById('wa-conv-list');
+  const view = document.getElementById('wa-conv-view');
+  if(!list || !view) return;
+  view.style.display='none'; list.style.display='flex';
+  let convs=[];
+  try{ const r=await api('/api/eco/wa/conversas'); convs=r.conversas||[]; }catch(e){}
+  if(!convs.length){ list.innerHTML='<div style="text-align:center;padding:24px;color:var(--muted);font-size:.85rem">Nenhuma conversa ainda. Quando um cliente mandar mensagem, ela aparece aqui.</div>'; return; }
+  list.innerHTML = convs.map(c=>`
+    <div onclick="waOpenConversa('${c.phone}')" style="cursor:pointer;border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;gap:8px">
+      <div style="min-width:0">
+        <div style="font-weight:700;font-size:.88rem">${escapeHtml(c.name||c.phone)} ${c.unread?('<span style="background:var(--red);color:#fff;font-size:.65rem;padding:1px 6px;border-radius:10px">'+c.unread+'</span>'):''}</div>
+        <div style="font-size:.76rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(c.last||'')}</div>
+      </div>
+      <div style="font-size:.68rem;color:var(--muted);white-space:nowrap">${c.updated?new Date(c.updated).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}</div>
+    </div>`).join('');
+}
+async function waOpenConversa(phone){
+  WA_CURRENT_PHONE=phone;
+  const list=document.getElementById('wa-conv-list');
+  const view=document.getElementById('wa-conv-view');
+  let conv={messages:[]};
+  try{ const r=await api('/api/eco/wa/conversas/'+encodeURIComponent(phone)); conv=r.conversa||conv; }catch(e){}
+  list.style.display='none'; view.style.display='block';
+  document.getElementById('wa-conv-header').textContent = (conv.name||phone)+' · '+phone;
+  const box=document.getElementById('wa-conv-msgs');
+  box.innerHTML = (conv.messages||[]).map(m=>{
+    const mine = m.dir==='out';
+    return `<div style="align-self:${mine?'flex-end':'flex-start'};max-width:80%;background:${mine?'#dcf8c6':'#fff'};border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:.82rem;color:#111">${escapeHtml(m.text)}<div style="font-size:.62rem;color:#666;margin-top:2px;text-align:right">${m.ts?new Date(m.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}</div></div>`;
+  }).join('');
+  box.scrollTop=box.scrollHeight;
+}
+function waVoltarLista(){ waLoadConversas(); }
+async function waReply(){
+  const phone=WA_CURRENT_PHONE; const inp=document.getElementById('wa-reply-text');
+  const text=(inp.value||'').trim();
+  if(!phone||!text) return;
+  try{ await api('/api/eco/wa/send',{method:'POST',body:JSON.stringify({phone,text})}); inp.value=''; waOpenConversa(phone); }
+  catch(e){ toast('❌ Erro ao enviar. Verifique o token do WhatsApp.','error'); }
+}
 
 // ─── WhatsApp Oficial (Cloud API) ───
 async function loadWaOficial(){
