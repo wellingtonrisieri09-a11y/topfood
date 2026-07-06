@@ -91,7 +91,8 @@ function registerWaCloudRoutes(app, requireAuth, requireOwner) {
         addMsg(from, "in", text, name);
 
         const c = cfg();
-        if (!c.enabled || isPaused(from) || m.type !== "text") continue; // só guarda, não responde
+        console.log(`[wa_cloud] msg de ${from}: "${text}" | enabled=${c.enabled} pausado=${isPaused(from)} configurado=${configured()}`);
+        if (!c.enabled || isPaused(from) || m.type !== "text") { console.log("[wa_cloud] não respondeu (desligado/pausado/não-texto)"); continue; }
 
         try {
           const reply = await askClaude(from, text);
@@ -99,6 +100,7 @@ function registerWaCloudRoutes(app, requireAuth, requireOwner) {
           const clean = (reply || "").replace(/^\[HUMANO\]\s*/, "").trim() || "Só um instante que já te respondo. 🙂";
           await sendText(from, clean);
           addMsg(from, "out", clean, name);
+          console.log(`[wa_cloud] resposta enviada para ${from}`);
           if (escalou) pausar(from); // IA pediu humano → pausa pra você assumir
         } catch (e) { console.error("[wa_cloud] IA/envio erro:", e.message); }
       }
