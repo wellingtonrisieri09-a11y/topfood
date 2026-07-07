@@ -2958,13 +2958,15 @@ async function loadWaOficial(){
     if(url) url.value = s.webhook_url || '';
     if(vt)  vt.value  = s.verify_token || '';
     if(st){
-      let base = s.configurado ? ('✅ configurado ('+(s.phone_number_id||'')+')') : '⚠️ ainda não configurado';
+      const d = s.diag || {};
+      let base = s.configurado ? ('✅ configurado') : '⚠️ não configurado';
+      base += ' · nº salvo: '+(d.numero_salvo?'SIM':'NÃO')+' · token salvo: '+(d.token_salvo?('SIM ('+d.token_tam+' car.)'):'NÃO');
       if(s.total_chamadas){
         const u = s.ultima_chamada;
         const q = u ? new Date(u.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
-        base += ' · 📡 a Meta bateu no servidor '+s.total_chamadas+'x (última: '+q+', '+(u?u.mensagens:0)+' msg)';
+        base += ' · 📡 Meta bateu '+s.total_chamadas+'x (última '+q+', '+(u?u.mensagens:0)+' msg)';
       } else {
-        base += ' · 📡 a Meta ainda NÃO bateu no servidor';
+        base += ' · 📡 Meta ainda NÃO bateu no servidor';
       }
       st.innerHTML = base;
     }
