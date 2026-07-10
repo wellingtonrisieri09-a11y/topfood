@@ -392,14 +392,19 @@ app.delete('/api/admin/users/:id', requireAuth, requireRole('users'), (req, res)
 // ============================================================
 // PUBLIC — GET /api/products (used by the store)
 // ============================================================
+// Custo é informação interna (margem) — nunca pode sair pra rota pública.
+function stripCost(product) {
+  return { ...product, variants: (product.variants || []).map(({ cost, ...rest }) => rest) };
+}
+
 app.get('/api/products', (req, res) => {
-  res.json(readData('products.json'));
+  res.json(readData('products.json').map(stripCost));
 });
 
 app.get('/api/products/:id', (req, res) => {
   const product = readData('products.json').find(p => p.id === req.params.id);
   if (!product) return res.status(404).json({ error: 'Produto não encontrado' });
-  res.json(product);
+  res.json(stripCost(product));
 });
 
 // ============================================================

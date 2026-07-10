@@ -1112,7 +1112,13 @@ function renderProducts() {
         <div class="product-card-name">${p.name}</div>
         <div class="product-card-cat">${p.sold||0} vendidos</div>
         <div class="product-card-prices">
-          ${p.variants.map(v=>`<div class="product-card-price">${v.units} un: <b>R$ ${fmt(v.price)}</b></div>`).join('')}
+          ${p.variants.map(v=>{
+            const custo = parseFloat(v.cost)||0;
+            if(!custo) return `<div class="product-card-price">${v.units} un: <b>R$ ${fmt(v.price)}</b></div>`;
+            const margemPct = v.price ? (((v.price-custo)/v.price)*100) : 0;
+            const cor = margemPct>=30 ? 'var(--green)' : (margemPct>=10 ? 'var(--yellow)' : 'var(--red)');
+            return `<div class="product-card-price">${v.units} un: <b>R$ ${fmt(v.price)}</b> · custo R$ ${fmt(custo)} · <b style="color:${cor}">${margemPct.toFixed(0)}% margem</b></div>`;
+          }).join('')}
         </div>
         <div style="margin-bottom:10px">
           ${stockBadge(p.stock)}
@@ -1229,13 +1235,13 @@ function buildProductForm(p) {
   const featsVal = p ? (p.features||[]).join('\n') : '';
   const specsVal = p ? (p.specs||[]).map(s=>`${s.label}: ${s.value}`).join('\n') : '';
   const variants = p ? p.variants : [
-    {units:50, price:0},
-    {units:100, price:0},
-    {units:250, price:0}
+    {units:50, price:0, cost:0},
+    {units:100, price:0, cost:0},
+    {units:250, price:0, cost:0}
   ];
   _variantCount = variants.length;
 
-  const variantsHTML = variants.map((v,i) => variantRow(i, v.units, v.price)).join('');
+  const variantsHTML = variants.map((v,i) => variantRow(i, v.units, v.price, v.cost)).join('');
 
   return `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
@@ -1285,7 +1291,7 @@ function buildProductForm(p) {
       </div>
     </div>
     <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;font-weight:600;margin:10px 0 6px;display:flex;align-items:center;justify-content:space-between">
-      Preços por pacote
+      Preços e custo por pacote
       <button type="button" class="btn btn-secondary" style="font-size:.72rem;padding:4px 10px" onclick="addVariantRow()"><i class="fa fa-plus"></i> Adicionar pacote</button>
     </div>
     <div id="variants-container">${variantsHTML}</div>
@@ -1334,16 +1340,20 @@ function buildProductForm(p) {
     </div>`;
 }
 
-function variantRow(i, units, price) {
+function variantRow(i, units, price, cost) {
   return `
-    <div id="variant-row-${i}" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin-bottom:8px;align-items:end">
+    <div id="variant-row-${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;margin-bottom:8px;align-items:end">
       <div class="form-row" style="margin:0">
         <label>Pacote ${i+1} — Unidades</label>
         <input id="ep-units-${i}" type="number" min="1" value="${units||''}" placeholder="50" />
       </div>
       <div class="form-row" style="margin:0">
-        <label>Preço R$</label>
+        <label>Preço de venda R$</label>
         <input id="ep-price-${i}" type="number" min="0" step="0.01" value="${price||''}" placeholder="0,00" />
+      </div>
+      <div class="form-row" style="margin:0">
+        <label>Custo R$ <span style="font-weight:400;color:var(--muted)">(interno)</span></label>
+        <input id="ep-cost-${i}" type="number" min="0" step="0.01" value="${cost||''}" placeholder="0,00" />
       </div>
       <button type="button" class="btn btn-secondary btn-icon" style="color:var(--red);border-color:var(--red);margin-bottom:0" title="Remover" onclick="removeVariantRow(${i})" ${i===0?'disabled style="opacity:.3;cursor:not-allowed"':''}><i class="fa fa-trash"></i></button>
     </div>`;
@@ -1355,7 +1365,7 @@ function addVariantRow() {
   if(_variantCount >= 6) return toast('Máximo de 6 pacotes por produto.', 'error');
   const i = _variantCount++;
   const div = document.createElement('div');
-  div.innerHTML = variantRow(i, '', '');
+  div.innerHTML = variantRow(i, '', '', '');
   container.appendChild(div.firstElementChild);
 }
 
@@ -1378,8 +1388,9 @@ function readVariantsFromForm() {
     const i   = row.id.replace('variant-row-', '');
     const u   = document.getElementById('ep-units-'+i);
     const pr  = document.getElementById('ep-price-'+i);
+    const co  = document.getElementById('ep-cost-'+i);
     if(u && pr && u.value) {
-      variants.push({ units: +u.value, price: parseFloat(pr.value)||0 });
+      variants.push({ units: +u.value, price: parseFloat(pr.value)||0, cost: parseFloat(co?.value)||0 });
     }
   });
   return variants;
@@ -2646,6 +2657,17 @@ function exportCSV(type) {
     const seen = new Map();
     STATE.orders.forEach(o => { if(!seen.has(o.customer.email)) seen.set(o.customer.email, o.customer.name); });
     rows=[['Email','Nome'],...[...seen.entries()].map(([email,name])=>[email,name])];
+  } else if(type==='products') {
+    filename='precos-custos-topfood.csv';
+    rows=[['Produto','Categoria','Pacote (un)','Preço venda','Custo','Lucro R$','Margem %']];
+    STATE.products.forEach(p=>{
+      (p.variants||[]).forEach(v=>{
+        const custo  = parseFloat(v.cost)||0;
+        const lucro  = (v.price||0) - custo;
+        const margem = v.price ? ((lucro/v.price)*100).toFixed(1) : '0.0';
+        rows.push([p.name, p.category||'', v.units, v.price||0, custo, lucro.toFixed(2), margem]);
+      });
+    });
   }
   if(!rows.length) return;
   const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
