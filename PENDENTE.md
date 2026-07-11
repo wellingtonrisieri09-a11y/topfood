@@ -55,11 +55,11 @@ _Responsáveis: **[W]** Wellington · **[Caio]** · **[Contador]** · **[Claude]
 ## 🛒 M10 — Marketplace Hub (ML / Shopee / Amazon) — EM ANDAMENTO
 > Objetivo: publicar produto, vender, pedido cai no mesmo painel, baixa estoque, e permite emitir NF-e/etiqueta como hoje.
 
-### Mercado Livre — fase 1 construída (código), falta o teste real
+### Mercado Livre — fase 1 construída e publicação TESTADA COM SUCESSO (11/07)
 - [x] **[Claude]** Publicar produto (1 anúncio por pacote), sugestão de categoria, sincronizar estoque, receber pedido via webhook (baixa estoque automaticamente).
-- [ ] **[W]** Testar no painel: abrir um produto → colar/gerar categoria ML → **Publicar no Mercado Livre** → conferir se os 3 pacotes foram criados sem erro.
-- [ ] **[W]** Fazer uma compra de teste (ou aguardar a primeira venda real) e confirmar que o pedido caiu em Admin → Pedidos com a tag "🛒 Mercado Livre".
-- [ ] **[Claude]** Ajustar payload de atributos/categoria conforme os erros reais que o Mercado Livre devolver no primeiro teste (é normal precisar de 1-2 rodadas — cada categoria exige atributos diferentes).
+- [x] **[W+Claude]** Testado no painel: Embalagem de Pastel publicada com sucesso nos 3 pacotes (categoria MLB277903 "Caixas para Alimentos") — 2 rodadas de ajuste (`family_name`/`title`), como esperado.
+- [ ] **[W]** Conferir os 3 anúncios direto no Mercado Livre (título/foto/preço) e fazer uma compra de teste real.
+- [ ] **[W]** Confirmar que o pedido de teste caiu em Admin → Pedidos com a tag "🛒 Mercado Livre" e que o estoque descontou certo.
 - [ ] **[W]** Decidir depois: quer emissão de NF-e automática pra pedido de marketplace, ou continua manual (botão) como hoje?
 
 ### Shopee — próxima fase (não iniciada)

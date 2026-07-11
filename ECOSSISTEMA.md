@@ -5,6 +5,19 @@ _Documento-mestre. Versionado no Git para nunca mais se perder (o PC com o hist�
 
 ---
 
+## 🔄 ATUALIZAÇÃO — sessão de 11/07 (Claude Code)
+**Custo/margem por produto + início do Marketplace Hub (M10) com Mercado Livre:**
+
+- ✅ **Custo e margem por pacote:** cada pacote (50/100/250 un) agora tem campo "Custo R$" no cadastro do produto. Card do produto mostra lucro R$ e margem % por pacote. Botão **"Exportar preço x custo"** na página Produtos gera CSV (preço, custo, lucro, margem). Custo é **interno** — as rotas públicas da loja (`/api/products`) removem esse campo antes de responder, nunca chega no cliente.
+- 🟡 **M10 — Marketplace Hub — fase 1 (Mercado Livre) CONSTRUÍDA E TESTADA COM SUCESSO:**
+  - Painel: seção "Mercado Livre" no cadastro do produto → sugere categoria automaticamente, botão **Publicar no Mercado Livre** cria 1 anúncio por pacote.
+  - **Testado em produção nesta sessão:** os 3 pacotes da Embalagem de Pastel foram publicados com sucesso no Mercado Livre (categoria "Caixas para Alimentos", MLB277903) — links reais gerados (MLB4877415259, MLB4877485593, MLB4877415269).
+  - Recebimento de pedido via webhook (`orders_v2`): cria o pedido automaticamente em Admin → Pedidos com a tag "🛒 Mercado Livre", dá baixa no estoque do produto e sincroniza a disponibilidade de volta pros anúncios. **Ainda não testado com uma venda real** (próximo passo).
+  - NF-e e etiqueta continuam manuais pra pedido de marketplace, igual já é hoje pro site — não foi automatizado sem decisão do Wellington.
+  - Shopee e Amazon: contas de vendedor + credenciais de API confirmadas prontas pelo Wellington, mas o código ainda **não foi construído** — é a próxima fase, mesmo padrão do Mercado Livre (`modules/shopee.js`, `modules/amazon.js`).
+
+---
+
 ## 🔄 ATUALIZAÇÃO — sessão de 30/06 (Claude Code)
 **Loja agora vende e recebe sozinha — checkout fechado de ponta a ponta:**
 
@@ -71,7 +84,7 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 | M7 | Dashboard de Métricas | Visitas/anúncios/SEO no painel | ✅ Pronto | Tela visual no admin (Inteligência) com orgânico + local + anúncios, via `/api/eco/metrics` — _28/06_ |
 | M8 | Memória da IA | Atendente lembra de clientes/conversas | ✅ Pronto | — |
 | M9 | Controle de Acesso | Login seguro, perfis, 2FA | ✅ Pronto | (2FA opcional) |
-| M10 | Marketplace Hub | Vender em ML/Shopee/Amazon | 🟡 Reavaliar | ML conectado; publicar é burocrático; foco mudou p/ anúncios |
+| M10 | Marketplace Hub | Vender em ML/Shopee/Amazon | 🟡 Em andamento | **Mercado Livre: publicar produto testado e funcionando (11/07).** Falta testar recebimento de pedido real. Shopee e Amazon: contas/API prontas, código a construir |
 | M11 | Portal B2B (Nota Fiscal) | CNPJ, boleto, emissão de NF-e | ⏳ Bloqueado | Certificado digital NF-e (Contador) |
 | M12 | Inteligência Competitiva | Espiar preços de concorrentes | 🔜 Ajustado | Radar ML inviável; intel virá do comportamento do site (M15) |
 | ~~M13~~ | ~~Gerador de Criativos~~ | ~~Criar artes no painel~~ | ❌ Removido | Wellington cria por fora (Photoshop/Corel/Canva) |
@@ -126,6 +139,7 @@ Legenda: ✅ Pronto · 🟡 Parcial · 🔜 A fazer · ⏳ Bloqueado (esperando 
 ## 👥 PENDÊNCIAS POR RESPONSÁVEL
 
 ### Wellington
+- [ ] **M10 — Mercado Livre:** conferir os 3 anúncios publicados da Embalagem de Pastel (título/foto/preço corretos) e fazer uma compra de teste pra validar o recebimento automático do pedido no painel
 - [x] ~~Créditos Anthropic~~ → **OK (já entraram há tempo)**; IA Atendente (M5) e IA Gestora (M15) funcionando
 - [ ] Token da **Conversions API** da Meta (no Gerenciador de Eventos) → destrava M4b _(opcional/melhoria; pixel e campanha já funcionam)_
 - [x] ~~Pegar com o Caio o acesso ao **painel registro.br** → criar contas de e-mail (M6)~~ → **feito** ✅ (contato@ ligado e funcionando)
