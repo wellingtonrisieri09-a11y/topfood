@@ -82,7 +82,11 @@ async function mlWrite(method, pathUrl, body) {
     body: JSON.stringify(body),
   });
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`ML ${method} ${pathUrl} → ${r.status}: ${JSON.stringify(data).slice(0, 400)}`);
+  if (!r.ok) {
+    const err = new Error(`ML ${method} ${pathUrl} → ${r.status}: ${JSON.stringify(data).slice(0, 1200)}`);
+    err.mlData = data;
+    throw err;
+  }
   return data;
 }
 const mlPost = (p, b) => mlWrite('POST', p, b);
@@ -118,15 +122,14 @@ async function suggestCategory(title) {
   return top ? { category_id: top.category_id, category_name: top.category_name } : null;
 }
 
-function buildItemPayload(product, variant, categoryId, attributes) {
+function buildItemPayload(product, variant, categoryId, attributes, opts) {
+  opts = opts || {};
   const stock = parseInt(product.stock, 10) || 0;
   const available = variant.units ? Math.max(0, Math.floor(stock / variant.units)) : 0;
   const img = (product.images && product.images[0]) || product.image || '';
   const baseUrl = process.env.BASE_URL || 'https://topfoodembalagens.com.br';
   const pictureUrl = img ? (img.startsWith('http') ? img : `${baseUrl}/${img}`) : null;
-  return {
-    title: `${product.name} - pacote ${variant.units} un`.slice(0, 60),
-    family_name: product.name.slice(0, 60), // exigido por algumas categorias (agrupa as variações do mesmo produto)
+  const payload = {
     category_id: categoryId,
     price: variant.price || 0,
     currency_id: 'BRL',
@@ -138,6 +141,17 @@ function buildItemPayload(product, variant, categoryId, attributes) {
     pictures: pictureUrl ? [{ source: pictureUrl }] : undefined,
     attributes,
   };
+  // Algumas categorias exigem family_name (agrupador do produto) e, quando presente,
+  // rejeitam um "title" próprio — o ML deriva o título da família nesse caso.
+  if (opts.useFamilyName) payload.family_name = product.name.slice(0, 60);
+  else payload.title = `${product.name} - pacote ${variant.units} un`.slice(0, 60);
+  return payload;
+}
+
+// Mensagem de erro da API do ML cita esse campo entre colchetes? (ex: "[family_name]")
+function errorMentionsField(err, field) {
+  const raw = err && (JSON.stringify(err.mlData || {}) || err.message || '');
+  return raw.includes(field);
 }
 
 // Publica (cria ou atualiza) todas as variantes de um produto no ML.
@@ -155,13 +169,19 @@ async function publicarProduto(productId) {
   const resultados = [];
   for (const variant of product.variants || []) {
     try {
-      const payload = buildItemPayload(product, variant, product.ml_category_id, attributes);
       let data;
       if (variant.ml_item_id) {
+        const payload = buildItemPayload(product, variant, product.ml_category_id, attributes);
         // Atualiza (preço/estoque não podem ir junto de category_id em alguns casos — manda tudo, ML ignora o que não muda)
         data = await mlPut(`/items/${variant.ml_item_id}`, { price: payload.price, available_quantity: payload.available_quantity, pictures: payload.pictures });
       } else {
-        data = await mlPost('/items', payload);
+        try {
+          data = await mlPost('/items', buildItemPayload(product, variant, product.ml_category_id, attributes, { useFamilyName: false }));
+        } catch (e1) {
+          if (!errorMentionsField(e1, 'family_name')) throw e1;
+          // Categoria exige family_name (e rejeita title junto) — tenta de novo já no formato certo
+          data = await mlPost('/items', buildItemPayload(product, variant, product.ml_category_id, attributes, { useFamilyName: true }));
+        }
         variant.ml_item_id = data.id;
       }
       resultados.push({ units: variant.units, ok: true, ml_item_id: variant.ml_item_id, permalink: data.permalink || null });
