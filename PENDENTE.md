@@ -50,8 +50,25 @@ _Responsáveis: **[W]** Wellington · **[Caio]** · **[Contador]** · **[Claude]
 ### M12 — Inteligência Competitiva
 - [ ] **[Claude]** Definir a fonte (radar do Mercado Livre é inviável) → virá do **comportamento do próprio site** (via M15). A desenhar.
 
-### M10 — Marketplace Hub (ML / Shopee / Amazon)
-- [ ] **[W]** Decidir se vale a pena publicar (hoje despriorizado — foco em anúncios próprios).
+---
+
+## 🛒 M10 — Marketplace Hub (ML / Shopee / Amazon) — EM ANDAMENTO
+> Objetivo: publicar produto, vender, pedido cai no mesmo painel, baixa estoque, e permite emitir NF-e/etiqueta como hoje.
+
+### Mercado Livre — fase 1 construída (código), falta o teste real
+- [x] **[Claude]** Publicar produto (1 anúncio por pacote), sugestão de categoria, sincronizar estoque, receber pedido via webhook (baixa estoque automaticamente).
+- [ ] **[W]** Testar no painel: abrir um produto → colar/gerar categoria ML → **Publicar no Mercado Livre** → conferir se os 3 pacotes foram criados sem erro.
+- [ ] **[W]** Fazer uma compra de teste (ou aguardar a primeira venda real) e confirmar que o pedido caiu em Admin → Pedidos com a tag "🛒 Mercado Livre".
+- [ ] **[Claude]** Ajustar payload de atributos/categoria conforme os erros reais que o Mercado Livre devolver no primeiro teste (é normal precisar de 1-2 rodadas — cada categoria exige atributos diferentes).
+- [ ] **[W]** Decidir depois: quer emissão de NF-e automática pra pedido de marketplace, ou continua manual (botão) como hoje?
+
+### Shopee — próxima fase (não iniciada)
+- [ ] **[W]** Confirmar Partner ID/Key já testados (tem, mas não testado nesta integração).
+- [ ] **[Claude]** Construir `modules/shopee.js`: OAuth da loja, publicar item, receber pedido (mesmo padrão do ML).
+
+### Amazon — próxima fase (não iniciada)
+- [ ] **[W]** Confirmar chaves LWA (SP-API) já testadas.
+- [ ] **[Claude]** Construir `modules/amazon.js`: autorização SP-API, Listings Items API, Orders API (mesmo padrão do ML).
 
 ### M16 — IA altera o site
 - [ ] **[Claude]** Construir "controles seguros" pra IA mudar produto/banner/cor/telefone com aprovação do Wellington (sem tocar no código).

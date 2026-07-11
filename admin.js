@@ -1171,7 +1171,7 @@ async function saveProduct(id) {
   const p = STATE.products.find(x=>x.id===id);
   if(!p) return;
 
-  const data = readProductFromForm();
+  const data = readProductFromForm(p.variants);
   if(!data.name) return toast('Informe o nome do produto.', 'error');
   if(!data.variants.length) return toast('Adicione ao menos um pacote de preço.', 'error');
 
@@ -1337,7 +1337,70 @@ function buildProductForm(p) {
     <div class="form-row">
       <label>Especificações <span style="font-weight:400;color:var(--muted)">(formato "Label: Valor", uma por linha)</span></label>
       <textarea id="ep-specs" rows="5" placeholder="Material: Kraft preto&#10;Gramatura: 350g/m²&#10;Formato: Pillow Box">${specsVal}</textarea>
+    </div>
+    ${isNew ? '' : mlSectionHtml(p)}`;
+}
+
+function mlSectionHtml(p) {
+  const publicados = (p.variants || []).filter(v => v.ml_item_id);
+  return `
+    <div class="form-row" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+      <label>Categoria no Mercado Livre <span style="font-weight:400;color:var(--muted)">(ex: MLB271599)</span></label>
+      <div style="display:flex;gap:8px">
+        <input id="ep-ml-cat" type="text" value="${esc(p.ml_category_id||'')}" placeholder="Cole o ID da categoria ou clique em Sugerir" style="flex:1" />
+        <button type="button" class="btn btn-secondary" onclick="mlSugerirCategoria('${p.id}')">Sugerir</button>
+      </div>
+      <span class="hint" id="ml-cat-hint"></span>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+        <button type="button" class="btn btn-primary" onclick="mlPublicarProduto('${p.id}')" id="ml-publicar-btn"><i class="fa fa-store"></i> Publicar no Mercado Livre</button>
+        <span style="font-size:.78rem;color:var(--muted)">${publicados.length} de ${(p.variants||[]).length} pacote(s) publicado(s)</span>
+      </div>
+      <div id="ml-status-list" style="margin-top:8px;display:flex;flex-direction:column;gap:4px">
+        ${(p.variants||[]).map(v=>`<div style="font-size:.78rem">${v.units} un: ${v.ml_item_id ? `<a href="https://produto.mercadolivre.com.br/${v.ml_item_id}" target="_blank" rel="noopener">publicado (${v.ml_item_id})</a>` : '<span style="color:var(--muted)">não publicado</span>'}</div>`).join('')}
+      </div>
     </div>`;
+}
+
+async function mlSugerirCategoria(id) {
+  const p = STATE.products.find(x=>x.id===id);
+  const hint = document.getElementById('ml-cat-hint');
+  if(hint) hint.textContent = 'Buscando sugestão...';
+  try {
+    const data = await api('/api/eco/ml/sugerir-categoria?titulo='+encodeURIComponent(p.name));
+    if(data.sugestao) {
+      document.getElementById('ep-ml-cat').value = data.sugestao.category_id;
+      if(hint) hint.textContent = 'Sugestão: '+data.sugestao.category_name+' ('+data.sugestao.category_id+') — confira antes de publicar.';
+    } else if(hint) hint.textContent = 'Não encontrei sugestão automática. Cole o ID da categoria manualmente.';
+  } catch(e) {
+    if(hint) hint.textContent = 'Erro ao buscar sugestão: '+e.message;
+  }
+}
+
+async function mlPublicarProduto(id) {
+  const catInput = document.getElementById('ep-ml-cat');
+  const catId = catInput?.value.trim();
+  if(!catId) return toast('Defina a categoria do Mercado Livre antes de publicar.', 'error');
+
+  const btn = document.getElementById('ml-publicar-btn');
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa fa-spinner fa-spin"></i> Publicando...'; }
+  try {
+    await api('/api/eco/ml/produto/'+id, { method:'PUT', body: JSON.stringify({ ml_category_id: catId }) });
+    const out = await api('/api/eco/ml/publicar/'+id, { method:'POST' });
+    const lista = document.getElementById('ml-status-list');
+    if(lista && out.resultados) {
+      lista.innerHTML = out.resultados.map(r => r.ok
+        ? `<div style="font-size:.78rem">${r.units} un: <a href="${r.permalink||'#'}" target="_blank" rel="noopener">publicado (${r.ml_item_id})</a></div>`
+        : `<div style="font-size:.78rem;color:var(--red)">${r.units} un: erro — ${esc(r.error)}</div>`
+      ).join('');
+    }
+    if(out.ok) toast('✅ Publicado no Mercado Livre! Confira os links.');
+    else toast('⚠️ Nenhum pacote foi publicado — veja os erros abaixo do botão.', 'error');
+    await loadProducts();
+  } catch(e) {
+    toast('❌ Erro ao publicar: '+e.message, 'error');
+  } finally {
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa fa-store"></i> Publicar no Mercado Livre'; }
+  }
 }
 
 function variantRow(i, units, price, cost) {
@@ -1382,7 +1445,7 @@ function syncVariantHints() {
   });
 }
 
-function readVariantsFromForm() {
+function readVariantsFromForm(existingVariants) {
   const variants = [];
   document.querySelectorAll('[id^="variant-row-"]').forEach(row => {
     const i   = row.id.replace('variant-row-', '');
@@ -1390,13 +1453,18 @@ function readVariantsFromForm() {
     const pr  = document.getElementById('ep-price-'+i);
     const co  = document.getElementById('ep-cost-'+i);
     if(u && pr && u.value) {
-      variants.push({ units: +u.value, price: parseFloat(pr.value)||0, cost: parseFloat(co?.value)||0 });
+      const units = +u.value;
+      // Preserva o vínculo com o anúncio do Mercado Livre se o pacote (mesmas unidades) já foi publicado
+      const anterior = (existingVariants||[]).find(v => v.units === units && v.ml_item_id);
+      const v = { units, price: parseFloat(pr.value)||0, cost: parseFloat(co?.value)||0 };
+      if(anterior) v.ml_item_id = anterior.ml_item_id;
+      variants.push(v);
     }
   });
   return variants;
 }
 
-function readProductFromForm() {
+function readProductFromForm(existingVariants) {
   const feats = (document.getElementById('ep-features')?.value.trim()||'')
     .split('\n').map(s=>s.trim()).filter(Boolean);
   const specs = (document.getElementById('ep-specs')?.value.trim()||'')
@@ -1415,7 +1483,8 @@ function readProductFromForm() {
     badgeColor:       document.getElementById('ep-badgeColor')?.value||'',
     stock:            parseInt(document.getElementById('ep-stock')?.value)||0,
     weight_per_unit:  parseFloat(document.getElementById('ep-weight')?.value)||0,
-    variants:         readVariantsFromForm(),
+    variants:         readVariantsFromForm(existingVariants),
+    ml_category_id:   document.getElementById('ep-ml-cat')?.value.trim() ?? undefined,
     images:           [..._editImages],
     image:            _editImages[0] || '',
     videos:           [..._editVideos],
@@ -2629,11 +2698,12 @@ function statusLabel(s) {
 }
 function payLabel(p) {
   return {
-    pix:          '🟢 PIX',
-    whatsapp:     '💬 WhatsApp',
-    mercadopago:  '💳 Mercado Pago',
-    credit_card:  '💳 Cartão',
-    boleto:       '📄 Boleto',
+    pix:            '🟢 PIX',
+    whatsapp:       '💬 WhatsApp',
+    mercadopago:    '💳 Mercado Pago',
+    credit_card:    '💳 Cartão',
+    boleto:         '📄 Boleto',
+    mercado_livre:  '🛒 Mercado Livre',
   }[p] || (p || '—');
 }
 function contactWA(phone,name,orderId) {
