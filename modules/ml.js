@@ -126,6 +126,7 @@ function buildItemPayload(product, variant, categoryId, attributes) {
   const pictureUrl = img ? (img.startsWith('http') ? img : `${baseUrl}/${img}`) : null;
   return {
     title: `${product.name} - pacote ${variant.units} un`.slice(0, 60),
+    family_name: product.name.slice(0, 60), // exigido por algumas categorias (agrupa as variações do mesmo produto)
     category_id: categoryId,
     price: variant.price || 0,
     currency_id: 'BRL',
