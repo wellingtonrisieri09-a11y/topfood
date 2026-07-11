@@ -1353,7 +1353,7 @@ function mlSectionHtml(p) {
       <span class="hint" id="ml-cat-hint"></span>
       <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
         <button type="button" class="btn btn-primary" onclick="mlPublicarProduto('${p.id}')" id="ml-publicar-btn"><i class="fa fa-store"></i> Publicar no Mercado Livre</button>
-        <span style="font-size:.78rem;color:var(--muted)">${publicados.length} de ${(p.variants||[]).length} pacote(s) publicado(s)</span>
+        <span style="font-size:.78rem;color:var(--muted)" id="ml-publicados-count">${publicados.length} de ${(p.variants||[]).length} pacote(s) publicado(s)</span>
       </div>
       <div id="ml-status-list" style="margin-top:8px;display:flex;flex-direction:column;gap:4px">
         ${(p.variants||[]).map(v=>`<div style="font-size:.78rem">${v.units} un: ${v.ml_item_id ? `<a href="https://produto.mercadolivre.com.br/${v.ml_item_id}" target="_blank" rel="noopener">publicado (${v.ml_item_id})</a>` : '<span style="color:var(--muted)">não publicado</span>'}</div>`).join('')}
@@ -1392,6 +1392,8 @@ async function mlPublicarProduto(id) {
         ? `<div style="font-size:.78rem">${r.units} un: <a href="${r.permalink||'#'}" target="_blank" rel="noopener">publicado (${r.ml_item_id})</a></div>`
         : `<div style="font-size:.78rem;color:var(--red)">${r.units} un: erro — ${esc(r.error)}</div>`
       ).join('');
+      const count = document.getElementById('ml-publicados-count');
+      if(count) count.textContent = out.resultados.filter(r=>r.ok).length+' de '+out.resultados.length+' pacote(s) publicado(s)';
     }
     if(out.ok) toast('✅ Publicado no Mercado Livre! Confira os links.');
     else toast('⚠️ Nenhum pacote foi publicado — veja os erros abaixo do botão.', 'error');
