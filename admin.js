@@ -710,8 +710,12 @@ async function toggleUserActive(id, active) {
    PRINT LABEL — Etiqueta de Envio Correios
 ══════════════════════════════════════════════════════ */
 function printLabel(id) {
-  const o = STATE.orders.find(x => x.id === id);
-  if (!o) return;
+  try { buildLabelOverlay(id); }
+  catch (e) { toast('Erro ao gerar etiqueta: ' + e.message, 'error'); }
+}
+function buildLabelOverlay(id) {
+  const o = STATE.orders.find(x => String(x.id) === String(id));
+  if (!o) { toast('Pedido não encontrado para gerar a etiqueta.', 'error'); return; }
 
   const s  = STATE.settings || {};
   const storeName    = s.store_name    || 'TopFood Embalagens';
@@ -721,12 +725,13 @@ function printLabel(id) {
 
   const cust     = o.customer  || {};
   const ship     = o.shipping  || {};
-  const dateStr  = new Date(o.date).toLocaleDateString('pt-BR');
+  const orderDate = o.date ? new Date(o.date) : new Date();
+  const dateStr  = orderDate.toLocaleDateString('pt-BR');
   const tracking = o.tracking_code || '';
-  const method   = ship.method || o.payment_method === 'whatsapp' ? (ship.method || 'A DEFINIR') : (ship.method || 'A DEFINIR');
+  const method   = ship.method || 'A DEFINIR';
 
   // Itens formatados
-  const itemsHTML = o.items.map(i =>
+  const itemsHTML = (Array.isArray(o.items) ? o.items : []).map(i =>
     `<tr>
       <td style="padding:2px 4px;font-size:9px;border-bottom:1px dashed #ccc">${i.name || i.id}</td>
       <td style="padding:4px 6px;font-size:11px;text-align:center;border-bottom:1px dashed #ccc">${i.qty}</td>
@@ -975,7 +980,7 @@ function printLabel(id) {
   <div class="label-header">
     <div class="brand">Top<span>Food</span> Embalagens</div>
     <div class="order-num">${o.id}</div>
-    <div class="date-info">${dateStr}<br>${new Date(o.date).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+    <div class="date-info">${dateStr}<br>${orderDate.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
   </div>
 
   <!-- MÉTODO DE ENVIO -->
@@ -1077,8 +1082,9 @@ function printLabel(id) {
   _ov.id = 'tf-label-overlay';
   _ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.65);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:18px;overflow:auto';
   _ov.innerHTML =
-    '<div style="display:flex;gap:10px;margin-bottom:12px">'
+    '<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;justify-content:center">'
     + '<button id="tf-lbl-print" style="background:#CC0000;color:#fff;border:none;padding:11px 26px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer">Imprimir etiqueta</button>'
+    + '<button id="tf-lbl-tab" style="background:#FFD700;color:#111;border:none;padding:11px 26px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer">Abrir em nova aba</button>'
     + '<button id="tf-lbl-close" style="background:#fff;color:#111;border:none;padding:11px 26px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer">Fechar</button>'
     + '</div>'
     + '<iframe id="tf-lbl-frame" style="width:100mm;height:150mm;max-width:96vw;background:#fff;border:0;border-radius:4px;box-shadow:0 8px 30px rgba(0,0,0,.4)"></iframe>';
@@ -1086,7 +1092,24 @@ function printLabel(id) {
   const _fr = document.getElementById('tf-lbl-frame');
   const _fd = _fr.contentWindow.document;
   _fd.open(); _fd.write(labelHTML); _fd.close();
-  document.getElementById('tf-lbl-print').onclick = function(){ try { _fr.contentWindow.focus(); _fr.contentWindow.print(); } catch (e) { toast('Nao foi possivel imprimir: ' + e.message, 'error'); } };
+
+  // Abre a etiqueta numa aba propria (Blob) — unico jeito confiavel de imprimir
+  // no celular (iPhone/Android); a pagina tem o proprio botao "Imprimir".
+  const _blob = new Blob([labelHTML], { type: 'text/html' });
+  function openLabelTab() {
+    const url = URL.createObjectURL(_blob);
+    const w = window.open(url, '_blank');
+    if (!w) { toast('O navegador bloqueou a nova aba. Permita pop-ups para este site e tente de novo.', 'error'); return; }
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+  }
+
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  document.getElementById('tf-lbl-print').onclick = function(){
+    if (isMobile) { openLabelTab(); return; } // print() de iframe falha calado no celular
+    try { _fr.contentWindow.focus(); _fr.contentWindow.print(); }
+    catch (e) { openLabelTab(); }
+  };
+  document.getElementById('tf-lbl-tab').onclick = openLabelTab;
   document.getElementById('tf-lbl-close').onclick = function(){ _ov.remove(); };
   _ov.addEventListener('click', function(e){ if (e.target === _ov) _ov.remove(); });
 }
