@@ -719,7 +719,7 @@ function buildLabelOverlay(id) {
 
   const s  = STATE.settings || {};
   const storeName    = s.store_name    || 'TopFood Embalagens';
-  const storePhone   = s.whatsapp      ? s.whatsapp.replace(/^55/,'').replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3') : '(11) 98885-6367';
+  const storePhone   = s.whatsapp      ? String(s.whatsapp).replace(/^55/,'').replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3') : '(11) 98885-6367';
   const storeAddress = s.store_address || 'Santo André — SP';
   const storeCEP     = s.store_cep     || '';
 
