@@ -1099,7 +1099,7 @@ function buildLabelOverlay(id) {
   function openLabelTab() {
     const url = URL.createObjectURL(_blob);
     const w = window.open(url, '_blank');
-    if (!w) { toast('O navegador bloqueou a nova aba. Permita pop-ups para este site e tente de novo.', 'error'); return; }
+    if (!w) { toast('O navegador bloqueou a nova aba. Abra o painel no Safari ou Chrome (fora do app) e tente de novo.', 'error'); return; }
     setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
   }
 

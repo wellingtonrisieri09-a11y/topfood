@@ -293,7 +293,12 @@ app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.get('/admin', (req, res) => res.redirect(301, '/admin.html'));
 app.get('/product.html', function(req, res, next) { var id = req.query.id; if (id) { return res.redirect(301, '/produto/' + encodeURIComponent(id)); } next(); });
 registerSeoRoutes(app, readData);
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname), {
+  // js/css/html sempre revalidam (ETag) — celular nunca fica preso num admin.js/app.js velho
+  setHeaders(res, filePath) {
+    if (/\.(js|css|html)$/i.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
+  }
+}));
 
 // ============================================================
 // RATE LIMITING — Protege login contra força bruta
