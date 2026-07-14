@@ -271,15 +271,21 @@ function registerVendedorRoutes(app, { readData, writeData, requireAuth }) {
       if (!porVendedor[key]) porVendedor[key] = {
         vendedor_id: key, nome: o.vendedor_nome || key,
         pedidos: 0, pedidos_pagos: 0, total_vendido: 0, base_comissao: 0, comissao: 0,
+        pedidos_pendentes: 0, valor_pendente: 0, comissao_pendente: 0,
       };
       const v = porVendedor[key];
       v.pedidos++;
+      const base = commissionBase(o);
       if (PAID_STATUSES.includes(o.status)) {
-        const base = commissionBase(o);
         v.pedidos_pagos++;
         v.total_vendido = round2(v.total_vendido + (parseFloat(o.total) || 0));
         v.base_comissao = round2(v.base_comissao + base);
         v.comissao      = round2(v.comissao + base * (o.comissao_pct || 0) / 100);
+      } else if (o.status !== "cancelled") {
+        // aguardando pagamento — comissão ainda prevista
+        v.pedidos_pendentes++;
+        v.valor_pendente    = round2(v.valor_pendente + (parseFloat(o.total) || 0));
+        v.comissao_pendente = round2(v.comissao_pendente + base * (o.comissao_pct || 0) / 100);
       }
     }
 

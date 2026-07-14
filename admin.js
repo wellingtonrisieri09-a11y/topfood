@@ -2981,8 +2981,12 @@ async function renderVender() {
       <div id="venda-result"></div>
 
       <div class="card" style="padding:18px">
-        <h3 style="margin:0 0 4px"><i class="fa fa-list-check" style="color:var(--red)"></i> Minhas vendas</h3>
-        <div id="venda-resumo" style="margin:8px 0"></div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between">
+          <h3 style="margin:0"><i class="fa fa-chart-line" style="color:var(--red)"></i> Meu desempenho</h3>
+          <input type="month" id="venda-mes" value="${new Date().toISOString().slice(0,7)}" onchange="vendaLoadMinhas()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:.82rem" />
+        </div>
+        <div id="venda-resumo" style="margin:12px 0"></div>
+        <h4 style="margin:14px 0 8px">🧾 Vendas do mês</h4>
         <div id="minhas-vendas" style="overflow-x:auto"></div>
       </div>
     </div>`;
@@ -3228,32 +3232,68 @@ function vendaShowResult(r) {
   box.scrollIntoView({ behavior: 'smooth' });
 }
 
+function vendaMesAnterior(mes) {
+  let [y, m] = mes.split('-').map(Number);
+  m--; if (m === 0) { m = 12; y--; }
+  return y + '-' + String(m).padStart(2, '0');
+}
+
+function vendaKpi(icone, titulo, valor, cor, sub) {
+  return `<div style="flex:1;min-width:140px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px 14px">
+    <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.5px">${icone} ${titulo}</div>
+    <div style="font-size:1.25rem;font-weight:800;margin-top:4px;color:${cor || 'var(--text,#111)'}">${valor}</div>
+    ${sub ? `<div style="font-size:.72rem;color:var(--muted);margin-top:2px">${sub}</div>` : ''}
+  </div>`;
+}
+
 async function vendaLoadMinhas() {
   const box = document.getElementById('minhas-vendas');
   const resumo = document.getElementById('venda-resumo');
   if (!box) return;
+  const mes = document.getElementById('venda-mes')?.value || new Date().toISOString().slice(0, 7);
   try {
-    const [mine, com] = await Promise.all([
-      api('/api/vendedor/my-orders'),
-      api('/api/vendedor/comissoes'),
+    const [com, comAnt] = await Promise.all([
+      api('/api/vendedor/comissoes?mes=' + mes),
+      api('/api/vendedor/comissoes?mes=' + vendaMesAnterior(mes)),
     ]);
+
     if (resumo) {
-      const me = (com.vendedores || [])[0];
-      resumo.innerHTML = STATE.role === 'vendedor'
-        ? `<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem">
-             <span>📅 <b>${com.mes}</b></span>
-             <span>✅ Pedidos pagos: <b>${me ? me.pedidos_pagos : 0}</b></span>
-             <span>💰 Comissão do mês: <b style="color:var(--green)">R$ ${fmt(me ? me.comissao : 0)}</b></span>
-           </div>`
-        : '';
+      // soma (para vendedor é só ele mesmo; admin/owner vê o time somado)
+      const soma = arr => (arr || []).reduce((a, v) => ({
+        pagos: a.pagos + v.pedidos_pagos, vendido: a.vendido + v.total_vendido, comissao: a.comissao + v.comissao,
+        pend: a.pend + (v.pedidos_pendentes || 0), valPend: a.valPend + (v.valor_pendente || 0), comPend: a.comPend + (v.comissao_pendente || 0),
+      }), { pagos: 0, vendido: 0, comissao: 0, pend: 0, valPend: 0, comPend: 0 });
+      const at = soma(com.vendedores), ant = soma(comAnt.vendedores);
+      const ticket = at.pagos ? at.vendido / at.pagos : 0;
+
+      // desempenho vs mês anterior (sobre o total vendido pago)
+      let perf;
+      if (!ant.vendido && !at.vendido) perf = '<span style="color:var(--muted)">Sem vendas pagas ainda neste mês — bora! 💪</span>';
+      else if (!ant.vendido) perf = '<span style="color:var(--green)">🚀 Primeiro mês com vendas pagas!</span>';
+      else {
+        const pct = Math.round(((at.vendido - ant.vendido) / ant.vendido) * 100);
+        perf = pct >= 0
+          ? `<span style="color:var(--green)">📈 ${pct === 0 ? 'igual ao' : '+' + pct + '% vs'} mês anterior${pct > 0 ? ' — mandou bem!' : ''}</span>`
+          : `<span style="color:var(--red)">📉 ${pct}% vs mês anterior (R$ ${fmt(ant.vendido)})</span>`;
+      }
+
+      resumo.innerHTML = `
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          ${vendaKpi('💰', 'Comissão a receber', 'R$ ' + fmt(at.comissao), 'var(--green)', 'sobre ' + at.pagos + ' pedido(s) pago(s)')}
+          ${vendaKpi('🛒', 'Total vendido (pago)', 'R$ ' + fmt(at.vendido), null, 'ticket médio R$ ' + fmt(ticket))}
+          ${vendaKpi('⏳', 'Aguardando pagamento', 'R$ ' + fmt(at.valPend), 'var(--orange)', at.pend + ' pedido(s) · comissão prevista R$ ' + fmt(at.comPend))}
+        </div>
+        <div style="margin-top:10px;font-size:.85rem;font-weight:600">${perf}</div>`;
     }
-    box.innerHTML = !(mine.orders || []).length
-      ? '<p style="color:var(--muted);font-size:.82rem">Nenhuma venda lançada ainda.</p>'
+
+    const pedidos = com.pedidos || [];
+    box.innerHTML = !pedidos.length
+      ? '<p style="color:var(--muted);font-size:.82rem">Nenhuma venda neste mês.</p>'
       : `<table style="width:100%;font-size:.8rem;border-collapse:collapse;min-width:560px">
           <thead><tr style="text-align:left;color:var(--muted)">
             <th style="padding:6px 4px">Pedido</th><th>Cliente</th><th>Total</th><th>Status</th><th>Comissão</th><th></th>
           </tr></thead>
-          <tbody>${mine.orders.map(o => `
+          <tbody>${pedidos.map(o => `
             <tr style="border-top:1px solid var(--border)">
               <td style="padding:7px 4px;font-weight:700">${o.id}</td>
               <td>${escapeHtml(o.customer.name)}</td>
@@ -3290,7 +3330,7 @@ async function renderComissoes() {
     body.innerHTML = `
       <div style="overflow-x:auto"><table style="width:100%;font-size:.82rem;border-collapse:collapse;min-width:620px">
         <thead><tr style="text-align:left;color:var(--muted)">
-          <th style="padding:6px 4px">Vendedor</th><th>Pedidos (pagos)</th><th>Total vendido</th><th>Base (sem frete)</th><th>Comissão a pagar</th>
+          <th style="padding:6px 4px">Vendedor</th><th>Pedidos (pagos)</th><th>Total vendido</th><th>Base (sem frete)</th><th>Comissão a pagar</th><th>Aguard. pagamento</th>
         </tr></thead>
         <tbody>${d.vendedores.map(v => `
           <tr style="border-top:1px solid var(--border)">
@@ -3299,6 +3339,7 @@ async function renderComissoes() {
             <td style="white-space:nowrap">R$ ${fmt(v.total_vendido)}</td>
             <td style="white-space:nowrap">R$ ${fmt(v.base_comissao)}</td>
             <td style="white-space:nowrap;color:var(--green);font-weight:800">R$ ${fmt(v.comissao)}</td>
+            <td style="white-space:nowrap;color:var(--orange)">R$ ${fmt(v.valor_pendente || 0)}${v.pedidos_pendentes ? ` <span style="font-size:.68rem">(${v.pedidos_pendentes} ped.)</span>` : ''}</td>
           </tr>`).join('')}</tbody>
       </table></div>
       <p style="font-size:.72rem;color:var(--muted);margin:10px 0 0">Comissão = % do vendedor sobre o valor dos produtos (sem frete) dos pedidos <b>pagos</b> no mês. O % usado é o que estava combinado no momento de cada venda.</p>
