@@ -642,6 +642,44 @@ function registerCatalogoRoutes(app, readData, decodeUser, writeData) {
     }
   });
 
+  // RESET de emergência: só o PROPRIETÁRIO logado no painel principal
+  // consegue voltar o acesso do cofre pro padrão (wellington / lucro2026).
+  app.get("/custos/reset", (req, res) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    const u = decodeUser(req);
+    if (!u || u.role !== "owner") {
+      return res.status(403).send(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Reset do cofre</title></head>
+        <body style="font-family:Arial;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#f1f5f9">
+        <div style="background:#fff;padding:34px;border-radius:16px;max-width:420px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.15)">
+          <div style="font-size:40px">🔒</div>
+          <h2 style="margin:10px 0 8px;font-size:18px">Reset restrito ao proprietário</h2>
+          <p style="font-size:13px;color:#4b5563;line-height:1.7">Para resetar a senha do cofre de custos:<br>
+          1) Entre no <a href="/admin.html"><b>painel principal</b></a> com o SEU login de proprietário (wellington);<br>
+          2) Depois volte a este endereço (<b>/custos/reset</b>).</p>
+        </div></body></html>`);
+    }
+    const s = readData("settings.json") || {};
+    s.custos_user = CUSTOS_DEFAULT_USER;
+    s.custos_pass_hash = require("bcryptjs").hashSync(CUSTOS_DEFAULT_PASS, 10);
+    writeData("settings.json", s);
+    res.clearCookie(CUSTOS_COOKIE);
+    auditLogSafe(u, "custos_reset");
+    res.send(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Cofre resetado</title></head>
+      <body style="font-family:Arial;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#f1f5f9">
+      <div style="background:#fff;padding:34px;border-radius:16px;max-width:420px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.15)">
+        <div style="font-size:40px">✅</div>
+        <h2 style="margin:10px 0 8px;font-size:18px">Acesso do cofre resetado!</h2>
+        <p style="font-size:14px;line-height:1.9">Entre com:<br>Usuário: <code style="background:#f3f4f6;padding:2px 10px;border-radius:6px"><b>wellington</b></code><br>
+        Senha: <code style="background:#f3f4f6;padding:2px 10px;border-radius:6px"><b>lucro2026</b></code></p>
+        <p style="font-size:12px;color:#6b7280">Depois troque de novo com calma na própria página (anote a nova senha!).</p>
+        <a href="/custos" style="display:inline-block;margin-top:14px;background:#7c3aed;color:#fff;padding:12px 26px;border-radius:9px;text-decoration:none;font-weight:700">Ir para o cofre →</a>
+      </div></body></html>`);
+  });
+
+  function auditLogSafe(u, acao) {
+    try { require("../db").auditLog(u.id, u.username, acao, "settings", "custos", "Reset do acesso ao cofre de custos", ""); } catch (_) {}
+  }
+
   // Troca usuário/senha desta área (exige a senha atual)
   app.post("/custos/credenciais", async (req, res) => {
     if (!custosAuth(req)) return res.status(401).json({ ok: false, error: "Sessão expirada — entre de novo" });
