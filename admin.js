@@ -2956,15 +2956,11 @@ async function renderVender() {
       </div>
 
       <div class="card" style="padding:18px">
-        <h3 style="margin:0 0 12px"><i class="fa fa-box" style="color:var(--red)"></i> Produtos <span style="font-size:.72rem;color:var(--muted);font-weight:400">(preço do site — não é editável)</span></h3>
-        <div style="display:grid;grid-template-columns:2fr 1.4fr .8fr auto;gap:8px;align-items:end">
-          <div class="form-row" style="margin:0"><label>Produto</label>
-            <select id="v-prod" onchange="vendaPacotes()">${VENDA.produtos.map((p,i)=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}</select></div>
-          <div class="form-row" style="margin:0"><label>Pacote</label><select id="v-pacote"></select></div>
-          <div class="form-row" style="margin:0"><label>Qtd</label><input type="number" id="v-qty" value="1" min="1" /></div>
-          <button class="btn btn-primary" onclick="vendaAddItem()" style="height:38px"><i class="fa fa-plus"></i></button>
-        </div>
-        <div id="venda-itens" style="margin-top:14px"></div>
+        <h3 style="margin:0 0 4px"><i class="fa fa-box" style="color:var(--red)"></i> Produtos <span style="font-size:.72rem;color:var(--muted);font-weight:400">(preço do site — não é editável)</span></h3>
+        <p style="font-size:.78rem;color:var(--muted);margin:0 0 12px">Toque no produto para escolher cor, tamanho, pacote e quantidade.</p>
+        <div id="venda-vitrine" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px"></div>
+        <h4 style="margin:16px 0 4px">🛒 Itens da venda</h4>
+        <div id="venda-itens"></div>
         <div class="form-row" style="margin-top:10px"><label>Frete combinado (R$) <span style="color:var(--muted);font-size:.72rem">(0 = a combinar / retirada)</span></label>
           <input type="number" id="v-frete" value="0" min="0" step="0.01" oninput="vendaTotais()" /></div>
         <div id="venda-total" style="font-size:1.05rem;font-weight:800;text-align:right;margin-top:6px"></div>
@@ -2991,30 +2987,157 @@ async function renderVender() {
       </div>
     </div>`;
 
-  vendaPacotes();
+  vendaVitrine();
   vendaRenderItens();
   vendaLoadMinhas();
 }
 
-function vendaPacotes() {
-  const pid = document.getElementById('v-prod')?.value;
-  const p = VENDA.produtos.find(x => x.id === pid);
-  const sel = document.getElementById('v-pacote');
-  if (!sel || !p) return;
-  sel.innerHTML = (p.variants||[]).map(v => `<option value="${v.units}">${v.units} un — R$ ${fmt(v.price)}</option>`).join('');
+// Vitrine com foto — toca no produto pra abrir a grade completa
+function vendaVitrine() {
+  const grid = document.getElementById('venda-vitrine');
+  if (!grid) return;
+  if (!VENDA.produtos.length) {
+    grid.innerHTML = '<p style="grid-column:1/-1;color:var(--muted);font-size:.85rem;text-align:center;padding:12px">Nenhum produto ativo no catálogo.</p>';
+    return;
+  }
+  grid.innerHTML = VENDA.produtos.map(p => {
+    const img = p.image || (p.images && p.images[0]) || '';
+    const menor = Math.min(...(p.variants || []).map(v => parseFloat(v.price) || Infinity));
+    return `
+    <div onclick="vendaOpenProduto('${p.id}')" style="cursor:pointer;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 14px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow='none'">
+      <div style="aspect-ratio:1;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden">
+        ${img ? `<img src="${img}" alt="${escapeHtml(p.name)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">` : '<i class="fa fa-box" style="font-size:2rem;color:var(--muted)"></i>'}
+      </div>
+      <div style="padding:8px 10px">
+        <div style="font-size:.78rem;font-weight:700;line-height:1.25;min-height:2.4em">${escapeHtml(p.name)}</div>
+        <div style="font-size:.74rem;color:var(--red);font-weight:800;margin-top:3px">${isFinite(menor) ? 'a partir de R$ ' + fmt(menor) : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
-function vendaAddItem() {
-  const pid   = document.getElementById('v-prod')?.value;
-  const units = parseInt(document.getElementById('v-pacote')?.value, 10);
-  const qty   = Math.max(1, parseInt(document.getElementById('v-qty')?.value, 10) || 1);
+// Modal do produto: grade (Tamanho × Cor) ou pacotes + quantidade
+function vendaOpenProduto(pid) {
   const p = VENDA.produtos.find(x => x.id === pid);
-  const v = p && (p.variants||[]).find(vv => Number(vv.units) === units);
-  if (!p || !v) return toast('Selecione produto e pacote.', 'error');
-  const existing = VENDA.itens.find(i => i.product_id === pid && i.units === units);
+  if (!p || !(p.variants || []).length) return;
+
+  const hasDims = Array.isArray(p.option_names) && p.option_names.length
+    && p.variants.some(v => Array.isArray(v.options) && v.options.length);
+
+  VENDA.sel = { pid, hasDims, vidx: 0, dims: hasDims ? (p.variants[0].options || []).slice() : null };
+
+  const img = p.image || (p.images && p.images[0]) || '';
+  let optsHtml = '';
+  if (hasDims) {
+    optsHtml = p.option_names.map((nome, d) => {
+      const valores = [...new Set(p.variants.map(v => (v.options || [])[d]).filter(Boolean))];
+      return `<p style="font-weight:700;font-size:.82rem;margin:10px 0 4px">${escapeHtml(nome)}:</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" data-dim-group="${d}">
+          ${valores.map(val => `<button type="button" class="btn btn-secondary venda-dim" data-dim="${d}" data-val="${escapeHtml(val)}" onclick="vendaSelDim(${d}, this.dataset.val)" style="${VENDA.sel.dims[d]===val?'border-color:var(--red);color:var(--red);background:var(--orange-l,#fff0f0);':''}padding:8px 14px">${escapeHtml(val)}</button>`).join('')}
+        </div>`;
+    }).join('');
+  } else {
+    optsHtml = `<p style="font-weight:700;font-size:.82rem;margin:10px 0 4px">Escolha o pacote:</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${p.variants.map((v, i) => `<button type="button" class="btn btn-secondary venda-var" data-idx="${i}" onclick="vendaSelVar(${i})" style="${i===0?'border-color:var(--red);color:var(--red);background:var(--orange-l,#fff0f0);':''}padding:8px 14px;text-align:left">
+          <div style="font-weight:700">${escapeHtml(v.label || (v.units + ' un'))}</div>
+          <div style="font-size:.74rem">${v.label ? v.units + ' un — ' : ''}R$ ${fmt(v.price)}</div>
+        </button>`).join('')}
+      </div>`;
+  }
+
+  document.getElementById('modal-title').textContent = p.name;
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+      ${img ? `<img src="${img}" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--border)" onerror="this.style.display='none'">` : ''}
+      <div style="flex:1;min-width:200px">
+        ${p.description ? `<p style="font-size:.8rem;color:var(--muted);margin:0 0 6px">${escapeHtml(p.description)}</p>` : ''}
+        ${optsHtml}
+        <div style="margin-top:12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px">
+            <button type="button" class="btn btn-secondary" onclick="vendaQtd(-1)" style="padding:6px 13px;font-weight:800">−</button>
+            <input type="number" id="venda-m-qty" value="1" min="1" style="width:64px;text-align:center;padding:7px;border:1px solid var(--border);border-radius:8px" />
+            <button type="button" class="btn btn-secondary" onclick="vendaQtd(1)" style="padding:6px 13px;font-weight:800">+</button>
+          </div>
+          <div id="venda-m-preco" style="font-size:1.05rem;font-weight:800;color:var(--red)"></div>
+        </div>
+        <div id="venda-m-aviso" style="font-size:.76rem;color:var(--orange);margin-top:6px"></div>
+      </div>
+    </div>`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" id="venda-m-add" onclick="vendaModalAdd()"><i class="fa fa-cart-plus"></i> Adicionar à venda</button>`;
+  showModal();
+  vendaModalPreco();
+}
+
+function vendaSelDim(d, val) {
+  VENDA.sel.dims[d] = val;
+  document.querySelectorAll(`.venda-dim[data-dim="${d}"]`).forEach(b => {
+    const on = b.dataset.val === val;
+    b.style.borderColor = on ? 'var(--red)' : '';
+    b.style.color       = on ? 'var(--red)' : '';
+    b.style.background  = on ? 'var(--orange-l, #fff0f0)' : '';
+  });
+  vendaModalPreco();
+}
+
+function vendaSelVar(i) {
+  VENDA.sel.vidx = i;
+  document.querySelectorAll('.venda-var').forEach(b => {
+    const on = Number(b.dataset.idx) === i;
+    b.style.borderColor = on ? 'var(--red)' : '';
+    b.style.color       = on ? 'var(--red)' : '';
+    b.style.background  = on ? 'var(--orange-l, #fff0f0)' : '';
+  });
+  vendaModalPreco();
+}
+
+function vendaQtd(delta) {
+  const el = document.getElementById('venda-m-qty');
+  if (el) el.value = Math.max(1, (parseInt(el.value, 10) || 1) + delta);
+}
+
+// Resolve a variação selecionada (índice em p.variants) — null se combinação não existe
+function vendaVariantSel() {
+  const p = VENDA.produtos.find(x => x.id === VENDA.sel?.pid);
+  if (!p) return { p: null, idx: -1 };
+  if (!VENDA.sel.hasDims) return { p, idx: VENDA.sel.vidx };
+  const idx = p.variants.findIndex(v =>
+    Array.isArray(v.options) && VENDA.sel.dims.every((val, d) => v.options[d] === val));
+  return { p, idx };
+}
+
+function vendaModalPreco() {
+  const { p, idx } = vendaVariantSel();
+  const preco = document.getElementById('venda-m-preco');
+  const aviso = document.getElementById('venda-m-aviso');
+  const addBtn = document.getElementById('venda-m-add');
+  if (!preco) return;
+  if (!p || idx < 0) {
+    preco.textContent = '—';
+    if (aviso) aviso.textContent = 'Essa combinação não está disponível — escolha outra opção.';
+    if (addBtn) addBtn.disabled = true;
+    return;
+  }
+  const v = p.variants[idx];
+  preco.textContent = `R$ ${fmt(v.price)} · pacote ${v.units} un`;
+  if (aviso) aviso.textContent = '';
+  if (addBtn) addBtn.disabled = false;
+}
+
+function vendaModalAdd() {
+  const { p, idx } = vendaVariantSel();
+  if (!p || idx < 0) return toast('Escolha uma combinação disponível.', 'error');
+  const v = p.variants[idx];
+  const qty = Math.max(1, parseInt(document.getElementById('venda-m-qty')?.value, 10) || 1);
+  const detail = Array.isArray(v.options) && v.options.length ? v.options.join(' · ') : (v.label || '');
+  const existing = VENDA.itens.find(i => i.product_id === p.id && i.variant_idx === idx);
   if (existing) existing.qty += qty;
-  else VENDA.itens.push({ product_id: pid, name: p.name, units, qty, price: v.price });
+  else VENDA.itens.push({ product_id: p.id, variant_idx: idx, name: p.name, detail, units: v.units, qty, price: v.price });
+  closeModal();
   vendaRenderItens();
+  toast('Adicionado: ' + p.name + (detail ? ' (' + detail + ')' : ''));
 }
 
 function vendaRemItem(idx) { VENDA.itens.splice(idx, 1); vendaRenderItens(); }
@@ -3027,7 +3150,7 @@ function vendaRenderItens() {
     : `<table style="width:100%;font-size:.82rem;border-collapse:collapse">
         ${VENDA.itens.map((i, idx) => `
         <tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:7px 4px">${escapeHtml(i.name)} <b>(${i.units} un)</b></td>
+          <td style="padding:7px 4px">${escapeHtml(i.name)}${i.detail ? ` <span style="color:var(--red);font-weight:700">${escapeHtml(i.detail)}</span>` : ''} <b>(${i.units} un)</b></td>
           <td style="padding:7px 4px;text-align:center;white-space:nowrap">${i.qty} × R$ ${fmt(i.price)}</td>
           <td style="padding:7px 4px;text-align:right;font-weight:700;white-space:nowrap">R$ ${fmt(i.qty * i.price)}</td>
           <td style="padding:7px 4px;text-align:right"><button class="btn btn-ghost btn-icon" onclick="vendaRemItem(${idx})" style="color:var(--red)"><i class="fa fa-times"></i></button></td>
@@ -3064,7 +3187,7 @@ async function vendaLancar() {
         state: document.getElementById('v-uf')?.value || '',
         cep:   document.getElementById('v-cep')?.value.trim() || '',
       },
-      items: VENDA.itens.map(i => ({ product_id: i.product_id, units: i.units, qty: i.qty })),
+      items: VENDA.itens.map(i => ({ product_id: i.product_id, variant_idx: i.variant_idx, units: i.units, qty: i.qty })),
       shipping_price: parseFloat(document.getElementById('v-frete')?.value) || 0,
       payment_method: document.querySelector('input[name="v-pag"]:checked')?.value || 'pix',
       notes: document.getElementById('v-obs')?.value.trim() || '',

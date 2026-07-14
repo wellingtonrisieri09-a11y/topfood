@@ -511,6 +511,7 @@ app.post('/api/admin/products', requireAuth, requireRole('products'), (req, res)
     variants:         body.variants && body.variants.length
                         ? body.variants
                         : [{ units: 50, price: 0 }],
+    option_names:     body.option_names     || [],   // grade (ex.: ['Tamanho','Cor'])
     created_at: new Date().toISOString(),
   };
 

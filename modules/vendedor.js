@@ -152,11 +152,20 @@ function registerVendedorRoutes(app, { readData, writeData, requireAuth }) {
       for (const it of items) {
         const p = products.find(pp => pp.id === it.product_id);
         if (!p) return res.status(400).json({ ok: false, error: `Produto inválido: ${it.product_id}` });
-        const v = (p.variants || []).find(vv => Number(vv.units) === Number(it.units));
-        if (!v) return res.status(400).json({ ok: false, error: `Pacote inválido p/ ${p.name}: ${it.units} un` });
+        // variação identificada pelo índice (suporta grade Tamanho × Cor);
+        // fallback por units p/ compatibilidade
+        let v = null;
+        if (it.variant_idx != null && (p.variants || [])[it.variant_idx]) v = p.variants[it.variant_idx];
+        else v = (p.variants || []).find(vv => Number(vv.units) === Number(it.units));
+        if (!v) return res.status(400).json({ ok: false, error: `Variação inválida p/ ${p.name}` });
         const qty = Math.max(1, parseInt(it.qty, 10) || 1);
+        // detalhe da variação: opções da grade (ex.: "M · Preta") ou label, + pacote
+        const detail = Array.isArray(v.options) && v.options.length ? v.options.join(" · ")
+                     : (v.label || "");
         lines.push({
-          id: p.id, name: `${p.name} (pacote ${v.units} un)`, units: v.units,
+          id: p.id,
+          name: `${p.name}${detail ? ` — ${detail}` : ""} (pacote ${v.units} un)`,
+          units: v.units, variant_detail: detail,
           qty, unit_price: round2(v.price), total: round2(v.price * qty),
         });
       }
