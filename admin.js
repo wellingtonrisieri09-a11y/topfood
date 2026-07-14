@@ -3484,12 +3484,94 @@ function empProdsList() {
       </div>`).join('');
 }
 
+// Carrega o catálogo do site (uma vez) — modelos base para a ficha personalizada
+async function empCatalogo() {
+  if (EMPRESAS.catalogo && EMPRESAS.catalogo.length) return EMPRESAS.catalogo;
+  try {
+    EMPRESAS.catalogo = (await (await fetch('/api/products')).json()).filter(p => p.active !== false);
+  } catch(e) { EMPRESAS.catalogo = []; }
+  return EMPRESAS.catalogo;
+}
+
+// Adivinha o tipo de embalagem a partir do produto do site
+function empTipoGuess(p) {
+  const s = ((p.category || '') + ' ' + (p.name || '')).toLowerCase();
+  if (s.includes('pizza'))                        return 'Caixa de pizza';
+  if (s.includes('bolo') || s.includes('torta'))  return 'Caixa de bolo / torta';
+  if (s.includes('hamb') || s.includes('burger') || s.includes('lanche')) return 'Caixa de hambúrguer';
+  if (s.includes('batata') || s.includes('frita')) return 'Embalagem de batata (cone/balde)';
+  if (s.includes('pastel'))                       return 'Caixa de pastel';
+  if (s.includes('churro'))                       return 'Caixa de churros';
+  if (s.includes('marmita') || s.includes('antivaz')) return 'Marmita / antivazamento';
+  if (s.includes('esfiha') || s.includes('salgado'))  return 'Caixa de esfiha / salgados';
+  if (s.includes('saco') || s.includes('sacola')) return 'Saco / sacola';
+  if (s.includes('copo') || s.includes('pote'))   return 'Copo / pote';
+  if (s.includes('bandeja'))                      return 'Bandeja';
+  return 'Outro';
+}
+
+function empSpecFind(p, keys) {
+  for (const s of (p.specs || [])) {
+    const l = String(s.label || '').toLowerCase();
+    if (keys.some(k => l.includes(k))) return String(s.value || '');
+  }
+  return '';
+}
+
+// Preenche a ficha a partir do modelo do site escolhido (ponto de partida — ajuste com o cliente)
+function empProdAplicarBase() {
+  const i = document.getElementById('ep-base')?.value;
+  if (i === '' || i == null) return;
+  const p = (EMPRESAS.catalogo || [])[Number(i)];
+  if (!p) return;
+  const v0 = (p.variants || [])[0] || {};
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val !== '' && val != null) el.value = val; };
+  set('ep-nome',   p.name);
+  set('ep-tipo',   empTipoGuess(p));
+  set('ep-unid',   v0.units || 100);
+  set('ep-preco',  v0.price || '');
+  // medidas/material das especificações do produto (quando existem)
+  const medidas = empSpecFind(p, ['medida', 'dimens', 'tamanho']);
+  if (medidas) {
+    const parts = medidas.replace(/cm/gi, '').split(/[x×]/).map(s => s.trim()).filter(Boolean);
+    if (parts.length >= 3) { set('ep-larg', parts[0]); set('ep-alt', parts[1]); set('ep-prof', parts[2]); }
+    else if (parts.length === 2) { set('ep-larg', parts[0]); set('ep-alt', parts[1]); }
+  } else {
+    set('ep-larg', empSpecFind(p, ['largura']));
+    set('ep-alt',  empSpecFind(p, ['altura']));
+    set('ep-prof', empSpecFind(p, ['profundidade', 'comprimento']));
+  }
+  const material = empSpecFind(p, ['material', 'papel']);
+  if (material) {
+    const conhecido = EMP_MATERIAIS.find(m => material.toLowerCase().includes(m.toLowerCase()));
+    set('ep-material', conhecido || 'Outro');
+  }
+  set('ep-gram', empSpecFind(p, ['gramatura']));
+  // foto do modelo como referência visual (a arte do cliente substitui depois)
+  const img = p.image || (p.images && p.images[0]) || '';
+  if (img) {
+    document.getElementById('ep-arte-url').value = img;
+    document.getElementById('ep-arte-prev').innerHTML = `<img src="${img}" style="width:100%;height:100%;object-fit:cover">`;
+  }
+  toast('Modelo aplicado — agora ajuste com o que o cliente pedir.');
+}
+
 // Modal de ficha técnica da embalagem personalizada
-function empProdModal(idx) {
+async function empProdModal(idx) {
   const p = idx != null && idx >= 0 ? EMPRESAS.editProds[idx] : {};
+  const catalogo = await empCatalogo();
   const sel = (opts, val) => opts.map(o => `<option ${o === val ? 'selected' : ''}>${o}</option>`).join('');
   document.getElementById('modal-title').textContent = p.nome ? 'Ficha — ' + p.nome : 'Nova embalagem personalizada';
   document.getElementById('modal-body').innerHTML = `
+    ${!p.nome && catalogo.length ? `
+    <div style="background:var(--blue-l,#eff6ff);border-radius:10px;padding:10px 12px;margin-bottom:12px">
+      <label style="font-weight:700;font-size:.78rem;display:block;margin-bottom:4px">🚀 Partir de um modelo pronto do site (opcional)</label>
+      <select id="ep-base" onchange="empProdAplicarBase()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:.85rem">
+        <option value="">— escolher modelo do catálogo —</option>
+        ${catalogo.map((cp, ci) => `<option value="${ci}">${escapeHtml(cp.name)}</option>`).join('')}
+      </select>
+      <p style="font-size:.7rem;color:var(--muted);margin:5px 0 0">Puxa nome, tipo, pacote, preço de referência, medidas e foto do modelo — aí você ajusta com o que o cliente pedir.</p>
+    </div>` : ''}
     <div class="form-row"><label>Nome / identificação *</label><input type="text" id="ep-nome" value="${escapeHtml(p.nome || '')}" placeholder="Ex: Caixa burger Sabor — logo vermelho" /></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div class="form-row"><label>Tipo de embalagem</label><select id="ep-tipo">${sel(EMP_TIPOS, p.tipo || EMP_TIPOS[0])}</select></div>
