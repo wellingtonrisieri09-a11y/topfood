@@ -41,6 +41,7 @@ const ROLE_PERMISSIONS = {
   secretaria: { pages: ['orders','customers','abandoned','contact'],  canDelete: false, canSettings: false },
   designer:   { pages: ['orders'],                                    canDelete: false, canSettings: false },
   vendedor:   { pages: ['vender'],                                    canDelete: false, canSettings: false },
+  empresa:    { pages: ['portal'],                                    canDelete: false, canSettings: false },
 };
 function hasPermission(role, resource) {
   const p = ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.designer;
@@ -312,17 +313,18 @@ app.use(express.static(path.join(__dirname), {
 // também — o registerAuthRoutes registra de novo mais abaixo, ok)
 // ============================================================
 app.use(require('cookie-parser')());
-const VENDEDOR_ADMIN_ALLOW = new Set(['/login', '/logout', '/me', '/change-password']);
+const RESTRICTED_ROLES = new Set(['vendedor', 'empresa']);
+const RESTRICTED_ADMIN_ALLOW = new Set(['/login', '/logout', '/me', '/change-password']);
 app.use('/api/admin', (req, res, next) => {
   const u = decodeUser(req);
-  if (u && u.role === 'vendedor' && !VENDEDOR_ADMIN_ALLOW.has(req.path)) {
+  if (u && RESTRICTED_ROLES.has(u.role) && !RESTRICTED_ADMIN_ALLOW.has(req.path)) {
     return res.status(403).json({ error: 'Acesso negado para seu perfil.' });
   }
   next();
 });
 app.use('/api/eco', (req, res, next) => {
   const u = decodeUser(req);
-  if (u && u.role === 'vendedor') {
+  if (u && RESTRICTED_ROLES.has(u.role)) {
     return res.status(403).json({ error: 'Acesso negado para seu perfil.' });
   }
   next();
@@ -1681,7 +1683,7 @@ registerMarketingRoutes(app, requireAuth);
 registerAnunciosRoutes(app, requireAuth);
 registerWaCloudRoutes(app, requireAuth, requireOwner);
 registerVendedorRoutes(app, { readData, writeData, requireAuth });
-registerEmpresasRoutes(app, { readData, writeData, requireAdminPlus });
+registerEmpresasRoutes(app, { readData, writeData, requireAdminPlus, requireAuth });
 
 // Limpar blacklist e reservas expiradas a cada 30min
 setInterval(() => { try { cleanBlacklist(); releaseExpiredReservations(); } catch(e){} }, 30 * 60 * 1000);

@@ -10,8 +10,9 @@ const ROLE_PERMISSIONS = {
   secretaria: { pages: ['orders','customers','abandoned','contact'],                                                                canDelete: false },
   designer:   { pages: ['orders'],                                                                                                  canDelete: false },
   vendedor:   { pages: ['vender'],                                                                                                  canDelete: false },
+  empresa:    { pages: ['portal'],                                                                                                  canDelete: false },
 };
-const ROLE_LABELS = { owner:'Proprietário', admin:'Administrador', socio:'Sócio', secretaria:'Secretária', designer:'Designer', vendedor:'Vendedor' };
+const ROLE_LABELS = { owner:'Proprietário', admin:'Administrador', socio:'Sócio', secretaria:'Secretária', designer:'Designer', vendedor:'Vendedor', empresa:'Empresa (Portal)' };
 
 let STATE = {
   orders: [],
@@ -225,7 +226,7 @@ const PAGE_TITLES = {
   newsletter:'Newsletter — Leads', contact:'Mensagens de Contato', settings:'Configurações',
   users:'Usuários do Painel',
   vender:'Vender — Novo Pedido', comissoes:'Comissões dos Vendedores',
-  empresas:'Empresas — Contratos B2B'
+  empresas:'Empresas — Contratos B2B', portal:'Portal da Empresa'
 };
 function navigate(page) {
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
@@ -257,6 +258,7 @@ function navigate(page) {
   if(page==='vender')    renderVender();
   if(page==='comissoes') renderComissoes();
   if(page==='empresas')  renderEmpresas();
+  if(page==='portal')    renderPortal();
 }
 function refreshPage() { navigate(STATE.currentPage); toast('Dados atualizados!'); }
 
@@ -3735,6 +3737,16 @@ function empEditor(id) {
         <button type="button" class="btn btn-secondary" onclick="empProdModal(-1)"><i class="fa fa-plus"></i> Adicionar embalagem</button>
       </div>
 
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-key" style="color:var(--red)"></i> Acesso ao Portal da Empresa</h3>
+        <p style="font-size:.76rem;color:var(--muted);margin:0 0 12px">Crie o login e passe pro cliente: ele entra em <b>topfoodembalagens.com.br/empresa</b> (tela verde), vê os produtos e preços dele, o estoque pronto, e faz pedido por loja sozinho.</p>
+        ${e?.portal_username ? `<p style="font-size:.8rem;margin:0 0 10px">Acesso atual: <code style="background:var(--bg);padding:2px 8px;border-radius:5px">${escapeHtml(e.portal_username)}</code></p>` : ''}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="form-row"><label>Usuário do portal</label><input type="text" id="emp-pt-user" value="${escapeHtml(e?.portal_username || '')}" placeholder="Ex: saborburger" /></div>
+          <div class="form-row"><label>Senha ${e?.portal_username ? '(em branco = manter)' : '(mínimo 6 caracteres)'}</label><input type="password" id="emp-pt-pass" placeholder="${e?.portal_username ? 'Nova senha (opcional)' : 'Senha de acesso'}" /></div>
+        </div>
+      </div>
+
       <button class="btn btn-primary" style="padding:13px;font-size:1rem" onclick="empSalvar(${e ? `'${e.id}'` : 'null'})"><i class="fa fa-save"></i> Salvar empresa</button>
     </div>`;
   empProdsList();
@@ -3769,12 +3781,15 @@ async function empSalvar(id) {
       phone:    r.querySelector('.el-phone')?.value.trim(),
     })),
     produtos: EMPRESAS.editProds,
+    portal_username: document.getElementById('emp-pt-user')?.value.trim() || '',
+    portal_password: document.getElementById('emp-pt-pass')?.value || '',
   };
   if (!body.nome) return toast('Informe o nome da empresa.', 'error');
   try {
-    if (id) await api('/api/empresas/' + id, { method: 'PUT', body: JSON.stringify(body) });
-    else    await api('/api/empresas',       { method: 'POST', body: JSON.stringify(body) });
-    toast('Empresa salva!');
+    const r = id ? await api('/api/empresas/' + id, { method: 'PUT', body: JSON.stringify(body) })
+                 : await api('/api/empresas',       { method: 'POST', body: JSON.stringify(body) });
+    if (r.portal_error) toast('Empresa salva, mas o acesso ao portal falhou: ' + r.portal_error, 'error');
+    else toast('Empresa salva!' + (r.portal_username ? ' Acesso do portal: ' + r.portal_username : ''));
     renderEmpresas();
   } catch(e) {
     toast('Erro ao salvar empresa: ' + e.message, 'error');
@@ -3903,6 +3918,159 @@ async function empAbrirPedido(orderId) {
   } catch(e) {
     toast('Pedido lançado! Veja na página Pedidos.', 'info');
     closeModal();
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   PORTAL DA EMPRESA — autoatendimento (role 'empresa')
+══════════════════════════════════════════════════════ */
+const PORTAL = { empresa: null, qtys: {} };
+
+async function renderPortal() {
+  const root = document.getElementById('portal-root');
+  if (!root) return;
+  root.innerHTML = '<p style="color:var(--muted)">Carregando…</p>';
+  try {
+    const d = await api('/api/portal/me');
+    PORTAL.empresa = d.empresa;
+  } catch(e) {
+    root.innerHTML = '<div class="card" style="padding:24px;color:var(--red)">Não foi possível carregar seus dados. Fale com a TopFood: (11) 98885-6367.</div>';
+    return;
+  }
+  const e = PORTAL.empresa;
+  PORTAL.qtys = {};
+
+  root.innerHTML = `
+    <div style="display:grid;gap:16px;max-width:760px;padding-bottom:86px">
+
+      <div class="card" style="padding:18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-weight:800;font-size:1.05rem">🏢 ${escapeHtml(e.nome)}</div>
+          <div style="font-size:.78rem;color:var(--muted);margin-top:3px">Contrato ${escapeHtml(e.contrato?.tipo || '')}${e.contrato?.fim ? ' · vigência até ' + e.contrato.fim.split('-').reverse().join('/') : ''}</div>
+        </div>
+        <a class="btn btn-wa" href="https://wa.me/5511988856367?text=${encodeURIComponent('Olá! Sou da ' + e.nome + ' e preciso de ajuda no portal.')}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Falar com a TopFood</a>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-cart-plus" style="color:var(--red)"></i> Fazer pedido</h3>
+        <p style="font-size:.78rem;color:var(--muted);margin:0 0 12px">Escolha a loja, informe as quantidades (em pacotes) e o pagamento. Suas embalagens já estão prontas no nosso estoque.</p>
+        <div class="form-row"><label>Loja que vai receber *</label>
+          <select id="pt-loja">${(e.lojas || []).map(l => `<option value="${l.id}">${escapeHtml(l.nome)}${l.cidade ? ' — ' + escapeHtml(l.cidade) : ''}${l.uf ? '/' + escapeHtml(l.uf) : ''}</option>`).join('')}</select></div>
+        <div id="pt-prods">
+          ${(e.produtos || []).map(p => `
+            <div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border-bottom:1px dashed var(--border);padding:9px 0">
+              <div style="width:52px;height:52px;border-radius:9px;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center">
+                ${p.arte_url ? `<img src="${p.arte_url}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">` : '<i class="fa fa-box" style="color:var(--muted)"></i>'}
+              </div>
+              <div>
+                <div style="font-size:.86rem;font-weight:700">${escapeHtml(p.nome)}</div>
+                <div style="font-size:.72rem;color:var(--muted)">${p.unidades_pacote ? p.unidades_pacote + ' un/pacote · ' : ''}R$ ${fmt(p.preco)}/pacote
+                  · <span style="color:${(p.estoque||0) > 0 ? 'var(--green)' : 'var(--orange)'}">${(p.estoque||0) > 0 ? p.estoque + ' pacote(s) pronto(s)' : 'sob produção'}</span></div>
+              </div>
+              <input type="number" class="pt-qty" data-idx="${p.idx}" min="0" step="1" value="0" style="width:78px;text-align:center;padding:8px;border:1px solid var(--border);border-radius:8px" oninput="portalTotal()" />
+            </div>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px">
+          <div class="form-row"><label>Forma de pagamento</label>
+            <select id="pt-pag">
+              <option value="boleto">Boleto (7 dias)</option>
+              <option value="pix">PIX</option>
+              <option value="card">Cartão de crédito</option>
+            </select></div>
+          <div class="form-row"><label>Observações</label><input type="text" id="pt-obs" placeholder="opcional — ex: entregar de manhã" /></div>
+        </div>
+        <div id="pt-total" style="font-size:1.05rem;font-weight:800;text-align:right;margin-top:6px"></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:12px;padding:13px;font-size:1rem" id="pt-lancar" onclick="portalPedido()">
+          <i class="fa fa-paper-plane"></i> Enviar pedido</button>
+        <p style="font-size:.72rem;color:var(--muted);margin:8px 0 0;text-align:center">Frete conforme contrato — confirmado pela TopFood junto com a entrega.</p>
+      </div>
+
+      <div id="pt-result"></div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 10px"><i class="fa fa-list-check" style="color:var(--red)"></i> Meus pedidos</h3>
+        <div id="pt-pedidos" style="overflow-x:auto">Carregando…</div>
+      </div>
+    </div>`;
+  portalTotal();
+  portalPedidos();
+}
+
+function portalTotal() {
+  const el = document.getElementById('pt-total');
+  if (!el || !PORTAL.empresa) return;
+  let sub = 0, pacotes = 0;
+  document.querySelectorAll('.pt-qty').forEach(inp => {
+    const qty = parseInt(inp.value, 10) || 0;
+    const p = (PORTAL.empresa.produtos || []).find(pp => pp.idx === Number(inp.dataset.idx));
+    if (p && qty > 0) { sub += qty * (parseFloat(p.preco) || 0); pacotes += qty; }
+  });
+  el.innerHTML = pacotes ? `${pacotes} pacote(s) &nbsp;·&nbsp; Total: <span style="color:var(--red)">R$ ${fmt(sub)}</span>` : '';
+}
+
+async function portalPedido() {
+  const items = [...document.querySelectorAll('.pt-qty')]
+    .map(inp => ({ idx: Number(inp.dataset.idx), qty: parseInt(inp.value, 10) || 0 }))
+    .filter(i => i.qty > 0);
+  if (!items.length) return toast('Informe a quantidade de ao menos um item.', 'error');
+  const btn = document.getElementById('pt-lancar');
+  btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Enviando...';
+  try {
+    const r = await api('/api/portal/pedido', { method: 'POST', body: JSON.stringify({
+      loja_id: document.getElementById('pt-loja')?.value,
+      items,
+      payment_method: document.getElementById('pt-pag')?.value,
+      notes: document.getElementById('pt-obs')?.value.trim(),
+    })});
+    document.querySelectorAll('.pt-qty').forEach(i => i.value = 0);
+    portalTotal();
+    const box = document.getElementById('pt-result');
+    box.innerHTML = `
+      <div class="card" style="padding:18px;border:2px solid var(--green)">
+        <h3 style="margin:0 0 8px;color:var(--green)"><i class="fa fa-check-circle"></i> Pedido ${r.order_id} enviado — R$ ${fmt(r.total)}</h3>
+        ${r.payment_link
+          ? `<p style="font-size:.8rem;margin:0 0 10px">Pague por aqui: <a href="${r.payment_link}" target="_blank" rel="noopener" style="word-break:break-all">${r.payment_link}</a></p>
+             <div style="display:flex;gap:8px;flex-wrap:wrap">
+               <a class="btn btn-primary" href="${r.payment_link}" target="_blank" rel="noopener"><i class="fa fa-credit-card"></i> Abrir pagamento</a>
+               <button class="btn btn-secondary" onclick="vendaCopy('${r.payment_link}','Link copiado!')"><i class="fa fa-copy"></i> Copiar link</button>
+               ${r.pix_copy_paste ? `<button class="btn btn-secondary" onclick="vendaCopy(document.getElementById('pt-cp').value,'PIX copiado!')"><i class="fa fa-qrcode"></i> Copiar PIX</button><input type="hidden" id="pt-cp" value="${escapeHtml(r.pix_copy_paste)}">` : ''}
+             </div>`
+          : `<p style="font-size:.8rem;color:var(--orange);margin:0">${escapeHtml(r.charge_error || 'A TopFood vai te mandar a cobrança.')}</p>`}
+        <p style="font-size:.76rem;color:var(--muted);margin:10px 0 0">A TopFood já recebeu seu pedido e vai preparar a entrega. 👍</p>
+      </div>`;
+    box.scrollIntoView({ behavior: 'smooth' });
+    portalPedidos();
+    toast('Pedido ' + r.order_id + ' enviado!');
+  } catch(e) {
+    toast('Erro ao enviar pedido: ' + e.message, 'error');
+  }
+  btn.disabled = false; btn.innerHTML = '<i class="fa fa-paper-plane"></i> Enviar pedido';
+}
+
+async function portalPedidos() {
+  const box = document.getElementById('pt-pedidos');
+  if (!box) return;
+  try {
+    const d = await api('/api/portal/pedidos');
+    box.innerHTML = !(d.pedidos || []).length
+      ? '<p style="color:var(--muted);font-size:.82rem">Nenhum pedido ainda — faça o primeiro acima. 👆</p>'
+      : `<table style="width:100%;font-size:.8rem;border-collapse:collapse;min-width:560px">
+          <thead><tr style="text-align:left;color:var(--muted)">
+            <th style="padding:6px 4px">Pedido</th><th>Data</th><th>Loja</th><th>Total</th><th>Status</th><th>Rastreio</th><th></th>
+          </tr></thead>
+          <tbody>${d.pedidos.map(o => `
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:7px 4px;font-weight:700">${o.id}</td>
+              <td style="white-space:nowrap">${fmtDate(o.date)}</td>
+              <td>${escapeHtml(o.loja_nome || '—')}</td>
+              <td style="white-space:nowrap">R$ ${fmt(o.total)}</td>
+              <td><span class="badge ${o.status}">${statusLabel(o.status)}</span></td>
+              <td style="font-size:.72rem">${o.tracking_code ? `<code>${escapeHtml(o.tracking_code)}</code>` : '—'}</td>
+              <td>${o.payment_link && o.status === 'pending' ? `<a class="btn btn-ghost btn-icon" href="${o.payment_link}" target="_blank" rel="noopener" title="Pagar"><i class="fa fa-credit-card"></i></a>` : ''}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+  } catch(e) {
+    box.innerHTML = '<p style="color:var(--red);font-size:.82rem">Erro ao carregar pedidos.</p>';
   }
 }
 
