@@ -262,6 +262,10 @@ function renderCustos(readData) {
   const aFix = num(settings.custo_taxa_asaas_fixo, 1.99);   // R$ fixo por venda Asaas (PIX/boleto)
   const mPct = num(settings.custo_taxa_ml_pct, 12);         // % Mercado Livre (clássico — varia por categoria)
   const mFix = num(settings.custo_taxa_ml_fixo, 6);         // R$ fixo ML (custo fixo p/ itens < R$79)
+  const sPct = num(settings.custo_taxa_shopee_pct, 20);     // % Shopee (comissão + frete grátis obrigatório 2026)
+  const sFix = num(settings.custo_taxa_shopee_fixo, 4);     // R$ fixo Shopee por item (varia por faixa de preço)
+  const zPct = num(settings.custo_taxa_amz_pct, 15);        // % Amazon (por categoria, 10–15%)
+  const zFix = num(settings.custo_taxa_amz_fixo, 2);        // R$ fixo Amazon (plano individual R$2/item; profissional 0)
   const fPct = num(settings.custo_taxa_fiscal_pct, 4.5);    // % imposto — Simples Nacional 1ª faixa indústria (confirmar c/ contador)
   const vPct = num(settings.custo_taxa_vendedor_pct, 15);   // % comissão do vendedor (10–20)
 
@@ -292,6 +296,10 @@ function renderCustos(readData) {
       <td class="dir c-lvend">—</td>
       <td class="dir c-ml">—</td>
       <td class="dir c-lml">—</td>
+      <td class="dir c-shopee">—</td>
+      <td class="dir c-lshopee">—</td>
+      <td class="dir c-amz">—</td>
+      <td class="dir c-lamz">—</td>
     </tr>`).join("");
 
   return `<!DOCTYPE html>
@@ -305,7 +313,7 @@ function renderCustos(readData) {
   @page { size: A4 landscape; margin: 10mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, Helvetica, sans-serif; color: #111; background: #f1f5f9; }
-  .folha { max-width: 1050px; margin: 0 auto; background: #fff; padding: 22px 26px; }
+  .folha { max-width: 1290px; margin: 0 auto; background: #fff; padding: 22px 26px; }
   .topo { display: flex; justify-content: space-between; align-items: center; gap: 10px;
           border-bottom: 4px solid #7c3aed; padding-bottom: 10px; flex-wrap: wrap; }
   .marca { font-size: 20px; font-weight: 900; }
@@ -324,11 +332,12 @@ function renderCustos(readData) {
   .taxas .grupo { border-left: 3px solid #ddd; padding-left: 12px; }
   .taxas .grupo b { font-size: 11px; display: block; margin-bottom: 4px; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
-  th { background: #f4f4f5; text-align: right; padding: 7px 8px; font-size: 9.5px; text-transform: uppercase;
-       letter-spacing: .4px; color: #374151; border-bottom: 2px solid #7c3aed; }
+  .tb-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 10.5px; min-width: 1150px; }
+  th { background: #f4f4f5; text-align: right; padding: 6px 6px; font-size: 8.5px; text-transform: uppercase;
+       letter-spacing: .3px; color: #374151; border-bottom: 2px solid #7c3aed; }
   th:first-child, th:nth-child(2) { text-align: left; }
-  td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; }
+  td { padding: 5px 6px; border-bottom: 1px solid #f0f0f0; }
   td.dir { text-align: right; white-space: nowrap; }
   td.prod { font-weight: 800; }
   td.custo { color: #b45309; }
@@ -343,8 +352,8 @@ function renderCustos(readData) {
   .barra button, .barra a { background: #7c3aed; color: #fff; border: none; padding: 10px 20px;
            border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; text-decoration: none; }
   .barra a.sec, .barra button.sec { background: #374151; }
-  .in-custo { width: 92px; padding: 5px 7px; border: 1px solid #f0c36d; background: #fffbeb; border-radius: 6px;
-              font-size: 12px; text-align: right; color: #92400e; font-weight: 700; }
+  .in-custo { width: 76px; padding: 5px 6px; border: 1px solid #f0c36d; background: #fffbeb; border-radius: 6px;
+              font-size: 11px; text-align: right; color: #92400e; font-weight: 700; }
   .cred { background: #f8f7ff; border: 1px solid #e9e5ff; border-radius: 10px; padding: 12px 14px; margin-top: 14px; }
   .cred summary { font-size: 11px; font-weight: 800; color: #7c3aed; cursor: pointer; }
   .cred input { padding: 7px 9px; border: 1px solid #d1d5db; border-radius: 7px; font-size: 12px; margin: 6px 6px 0 0; }
@@ -384,27 +393,40 @@ function renderCustos(readData) {
         <div><label>+ fixo R$</label><input type="number" id="tx-mfix" step="0.01" value="${mFix}"></div>
       </div>
     </div>
+    <div class="grupo" style="border-color:#f97316"><b>Taxa Shopee</b>
+      <div style="display:flex;gap:8px">
+        <div><label>% da venda</label><input type="number" id="tx-spct" step="0.01" value="${sPct}"></div>
+        <div><label>+ fixo R$</label><input type="number" id="tx-sfix" step="0.01" value="${sFix}"></div>
+      </div>
+    </div>
+    <div class="grupo" style="border-color:#111827"><b>Taxa Amazon</b>
+      <div style="display:flex;gap:8px">
+        <div><label>% da venda</label><input type="number" id="tx-zpct" step="0.01" value="${zPct}"></div>
+        <div><label>+ fixo R$</label><input type="number" id="tx-zfix" step="0.01" value="${zFix}"></div>
+      </div>
+    </div>
     <div class="grupo" style="border-color:#0891b2"><b>Imposto (fiscal)</b>
       <div><label>% da venda</label><input type="number" id="tx-fpct" step="0.01" value="${fPct}"></div>
     </div>
     <div class="grupo" style="border-color:#1d4ed8"><b>Comissão vendedor</b>
       <div><label>% da venda</label><input type="number" id="tx-vpct" step="0.01" value="${vPct}"></div>
     </div>
-    <span style="font-size:10px;color:#6b7280;max-width:250px">Asaas: R$ 1,99/venda é a tarifa padrão de PIX e boleto (cartão ≈ 2,99% + R$ 0,49). Imposto: 4,5% = Simples 1ª faixa indústria — <b>confirme com o contador</b>. ML: confira a % da sua categoria. Campos amarelos = <b>custo de matéria-prima por pacote</b>, edite direto e salve.</span>
+    <span style="font-size:10px;color:#6b7280;max-width:250px">Asaas: R$ 1,99/venda (PIX/boleto; cartão ≈ 2,99% + R$ 0,49). Imposto: 4,5% = Simples 1ª faixa indústria — <b>confirme com o contador</b>. ML/Shopee/Amazon: confira a % da sua categoria (Shopee 2026: 20% c/ frete grátis + fixo por faixa de preço; Amazon: 10–15% + R$2/item no plano individual). Campos amarelos = <b>custo de matéria-prima por pacote</b>, edite e salve.</span>
   </div>
 
-  <table id="tb">
+  <div class="tb-wrap"><table id="tb">
     <thead><tr>
       <th>Produto</th><th>Variação / Pacote</th><th>Preço venda</th><th>Custo mat.-prima</th>
-      <th>Imposto</th><th>Taxa Asaas</th><th>Lucro SITE</th><th>Lucro c/ VENDEDOR</th><th>Taxa ML</th><th>Lucro ML</th>
+      <th>Imposto</th><th>Taxa Asaas</th><th>Lucro SITE</th><th>Lucro c/ VENDEDOR</th>
+      <th>Taxa ML</th><th>Lucro ML</th><th>Taxa Shopee</th><th>Lucro Shopee</th><th>Taxa Amazon</th><th>Lucro Amazon</th>
     </tr></thead>
-    <tbody>${rows || '<tr><td colspan="10" style="text-align:center;padding:20px;color:#6b7280">Nenhum produto ativo.</td></tr>'}</tbody>
-  </table>
+    <tbody>${rows || '<tr><td colspan="14" style="text-align:center;padding:20px;color:#6b7280">Nenhum produto ativo.</td></tr>'}</tbody>
+  </table></div>
 
   <p class="nota">
     <b>Lucro SITE</b> = preço − matéria-prima − imposto − taxa Asaas &nbsp;·&nbsp;
     <b>Lucro c/ VENDEDOR</b> = Lucro SITE − comissão do vendedor &nbsp;·&nbsp;
-    <b>Lucro ML</b> = preço − matéria-prima − imposto − taxa ML (frete do ML não incluso).<br>
+    <b>Lucro ML / Shopee / Amazon</b> = preço − matéria-prima − imposto − taxa do canal (frete dos marketplaces não incluso).<br>
     Campos amarelos = custo de matéria-prima por pacote (o mesmo campo "custo" da página Produtos — salvar aqui atualiza lá também).<br>
     🔒 Área restrita com login próprio — não compartilhe este acesso. O catálogo de vendas (sem custos) é o /catalogo.
   </p>
@@ -428,22 +450,30 @@ function lucroCell(el, v, preco){
 function recalc(){
   var apct=parseFloat(document.getElementById('tx-apct').value)||0, afix=parseFloat(document.getElementById('tx-afix').value)||0;
   var mpct=parseFloat(document.getElementById('tx-mpct').value)||0, mfix=parseFloat(document.getElementById('tx-mfix').value)||0;
+  var spct=parseFloat(document.getElementById('tx-spct').value)||0, sfix=parseFloat(document.getElementById('tx-sfix').value)||0;
+  var zpct=parseFloat(document.getElementById('tx-zpct').value)||0, zfix=parseFloat(document.getElementById('tx-zfix').value)||0;
   var fpct=parseFloat(document.getElementById('tx-fpct').value)||0, vpct=parseFloat(document.getElementById('tx-vpct').value)||0;
   document.querySelectorAll('#tb tbody tr[data-preco]').forEach(function(tr){
     var preco=parseFloat(tr.dataset.preco)||0;
     var custo=parseFloat(tr.querySelector('.in-custo').value)||0;
-    var imposto=preco*fpct/100, ta=preco*apct/100+afix, tm=preco*mpct/100+mfix, comis=preco*vpct/100;
+    var imposto=preco*fpct/100, ta=preco*apct/100+afix, comis=preco*vpct/100;
+    var tm=preco*mpct/100+mfix, ts=preco*spct/100+sfix, tz=preco*zpct/100+zfix;
     tr.querySelector('.c-imposto').textContent='R$ '+fmt(imposto);
     tr.querySelector('.c-asaas').textContent='R$ '+fmt(ta);
     tr.querySelector('.c-ml').textContent='R$ '+fmt(tm);
-    var ls=tr.querySelector('.c-lsite'), lv=tr.querySelector('.c-lvend'), lm=tr.querySelector('.c-lml');
-    if(!custo){ ls.innerHTML=lv.innerHTML=lm.innerHTML='<span class="falta">sem custo</span>'; return; }
+    tr.querySelector('.c-shopee').textContent='R$ '+fmt(ts);
+    tr.querySelector('.c-amz').textContent='R$ '+fmt(tz);
+    var ls=tr.querySelector('.c-lsite'), lv=tr.querySelector('.c-lvend'),
+        lm=tr.querySelector('.c-lml'), lsh=tr.querySelector('.c-lshopee'), lz=tr.querySelector('.c-lamz');
+    if(!custo){ ls.innerHTML=lv.innerHTML=lm.innerHTML=lsh.innerHTML=lz.innerHTML='<span class="falta">sem custo</span>'; return; }
     lucroCell(ls, preco-custo-imposto-ta, preco);
     lucroCell(lv, preco-custo-imposto-ta-comis, preco);
     lucroCell(lm, preco-custo-imposto-tm, preco);
+    lucroCell(lsh, preco-custo-imposto-ts, preco);
+    lucroCell(lz, preco-custo-imposto-tz, preco);
   });
 }
-['tx-apct','tx-afix','tx-mpct','tx-mfix','tx-fpct','tx-vpct'].forEach(function(id){ document.getElementById(id).addEventListener('input', recalc); });
+['tx-apct','tx-afix','tx-mpct','tx-mfix','tx-spct','tx-sfix','tx-zpct','tx-zfix','tx-fpct','tx-vpct'].forEach(function(id){ document.getElementById(id).addEventListener('input', recalc); });
 document.querySelectorAll('.in-custo').forEach(function(i){ i.addEventListener('input', recalc); });
 recalc();
 
@@ -453,6 +483,10 @@ async function salvarTudo(){
       custo_taxa_asaas_fixo:parseFloat(document.getElementById('tx-afix').value)||0,
       custo_taxa_ml_pct:parseFloat(document.getElementById('tx-mpct').value)||0,
       custo_taxa_ml_fixo:parseFloat(document.getElementById('tx-mfix').value)||0,
+      custo_taxa_shopee_pct:parseFloat(document.getElementById('tx-spct').value)||0,
+      custo_taxa_shopee_fixo:parseFloat(document.getElementById('tx-sfix').value)||0,
+      custo_taxa_amz_pct:parseFloat(document.getElementById('tx-zpct').value)||0,
+      custo_taxa_amz_fixo:parseFloat(document.getElementById('tx-zfix').value)||0,
       custo_taxa_fiscal_pct:parseFloat(document.getElementById('tx-fpct').value)||0,
       custo_taxa_vendedor_pct:parseFloat(document.getElementById('tx-vpct').value)||0 };
     var custos=[].map.call(document.querySelectorAll('.in-custo'),function(i){
@@ -546,7 +580,9 @@ function registerCatalogoRoutes(app, readData, decodeUser, writeData) {
       if (taxas && typeof taxas === "object") {
         const s = readData("settings.json") || {};
         const permitidas = ["custo_taxa_asaas_pct", "custo_taxa_asaas_fixo", "custo_taxa_ml_pct",
-                            "custo_taxa_ml_fixo", "custo_taxa_fiscal_pct", "custo_taxa_vendedor_pct"];
+                            "custo_taxa_ml_fixo", "custo_taxa_shopee_pct", "custo_taxa_shopee_fixo",
+                            "custo_taxa_amz_pct", "custo_taxa_amz_fixo",
+                            "custo_taxa_fiscal_pct", "custo_taxa_vendedor_pct"];
         permitidas.forEach(k => { if (taxas[k] !== undefined) s[k] = num(taxas[k], 0); });
         writeData("settings.json", s);
       }
