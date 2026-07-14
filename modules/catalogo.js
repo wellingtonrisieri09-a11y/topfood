@@ -108,24 +108,26 @@ function renderCatalogo(readData) {
   .barra p { font-size: 11px; color: #9CA3AF; width: 100%; text-align: center; margin: 0; }
 
   /* ── CAPA ── */
-  .capa { min-height: 96vh; display: flex; flex-direction: column; align-items: center;
-          justify-content: center; text-align: center; page-break-after: always; break-after: page;
-          border: 10px solid #CC0000; border-radius: 4px; padding: 40px 24px; position: relative; }
-  .capa-logo { width: 170px; height: 170px; object-fit: contain; border-radius: 20px; margin-bottom: 26px; }
-  .capa-marca { font-size: 40px; font-weight: 900; letter-spacing: -1px; }
+  /* Layout em fluxo: centraliza quando sobra espaço (margin:auto) e
+     empilha sem sobrepor quando a tela é baixa — nada absoluto. */
+  .capa { min-height: 92vh; display: flex; flex-direction: column; align-items: center;
+          text-align: center; page-break-after: always; break-after: page;
+          border: 10px solid #CC0000; border-radius: 4px; padding: 30px 24px 24px; margin-bottom: 22px; }
+  .capa-conteudo { margin: auto 0; }
+  .capa-logo { width: 150px; height: 150px; object-fit: contain; border-radius: 20px; margin-bottom: 20px; }
+  .capa-marca { font-size: 38px; font-weight: 900; letter-spacing: -1px; }
   .capa-marca span { color: #CC0000; }
   .capa-sub { font-size: 12px; letter-spacing: 5px; color: #6b7280; text-transform: uppercase; margin-top: 4px; }
-  .capa-linha { width: 90px; height: 4px; background: #CC0000; border-radius: 2px; margin: 34px auto 30px; }
-  .capa-cat { font-size: 54px; font-weight: 900; letter-spacing: 6px; color: #111; text-transform: uppercase; line-height: 1; }
-  .capa-cat-sub { font-size: 17px; color: #374151; margin-top: 10px; letter-spacing: 1px; }
-  .capa-ano { display: inline-block; margin-top: 26px; background: #CC0000; color: #fff;
-              font-size: 20px; font-weight: 800; padding: 8px 34px; border-radius: 30px; letter-spacing: 2px; }
-  .capa-vig { font-size: 11px; color: #6b7280; margin-top: 10px; }
-  .capa-rodape { position: absolute; bottom: 28px; left: 0; right: 0; font-size: 12px;
-                 color: #374151; line-height: 1.9; }
+  .capa-linha { width: 90px; height: 4px; background: #CC0000; border-radius: 2px; margin: 26px auto 24px; }
+  .capa-cat { font-size: 50px; font-weight: 900; letter-spacing: 6px; color: #111; text-transform: uppercase; line-height: 1; }
+  .capa-cat-sub { font-size: 16px; color: #374151; margin-top: 10px; letter-spacing: 1px; }
+  .capa-ano { display: inline-block; margin-top: 22px; background: #CC0000; color: #fff;
+              font-size: 19px; font-weight: 800; padding: 8px 32px; border-radius: 30px; letter-spacing: 2px; }
+  .capa-vig { font-size: 11px; color: #6b7280; margin-top: 9px; }
+  .capa-rodape { margin-top: auto; padding-top: 26px; font-size: 12px; color: #374151; line-height: 1.9; }
   .capa-rodape b { color: #CC0000; }
-  @media print { .capa { min-height: 250mm; } }
-  @media (max-width: 560px) { .capa-cat { font-size: 34px; letter-spacing: 3px; } .capa-marca { font-size: 28px; } }
+  @media print { .capa { min-height: 248mm; } }
+  @media (max-width: 560px) { .capa-cat { font-size: 32px; letter-spacing: 3px; } .capa-marca { font-size: 26px; } .capa-logo { width: 110px; height: 110px; } }
 
   @media print {
     body { background: #fff; }
@@ -150,14 +152,16 @@ function renderCatalogo(readData) {
 
   <!-- ═══ CAPA ═══ -->
   <div class="capa">
-    <img class="capa-logo" src="/images/WhatsApp Image 2026-05-22 at 16.14.11 (1).webp" alt="TopFood Embalagens" onerror="this.style.display='none'">
-    <div class="capa-marca">Top<span>Food</span> Embalagens</div>
-    <div class="capa-sub">Embalagens Food Service</div>
-    <div class="capa-linha"></div>
-    <div class="capa-cat">Catálogo</div>
-    <div class="capa-cat-sub">de Produtos e Preços</div>
-    <div class="capa-ano">${new Date().getFullYear()}</div>
-    <div class="capa-vig">Tabela vigente em ${hoje}</div>
+    <div class="capa-conteudo">
+      <img class="capa-logo" src="/images/WhatsApp Image 2026-05-22 at 16.14.11 (1).webp" alt="TopFood Embalagens" onerror="this.style.display='none'">
+      <div class="capa-marca">Top<span>Food</span> Embalagens</div>
+      <div class="capa-sub">Embalagens Food Service</div>
+      <div class="capa-linha"></div>
+      <div class="capa-cat">Catálogo</div>
+      <div class="capa-cat-sub">de Produtos e Preços</div>
+      <div class="capa-ano">${new Date().getFullYear()}</div>
+      <div class="capa-vig">Tabela vigente em ${hoje}</div>
+    </div>
     <div class="capa-rodape">
       📱 <b>${esc(foneFmt)}</b> &nbsp;·&nbsp; 🌐 topfoodembalagens.com.br<br>
       Embalagens que valorizam o seu alimento · Atacado a partir de 50 unidades · Entrega para todo o Brasil
