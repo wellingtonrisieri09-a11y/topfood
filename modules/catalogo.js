@@ -281,13 +281,17 @@ function renderCustos(readData) {
       // custo legado em R$ (antes do modelo kg/hora) segura o lucro até preencher as quantidades
       const legado = (parseFloat(v.cost_papel) || 0) + (parseFloat(v.cost_acabamento) || 0) + (parseFloat(v.cost_impressao) || 0)
                    || (parseFloat(v.cost) || 0);
+      // kg de papel AUTOMÁTICO: peso unitário (gramas, do cadastro do produto) × unidades do pacote
+      const pesoG = parseFloat(p.weight_per_unit) || 0;
+      const kgAuto = pesoG > 0 ? Math.round(pesoG * (v.units || 0) / 1000 * 100) / 100 : "";
       linhas.push({
         pid: p.id, vidx: i,
         produto: i === 0 ? p.name : "",
         variacao: `${detalhe ? detalhe + " — " : ""}${v.units} un`,
         preco: parseFloat(v.price) || 0,
         legado,
-        papelKg: v.papel_kg ?? "",
+        papelKg: v.papel_kg ?? kgAuto,   // salvo manualmente vence; senão vem do peso do cadastro
+        kgAuto,
         acabH:   v.acab_horas ?? "",
         imprH:   v.impr_horas ?? "",
       });
@@ -303,7 +307,7 @@ function renderCustos(readData) {
       <td class="prod">${esc(l.produto)}</td>
       <td>${esc(l.variacao)}</td>
       <td class="dir">R$ ${money(l.preco)}</td>
-      <td class="dir">${inQtd(l, "papel", l.papelKg, "Quilos de papel usados neste pacote", "kg")}</td>
+      <td class="dir">${inQtd(l, "papel", l.papelKg, l.kgAuto ? `Calculado do cadastro: peso unitário × ${"" + l.variacao.match(/\d+ un/)} = ${l.kgAuto} kg (pode ajustar)` : "Quilos de papel usados neste pacote — dica: cadastre o peso unitário (g) no produto e este campo preenche sozinho", "kg")}</td>
       <td class="dir">${inQtd(l, "acab", l.acabH, "Horas de acabamento deste pacote", "horas")}</td>
       <td class="dir">${inQtd(l, "impr", l.imprH, "Horas de impressão deste pacote", "horas")}</td>
       <td class="dir c-totmp" style="font-weight:800;color:#92400e">—</td>
@@ -455,6 +459,7 @@ function renderCustos(readData) {
     <b>Lucro c/ VENDEDOR</b> = Lucro SITE − comissão do vendedor &nbsp;·&nbsp;
     <b>Lucro ML / Shopee / Amazon</b> = preço − matéria-prima − imposto − taxa do canal (frete dos marketplaces não incluso).<br>
     Campos amarelos = quantidades POR PACOTE: <b>papel em kg</b>, <b>acabamento e impressão em horas</b>. O R$ de cada um = quantidade × custo unitário (configurado em "Custos de produção" acima); o Total mat.-prima é a soma e vira o campo "custo" da página Produtos ao salvar. Valores antigos em R$ aparecem como "(antigo)" até você preencher as quantidades.<br>
+    📦 <b>Papel (kg) preenche sozinho</b> quando o produto tem o <b>peso unitário em gramas</b> cadastrado (página Produtos): peso × unidades do pacote ÷ 1000. Ex.: caixa de 30 g × 100 un = 3 kg. Você pode ajustar o valor na mão — o ajuste manual vence.<br>
     🔒 Área restrita com login próprio — não compartilhe este acesso. O catálogo de vendas (sem custos) é o /catalogo.
   </p>
 
