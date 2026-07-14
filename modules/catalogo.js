@@ -189,13 +189,17 @@ function renderCatalogo(readData) {
 </html>`;
 }
 
-function registerCatalogoRoutes(app, readData) {
+function registerCatalogoRoutes(app, readData, decodeUser) {
   app.get("/catalogo", (req, res) => {
+    // material comercial interno — só pra quem está logado no painel
+    // (vendedor, admin, sócio...); quem cair aqui sem login vai pro login azul
+    const u = decodeUser(req);
+    if (!u) return res.redirect("/admin.html?perfil=vendedor");
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-cache");
     res.send(renderCatalogo(readData));
   });
-  console.log("✅ Catálogo registrado: /catalogo (PDF via imprimir)");
+  console.log("✅ Catálogo registrado: /catalogo (interno — exige login)");
 }
 
 module.exports = { registerCatalogoRoutes };
