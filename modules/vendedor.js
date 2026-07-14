@@ -299,4 +299,4 @@ function registerVendedorRoutes(app, { readData, writeData, requireAuth }) {
   console.log("✅ M11-F1 Vendedor registrado: /api/vendedor/orders + my-orders + comissoes");
 }
 
-module.exports = { registerVendedorRoutes, clampPct };
+module.exports = { registerVendedorRoutes, clampPct, generateOrderId };

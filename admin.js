@@ -4,9 +4,9 @@
 ══════════════════════════════════════════════════════ */
 // Permissões espelhadas do servidor (para UI)
 const ROLE_PERMISSIONS = {
-  owner:      { pages: ['overview','orders','vender','comissoes','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','newsletter','contact','settings','nfe','users'], canDelete: true  },
-  admin:      { pages: ['overview','orders','vender','comissoes','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','contact','settings','nfe','users'], canDelete: true  },
-  socio:      { pages: ['overview','orders','vender','comissoes','reports','adcenter','campaigns'],                                            canDelete: true  },
+  owner:      { pages: ['overview','orders','vender','comissoes','empresas','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','newsletter','contact','settings','nfe','users'], canDelete: true  },
+  admin:      { pages: ['overview','orders','vender','comissoes','empresas','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','contact','settings','nfe','users'], canDelete: true  },
+  socio:      { pages: ['overview','orders','vender','comissoes','empresas','reports','adcenter','campaigns'],                                 canDelete: true  },
   secretaria: { pages: ['orders','customers','abandoned','contact'],                                                                canDelete: false },
   designer:   { pages: ['orders'],                                                                                                  canDelete: false },
   vendedor:   { pages: ['vender'],                                                                                                  canDelete: false },
@@ -203,7 +203,8 @@ const PAGE_TITLES = {
   reports:'Relatórios', campaigns:'Campanhas & SEO',
   newsletter:'Newsletter — Leads', contact:'Mensagens de Contato', settings:'Configurações',
   users:'Usuários do Painel',
-  vender:'Vender — Novo Pedido', comissoes:'Comissões dos Vendedores'
+  vender:'Vender — Novo Pedido', comissoes:'Comissões dos Vendedores',
+  empresas:'Empresas — Contratos B2B'
 };
 function navigate(page) {
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
@@ -234,6 +235,7 @@ function navigate(page) {
   if(page==='users')     loadUsers();
   if(page==='vender')    renderVender();
   if(page==='comissoes') renderComissoes();
+  if(page==='empresas')  renderEmpresas();
 }
 function refreshPage() { navigate(STATE.currentPage); toast('Dados atualizados!'); }
 
@@ -3377,6 +3379,268 @@ async function renderComissoes() {
   } catch(e) {
     const body = document.getElementById('com-body');
     if (body) body.innerHTML = '<p style="color:var(--red);font-size:.85rem">Erro ao carregar comissões.</p>';
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   M11-F2 — EMPRESAS (B2B por contrato)
+══════════════════════════════════════════════════════ */
+const EMPRESAS = { lista: [] };
+const CONTRATO_LABELS = { mensal:'Mensal', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual', avulso:'Avulso' };
+
+function empContratoBadge(e) {
+  const c = e.contrato || {};
+  const tipo = CONTRATO_LABELS[c.tipo] || 'Contrato';
+  if (!c.fim) return `<span class="badge gray">${tipo}</span>`;
+  const dias = Math.ceil((new Date(c.fim + 'T23:59:59') - new Date()) / 86400000);
+  if (dias < 0)   return `<span class="badge red">${tipo} — vencido</span>`;
+  if (dias <= 30) return `<span class="badge yellow">${tipo} — vence em ${dias}d</span>`;
+  return `<span class="badge green">${tipo} — vigente</span>`;
+}
+
+async function renderEmpresas() {
+  const root = document.getElementById('empresas-root');
+  if (!root) return;
+  root.innerHTML = '<p style="color:var(--muted)">Carregando…</p>';
+  try {
+    const d = await api('/api/empresas');
+    EMPRESAS.lista = d.empresas || [];
+  } catch(e) {
+    root.innerHTML = '<p style="color:var(--red)">Erro ao carregar empresas.</p>';
+    return;
+  }
+
+  root.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <p style="font-size:.82rem;color:var(--muted);margin:0;max-width:520px">Clientes com contrato de fornecimento: você produz e deixa o estoque pronto; as lojas vão pedindo e o pedido baixa do estoque dedicado da empresa.</p>
+      <button class="btn btn-primary" onclick="empEditor(null)"><i class="fa fa-plus"></i> Nova Empresa</button>
+    </div>
+    ${!EMPRESAS.lista.length
+      ? '<div class="card" style="padding:28px;text-align:center;color:var(--muted)">Nenhuma empresa cadastrada ainda.<br><span style="font-size:.8rem">Cadastre a primeira rede/cliente de contrato no botão acima.</span></div>'
+      : `<div style="display:grid;gap:12px">${EMPRESAS.lista.map(e => {
+          const totEstoque = (e.produtos || []).reduce((s, p) => s + (parseInt(p.estoque, 10) || 0), 0);
+          const negativos  = (e.produtos || []).filter(p => (parseInt(p.estoque, 10) || 0) < 0);
+          return `
+          <div class="card" style="padding:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;${e.ativa === false ? 'opacity:.55' : ''}">
+            <div style="min-width:0">
+              <div style="font-weight:800;font-size:1rem">${escapeHtml(e.nome)} ${e.ativa === false ? '<span class="badge gray">inativa</span>' : ''}</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:.76rem;align-items:center">
+                ${empContratoBadge(e)}
+                <span style="color:var(--muted)">🏪 ${(e.lojas || []).length} loja(s)</span>
+                <span style="color:var(--muted)">📦 ${(e.produtos || []).length} produto(s)</span>
+                <span style="color:${negativos.length ? 'var(--red)' : 'var(--muted)'}">🏭 estoque pronto: ${totEstoque} pacote(s)${negativos.length ? ' ⚠️ produzir!' : ''}</span>
+                ${e.contrato?.valor ? `<span style="color:var(--muted)">💰 R$ ${fmt(e.contrato.valor)}/${(e.contrato.tipo || 'mês').replace('mensal','mês').replace('trimestral','tri').replace('semestral','sem').replace('anual','ano')}</span>` : ''}
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn btn-primary" onclick="empPedido('${e.id}')"><i class="fa fa-cart-plus"></i> Pedido</button>
+              <button class="btn btn-secondary" onclick="empEditor('${e.id}')"><i class="fa fa-pen"></i> Editar</button>
+              ${['owner','admin'].includes(STATE.role) ? `<button class="btn btn-secondary" style="color:var(--red)" onclick="empExcluir('${e.id}')"><i class="fa fa-trash"></i></button>` : ''}
+            </div>
+          </div>`;
+        }).join('')}</div>`}`;
+}
+
+function empLojaRow(l = {}) {
+  return `<div class="emp-loja-row" style="display:grid;grid-template-columns:1.4fr 1fr;gap:8px;border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px" data-loja-id="${l.id || ''}">
+    <input type="text" class="el-nome" placeholder="Nome da loja (ex: Loja Centro) *" value="${escapeHtml(l.nome || '')}" />
+    <input type="text" class="el-cnpj" placeholder="CNPJ da loja" value="${escapeHtml(l.cnpj || '')}" />
+    <input type="text" class="el-end" placeholder="Endereço" value="${escapeHtml(l.endereco || '')}" style="grid-column:1/-1" />
+    <div style="display:grid;grid-template-columns:2fr .7fr 1fr;gap:8px"><input type="text" class="el-cidade" placeholder="Cidade" value="${escapeHtml(l.cidade || '')}" /><input type="text" class="el-uf" placeholder="UF" maxlength="2" value="${escapeHtml(l.uf || '')}" /><input type="text" class="el-cep" placeholder="CEP" value="${escapeHtml(l.cep || '')}" /></div>
+    <div style="display:flex;gap:8px"><input type="tel" class="el-phone" placeholder="Telefone/WhatsApp" value="${escapeHtml(l.phone || '')}" style="flex:1" />
+    <button type="button" class="btn btn-ghost btn-icon" style="color:var(--red)" onclick="this.closest('.emp-loja-row').remove()" title="Remover loja"><i class="fa fa-trash"></i></button></div>
+  </div>`;
+}
+
+function empProdRow(p = {}) {
+  return `<div class="emp-prod-row" style="display:grid;grid-template-columns:2fr .8fr .7fr auto;gap:8px;align-items:center;margin-bottom:8px">
+    <input type="text" class="ep-nome" placeholder="Embalagem (ex: Caixa burger personalizada — pacote 100 un) *" value="${escapeHtml(p.nome || '')}" />
+    <input type="number" class="ep-preco" placeholder="Preço R$" min="0" step="0.01" value="${p.preco ?? ''}" />
+    <input type="number" class="ep-estoque" placeholder="Estoque" step="1" value="${p.estoque ?? 0}" title="Pacotes prontos no estoque dedicado" />
+    <button type="button" class="btn btn-ghost btn-icon" style="color:var(--red)" onclick="this.closest('.emp-prod-row').remove()" title="Remover"><i class="fa fa-trash"></i></button>
+  </div>`;
+}
+
+function empEditor(id) {
+  const root = document.getElementById('empresas-root');
+  const e = id ? EMPRESAS.lista.find(x => x.id === id) : null;
+  const c = e?.contrato || {};
+  root.innerHTML = `
+    <button class="btn btn-secondary" onclick="renderEmpresas()" style="margin-bottom:14px"><i class="fa fa-arrow-left"></i> Voltar</button>
+    <div style="display:grid;gap:16px;max-width:760px">
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 12px"><i class="fa fa-building" style="color:var(--red)"></i> Dados da empresa</h3>
+        <div class="form-row"><label>Nome (como você chama) *</label><input type="text" id="emp-nome" value="${escapeHtml(e?.nome || '')}" placeholder="Ex: Rede Sodiê" /></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="form-row"><label>Razão social</label><input type="text" id="emp-razao" value="${escapeHtml(e?.razao_social || '')}" /></div>
+          <div class="form-row"><label>CNPJ (matriz)</label><input type="text" id="emp-cnpj" value="${escapeHtml(e?.cnpj || '')}" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div class="form-row"><label>Contato</label><input type="text" id="emp-ct-nome" value="${escapeHtml(e?.contato?.nome || '')}" placeholder="Nome" /></div>
+          <div class="form-row"><label>WhatsApp</label><input type="tel" id="emp-ct-phone" value="${escapeHtml(e?.contato?.phone || '')}" /></div>
+          <div class="form-row"><label>E-mail</label><input type="email" id="emp-ct-email" value="${escapeHtml(e?.contato?.email || '')}" /></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;cursor:pointer"><input type="checkbox" id="emp-ativa" ${e?.ativa === false ? '' : 'checked'} /> Empresa ativa</label>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-file-signature" style="color:var(--red)"></i> Contrato</h3>
+        <p style="font-size:.76rem;color:var(--muted);margin:0 0 12px">O contrato garante o fornecimento pro cliente e protege seu estoque: você só produz com contrato fechado.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="form-row"><label>Período</label>
+            <select id="emp-c-tipo">${Object.entries(CONTRATO_LABELS).map(([k, v]) => `<option value="${k}" ${c.tipo === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+          <div class="form-row"><label>Valor do contrato (R$ por período)</label><input type="number" id="emp-c-valor" min="0" step="0.01" value="${c.valor ?? ''}" /></div>
+          <div class="form-row"><label>Início</label><input type="date" id="emp-c-inicio" value="${c.inicio || ''}" /></div>
+          <div class="form-row"><label>Fim (vigência)</label><input type="date" id="emp-c-fim" value="${c.fim || ''}" /></div>
+        </div>
+        <div class="form-row"><label>Condições combinadas (prazos, reajuste, mínimos…)</label>
+          <textarea id="emp-c-cond" rows="3" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;font-family:inherit">${escapeHtml(c.condicoes || '')}</textarea></div>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-shop" style="color:var(--red)"></i> Lojas</h3>
+        <p style="font-size:.76rem;color:var(--muted);margin:0 0 12px">Cada loja pode ter CNPJ próprio — a NF-e e a etiqueta do pedido saem com os dados da loja que pediu.</p>
+        <div id="emp-lojas">${(e?.lojas || []).map(empLojaRow).join('')}</div>
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('emp-lojas').insertAdjacentHTML('beforeend', empLojaRow())"><i class="fa fa-plus"></i> Adicionar loja</button>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-box" style="color:var(--red)"></i> Produtos contratados & estoque dedicado</h3>
+        <p style="font-size:.76rem;color:var(--muted);margin:0 0 12px">Preço combinado com ESTA empresa (cada cliente tem sua tabela). "Estoque" = pacotes já produzidos e prontos pra entrega.</p>
+        <div id="emp-prods">${(e?.produtos || []).map(empProdRow).join('')}</div>
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('emp-prods').insertAdjacentHTML('beforeend', empProdRow())"><i class="fa fa-plus"></i> Adicionar produto</button>
+      </div>
+
+      <button class="btn btn-primary" style="padding:13px;font-size:1rem" onclick="empSalvar(${e ? `'${e.id}'` : 'null'})"><i class="fa fa-save"></i> Salvar empresa</button>
+    </div>`;
+}
+
+async function empSalvar(id) {
+  const body = {
+    nome:         document.getElementById('emp-nome')?.value.trim(),
+    razao_social: document.getElementById('emp-razao')?.value.trim(),
+    cnpj:         document.getElementById('emp-cnpj')?.value.trim(),
+    ativa:        document.getElementById('emp-ativa')?.checked,
+    contato: {
+      nome:  document.getElementById('emp-ct-nome')?.value.trim(),
+      phone: document.getElementById('emp-ct-phone')?.value.trim(),
+      email: document.getElementById('emp-ct-email')?.value.trim(),
+    },
+    contrato: {
+      tipo:      document.getElementById('emp-c-tipo')?.value,
+      valor:     parseFloat(document.getElementById('emp-c-valor')?.value) || 0,
+      inicio:    document.getElementById('emp-c-inicio')?.value || '',
+      fim:       document.getElementById('emp-c-fim')?.value || '',
+      condicoes: document.getElementById('emp-c-cond')?.value.trim(),
+    },
+    lojas: [...document.querySelectorAll('.emp-loja-row')].map(r => ({
+      id:       r.dataset.lojaId || undefined,
+      nome:     r.querySelector('.el-nome')?.value.trim(),
+      cnpj:     r.querySelector('.el-cnpj')?.value.trim(),
+      endereco: r.querySelector('.el-end')?.value.trim(),
+      cidade:   r.querySelector('.el-cidade')?.value.trim(),
+      uf:       r.querySelector('.el-uf')?.value.trim(),
+      cep:      r.querySelector('.el-cep')?.value.trim(),
+      phone:    r.querySelector('.el-phone')?.value.trim(),
+    })),
+    produtos: [...document.querySelectorAll('.emp-prod-row')].map(r => ({
+      nome:    r.querySelector('.ep-nome')?.value.trim(),
+      preco:   parseFloat(r.querySelector('.ep-preco')?.value) || 0,
+      estoque: parseInt(r.querySelector('.ep-estoque')?.value, 10) || 0,
+    })),
+  };
+  if (!body.nome) return toast('Informe o nome da empresa.', 'error');
+  try {
+    if (id) await api('/api/empresas/' + id, { method: 'PUT', body: JSON.stringify(body) });
+    else    await api('/api/empresas',       { method: 'POST', body: JSON.stringify(body) });
+    toast('Empresa salva!');
+    renderEmpresas();
+  } catch(e) {
+    toast('Erro ao salvar empresa: ' + e.message, 'error');
+  }
+}
+
+async function empExcluir(id) {
+  const e = EMPRESAS.lista.find(x => x.id === id);
+  if (!e) return;
+  if (!confirm(`Excluir a empresa "${e.nome}"? Os pedidos já lançados continuam no painel.`)) return;
+  try {
+    await api('/api/empresas/' + id, { method: 'DELETE' });
+    toast('Empresa excluída.');
+    renderEmpresas();
+  } catch(err) { toast('Erro ao excluir.', 'error'); }
+}
+
+function empPedido(id) {
+  const e = EMPRESAS.lista.find(x => x.id === id);
+  if (!e) return;
+  if (!(e.lojas || []).length)    return toast('Cadastre ao menos uma loja nessa empresa primeiro.', 'error');
+  if (!(e.produtos || []).length) return toast('Cadastre os produtos contratados dessa empresa primeiro.', 'error');
+
+  document.getElementById('modal-title').textContent = 'Pedido — ' + e.nome;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-row"><label>Loja que está pedindo *</label>
+      <select id="empd-loja">${e.lojas.map(l => `<option value="${l.id}">${escapeHtml(l.nome)}${l.cidade ? ' — ' + escapeHtml(l.cidade) : ''}</option>`).join('')}</select></div>
+    <p style="font-weight:700;font-size:.82rem;margin:12px 0 6px">Itens (pacotes):</p>
+    ${e.produtos.map((p, i) => `
+      <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;border-bottom:1px dashed var(--border);padding:7px 0">
+        <div><div style="font-size:.82rem;font-weight:600">${escapeHtml(p.nome)}</div>
+          <div style="font-size:.72rem;color:var(--muted)">R$ ${fmt(p.preco)}/pacote · <span style="color:${(p.estoque||0) > 0 ? 'var(--green)' : 'var(--red)'}">estoque pronto: ${p.estoque || 0}</span></div></div>
+        <input type="number" class="empd-qty" data-idx="${i}" min="0" step="1" value="0" style="width:74px;text-align:center;padding:7px;border:1px solid var(--border);border-radius:8px" oninput="empPedidoTotal('${id}')" />
+      </div>`).join('')}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+      <div class="form-row"><label>Frete (R$)</label><input type="number" id="empd-frete" min="0" step="0.01" value="0" oninput="empPedidoTotal('${id}')" /></div>
+      <div class="form-row"><label>Pagamento</label>
+        <select id="empd-pag">
+          <option value="faturado">Faturado (contrato)</option>
+          <option value="pix">PIX</option>
+          <option value="boleto">Boleto</option>
+          <option value="card">Cartão</option>
+        </select></div>
+    </div>
+    <div class="form-row"><label>Observações</label><input type="text" id="empd-obs" placeholder="opcional" /></div>
+    <div id="empd-total" style="font-size:1.05rem;font-weight:800;text-align:right"></div>`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="empPedidoLancar('${id}')"><i class="fa fa-paper-plane"></i> Lançar pedido</button>`;
+  showModal();
+  empPedidoTotal(id);
+}
+
+function empPedidoTotal(id) {
+  const e = EMPRESAS.lista.find(x => x.id === id);
+  const el = document.getElementById('empd-total');
+  if (!e || !el) return;
+  let sub = 0;
+  document.querySelectorAll('.empd-qty').forEach(inp => {
+    const qty = parseInt(inp.value, 10) || 0;
+    const p = e.produtos[Number(inp.dataset.idx)];
+    if (p && qty > 0) sub += qty * (parseFloat(p.preco) || 0);
+  });
+  const frete = parseFloat(document.getElementById('empd-frete')?.value) || 0;
+  el.innerHTML = `Total: <span style="color:var(--red)">R$ ${fmt(sub + frete)}</span>`;
+}
+
+async function empPedidoLancar(id) {
+  const items = [...document.querySelectorAll('.empd-qty')]
+    .map(inp => ({ idx: Number(inp.dataset.idx), qty: parseInt(inp.value, 10) || 0 }))
+    .filter(i => i.qty > 0);
+  if (!items.length) return toast('Informe a quantidade de ao menos um item.', 'error');
+  try {
+    const r = await api('/api/empresas/' + id + '/pedido', { method: 'POST', body: JSON.stringify({
+      loja_id: document.getElementById('empd-loja')?.value,
+      items,
+      shipping_price: parseFloat(document.getElementById('empd-frete')?.value) || 0,
+      payment_method: document.getElementById('empd-pag')?.value,
+      notes: document.getElementById('empd-obs')?.value.trim(),
+    })});
+    closeModal();
+    toast(`Pedido ${r.order_id} lançado — R$ ${fmt(r.total)}!`);
+    (r.avisos || []).forEach(a => toast('⚠️ ' + a, 'error'));
+    renderEmpresas();
+  } catch(e) {
+    toast('Erro ao lançar pedido: ' + e.message, 'error');
   }
 }
 

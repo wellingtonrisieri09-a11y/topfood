@@ -91,6 +91,10 @@ CREATE TABLE IF NOT EXISTS budget_config (
 CREATE TABLE IF NOT EXISTS session_blacklist (
   token TEXT PRIMARY KEY, blacklisted_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS empresas (
+  id TEXT PRIMARY KEY,
+  raw_data TEXT NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_orders_status   ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_created  ON orders(created_at);
 CREATE INDEX IF NOT EXISTS idx_orders_email    ON orders(customer_email);
@@ -107,6 +111,7 @@ const TABLE_MAP = {
   "coupons.json":          "coupons",
   "users.json":            "users",
   "contact_messages.json": "contact_messages",
+  "empresas.json":         "empresas",
   "newsletter_leads.json": null,
 };
 
