@@ -1189,6 +1189,7 @@ function editProduct(id) {
   initImgManager(p.images && p.images.length ? p.images : (p.image ? [p.image] : []));
   initVideoManager(p.videos || []);
   showModal();
+  mlInitAccounts(id);
 }
 async function saveProduct(id) {
   const p = STATE.products.find(x=>x.id===id);
@@ -1365,7 +1366,6 @@ function buildProductForm(p) {
 }
 
 function mlSectionHtml(p) {
-  const publicados = (p.variants || []).filter(v => v.ml_item_id);
   return `
     <div class="form-row" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
       <label>Categoria no Mercado Livre <span style="font-weight:400;color:var(--muted)">(ex: MLB271599)</span></label>
@@ -1374,14 +1374,94 @@ function mlSectionHtml(p) {
         <button type="button" class="btn btn-secondary" onclick="mlSugerirCategoria('${p.id}')">Sugerir</button>
       </div>
       <span class="hint" id="ml-cat-hint"></span>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
-        <button type="button" class="btn btn-primary" onclick="mlPublicarProduto('${p.id}')" id="ml-publicar-btn"><i class="fa fa-store"></i> Publicar no Mercado Livre</button>
-        <span style="font-size:.78rem;color:var(--muted)" id="ml-publicados-count">${publicados.length} de ${(p.variants||[]).length} pacote(s) publicado(s)</span>
+
+      <div style="margin-top:12px">
+        <label>Publicar nestas contas do Mercado Livre</label>
+        <div id="ml-accounts-box" style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+          <span style="font-size:.8rem;color:var(--muted)">Carregando contas...</span>
+        </div>
       </div>
-      <div id="ml-status-list" style="margin-top:8px;display:flex;flex-direction:column;gap:4px">
-        ${(p.variants||[]).map(v=>`<div style="font-size:.78rem">${v.units} un: ${v.ml_item_id ? `<a href="https://produto.mercadolivre.com.br/${v.ml_item_id}" target="_blank" rel="noopener">publicado (${v.ml_item_id})</a>` : '<span style="color:var(--muted)">não publicado</span>'}</div>`).join('')}
+
+      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <button type="button" class="btn btn-primary" onclick="mlPublicarProduto('${p.id}')" id="ml-publicar-btn"><i class="fa fa-store"></i> Publicar nas contas selecionadas</button>
       </div>
+      <div id="ml-status-list" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
     </div>`;
+}
+
+// --- Mercado Livre: contas conectadas (multi-conta) ---
+let ML_ACCOUNTS = [];
+let ML_PID = null;
+
+async function mlInitAccounts(productId) {
+  ML_PID = productId;
+  const box = document.getElementById('ml-accounts-box');
+  if (!box) return;
+  try {
+    const st = await api('/api/eco/ml/status');
+    ML_ACCOUNTS = st.contas || [];
+  } catch (e) { ML_ACCOUNTS = []; }
+  mlRenderAccountsBox();
+  mlRenderStatusList();
+}
+
+function mlRenderAccountsBox() {
+  const box = document.getElementById('ml-accounts-box');
+  if (!box) return;
+  let html;
+  if (!ML_ACCOUNTS.length) {
+    html = `<span style="font-size:.82rem;color:var(--muted)">Nenhuma conta conectada ainda.</span>`;
+  } else {
+    html = ML_ACCOUNTS.map(a => `
+      <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;font-weight:400;cursor:pointer">
+        <input type="checkbox" class="ml-acc-check" value="${esc(a.id)}" checked />
+        <b>${esc(a.label||a.nickname||a.id)}</b>
+        <span style="color:var(--muted)">${esc(a.nickname||'')}</span>
+        ${a.tokenValido ? '' : '<span style="color:var(--red);font-size:.72rem">(reconectar)</span>'}
+        <span onclick="mlRemoverConta('${esc(a.id)}',event)" title="Desconectar do painel" style="margin-left:auto;color:var(--muted);cursor:pointer;font-weight:700">✕</span>
+      </label>`).join('');
+  }
+  html += `<div style="display:flex;gap:14px;margin-top:4px">
+    <a href="#" onclick="mlConectarConta(event)" style="font-size:.82rem"><i class="fa fa-plus"></i> Conectar outra conta</a>
+    <a href="#" onclick="mlInitAccounts(ML_PID);return false" style="font-size:.82rem;color:var(--muted)"><i class="fa fa-rotate"></i> Atualizar</a>
+  </div>`;
+  box.innerHTML = html;
+}
+
+function mlRenderStatusList() {
+  const el = document.getElementById('ml-status-list');
+  const p = STATE.products.find(x => x.id === ML_PID);
+  if (!el || !p) return;
+  const labelDe = id => { const a = ML_ACCOUNTS.find(x => x.id === id); return a ? (a.label||a.nickname||id) : id; };
+  el.innerHTML = (p.variants||[]).map(v => {
+    const items = v.ml_items || (v.ml_item_id ? { _: v.ml_item_id } : {});
+    const ks = Object.keys(items);
+    const linhas = ks.length
+      ? ks.map(acc => `<div style="font-size:.76rem;margin-left:10px">↳ ${esc(labelDe(acc))}: <a href="https://produto.mercadolivre.com.br/${esc(items[acc])}" target="_blank" rel="noopener">${esc(items[acc])}</a></div>`).join('')
+      : `<div style="font-size:.76rem;margin-left:10px;color:var(--muted)">↳ não publicado</div>`;
+    return `<div><div style="font-size:.8rem;font-weight:600">${v.units} un${v.label ? ' · ' + esc(v.label) : ''}</div>${linhas}</div>`;
+  }).join('');
+}
+
+async function mlConectarConta(ev) {
+  if (ev) ev.preventDefault();
+  try {
+    const d = await api('/api/ml/auth-url');
+    if (d.url) {
+      window.open(d.url, '_blank');
+      toast('Autorize a conta na aba que abriu (esteja logado NELA no ML). Depois clique em "Atualizar".');
+    }
+  } catch (e) { toast('Erro ao gerar link: ' + e.message, 'error'); }
+}
+
+async function mlRemoverConta(id, ev) {
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  if (!confirm('Desconectar esta conta do painel?\n\nOs anúncios já publicados no Mercado Livre NÃO são apagados — só o vínculo no painel é removido.')) return;
+  try {
+    await api('/api/eco/ml/accounts/' + encodeURIComponent(id), { method: 'DELETE' });
+    toast('Conta desconectada do painel.');
+    mlInitAccounts(ML_PID);
+  } catch (e) { toast('Erro: ' + e.message, 'error'); }
 }
 
 async function mlSugerirCategoria(id) {
@@ -1404,27 +1484,36 @@ async function mlPublicarProduto(id) {
   const catId = catInput?.value.trim();
   if(!catId) return toast('Defina a categoria do Mercado Livre antes de publicar.', 'error');
 
+  const selecionadas = Array.from(document.querySelectorAll('.ml-acc-check:checked')).map(c => c.value);
+  if(!selecionadas.length) return toast('Selecione ao menos uma conta para publicar.', 'error');
+
   const btn = document.getElementById('ml-publicar-btn');
   if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa fa-spinner fa-spin"></i> Publicando...'; }
   try {
     await api('/api/eco/ml/produto/'+id, { method:'PUT', body: JSON.stringify({ ml_category_id: catId }) });
-    const out = await api('/api/eco/ml/publicar/'+id, { method:'POST' });
+    const out = await api('/api/eco/ml/publicar/'+id, { method:'POST', body: JSON.stringify({ accounts: selecionadas }) });
     const lista = document.getElementById('ml-status-list');
-    if(lista && out.resultados) {
-      lista.innerHTML = out.resultados.map(r => r.ok
-        ? `<div style="font-size:.78rem">${r.units} un: <a href="${r.permalink||'#'}" target="_blank" rel="noopener">publicado (${r.ml_item_id})</a></div>`
-        : `<div style="font-size:.78rem;color:var(--red)">${r.units} un: erro — ${esc(r.error)}</div>`
-      ).join('');
-      const count = document.getElementById('ml-publicados-count');
-      if(count) count.textContent = out.resultados.filter(r=>r.ok).length+' de '+out.resultados.length+' pacote(s) publicado(s)';
+    if(lista && out.contas) {
+      lista.innerHTML = out.contas.map(c => {
+        const linhas = (c.resultados||[]).map(r => r.ok
+          ? `<div style="font-size:.76rem;margin-left:10px">↳ ${r.units} un: <a href="${r.permalink||'#'}" target="_blank" rel="noopener">publicado (${r.ml_item_id})</a></div>`
+          : `<div style="font-size:.76rem;margin-left:10px;color:var(--red)">↳ ${r.units} un: erro — ${esc(r.error)}</div>`
+        ).join('');
+        const cab = c.error
+          ? `<div style="font-size:.8rem;font-weight:600;color:var(--red)">${esc(c.nickname)}: ${esc(c.error)}</div>`
+          : `<div style="font-size:.8rem;font-weight:600">${esc(c.nickname)}</div>`;
+        return `<div>${cab}${linhas}</div>`;
+      }).join('');
+    } else if(lista && out.error) {
+      lista.innerHTML = `<div style="font-size:.8rem;color:var(--red)">${esc(out.error)}</div>`;
     }
-    if(out.ok) toast('✅ Publicado no Mercado Livre! Confira os links.');
-    else toast('⚠️ Nenhum pacote foi publicado — veja os erros abaixo do botão.', 'error');
+    if(out.ok) toast('✅ Publicado! Confira os links por conta.');
+    else toast('⚠️ Nada foi publicado — veja os erros abaixo do botão.', 'error');
     await loadProducts();
   } catch(e) {
     toast('❌ Erro ao publicar: '+e.message, 'error');
   } finally {
-    if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa fa-store"></i> Publicar no Mercado Livre'; }
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa fa-store"></i> Publicar nas contas selecionadas'; }
   }
 }
 
@@ -1472,6 +1561,7 @@ function syncVariantHints() {
 
 function readVariantsFromForm(existingVariants) {
   const variants = [];
+  let pos = 0;
   document.querySelectorAll('[id^="variant-row-"]').forEach(row => {
     const i   = row.id.replace('variant-row-', '');
     const u   = document.getElementById('ep-units-'+i);
@@ -1479,11 +1569,18 @@ function readVariantsFromForm(existingVariants) {
     const co  = document.getElementById('ep-cost-'+i);
     if(u && pr && u.value) {
       const units = +u.value;
-      // Preserva o vínculo com o anúncio do Mercado Livre se o pacote (mesmas unidades) já foi publicado
-      const anterior = (existingVariants||[]).find(v => v.units === units && v.ml_item_id);
+      // Preserva o vínculo com os anúncios do Mercado Livre (por conta) se o pacote (mesmas unidades) já foi publicado
+      const anterior = (existingVariants||[]).find(v => v.units === units && (v.ml_items || v.ml_item_id));
       const v = { units, price: parseFloat(pr.value)||0, cost: parseFloat(co?.value)||0 };
-      if(anterior) v.ml_item_id = anterior.ml_item_id;
+      if(anterior && anterior.ml_items) v.ml_items = anterior.ml_items;
+      if(anterior && anterior.ml_item_id) v.ml_item_id = anterior.ml_item_id;
+      // Preserva rótulo e dados da variação (cor/tamanho — produtos Starprint) pela posição da linha
+      const mesmo = (existingVariants||[])[pos];
+      if(mesmo && mesmo.label) v.label = mesmo.label;
+      if(mesmo && mesmo.options) v.options = mesmo.options;
+      if(mesmo && mesmo.image) v.image = mesmo.image;
       variants.push(v);
+      pos++;
     }
   });
   return variants;

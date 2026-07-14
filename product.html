@@ -553,12 +553,42 @@ ttq.page();
 
     const variantsHtml = p.variants.map((v, i) => {
       const unitPrice = (v.price / v.units).toFixed(2).replace('.', ',');
+      const titulo = v.label
+        ? String(v.label).replace(/</g, '&lt;')
+        : `${v.units} unidades`;
+      const sub = v.label ? `<div class="variant-unit-price">${v.units} un</div>` : '';
       return `<div class="variant-btn${i === 0 ? ' selected' : ''}" onclick="selectVariant(${i})" data-idx="${i}">
-        <div class="variant-units">${v.units} unidades</div>
+        <div class="variant-units">${titulo}</div>
         <div class="variant-price">${fmt(v.price)}</div>
-        <div class="variant-unit-price">R$ ${unitPrice}/un</div>
+        ${sub}<div class="variant-unit-price">R$ ${unitPrice}/un</div>
       </div>`;
     }).join('');
+
+    // Grade dinâmica por dimensão (Tamanho × Cor) — produtos com option_names + variant.options
+    const hasDims = Array.isArray(p.option_names) && p.option_names.length > 0
+      && p.variants.some(v => Array.isArray(v.options) && v.options.length);
+    let variantsArea;
+    if (hasDims) {
+      window._selDims = (p.variants[0].options || []).slice();
+      const grupos = p.option_names.map((nome, d) => {
+        const valores = [...new Set(p.variants.map(v => (v.options || [])[d]).filter(Boolean))];
+        const botoes = valores.map(val => {
+          const escVal = String(val).replace(/"/g, '&quot;').replace(/</g, '&lt;');
+          return `<div class="variant-btn dim-btn${window._selDims[d] === val ? ' selected' : ''}" data-dim="${d}" data-val="${escVal}" onclick="selectDim(${d}, this.dataset.val)" style="flex:0 0 auto;min-width:56px;width:auto;padding:8px 14px;white-space:nowrap">
+            <div class="variant-units" style="white-space:nowrap">${escVal}</div>
+          </div>`;
+        }).join('');
+        return `<p class="variants-label" style="margin-top:10px">${nome}:</p><div class="variants-grid">${botoes}</div>`;
+      }).join('');
+      variantsArea = grupos + `
+        <div style="margin-top:14px;background:#fff5f5;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;display:inline-block">
+          <span style="font-size:.8rem;color:var(--gray)">Preço desta opção:</span>
+          <strong id="dimPrice" style="color:var(--red);font-size:1.25rem;margin-left:6px">${fmt(p.variants[0].price)}</strong>
+          <span style="font-size:.78rem;color:var(--gray);margin-left:4px">· pacote com ${p.variants[0].units} un</span>
+        </div>`;
+    } else {
+      variantsArea = `<p class="variants-label">Escolha o pacote:</p><div class="variants-grid" id="variantsGrid">${variantsHtml}</div>`;
+    }
 
     const featuresHtml = p.features && p.features.length
       ? `<div>
@@ -603,10 +633,7 @@ ttq.page();
           <div class="stars" title="${p.stars || 5} estrelas">${starsHtml}</div>
           <p class="product-desc">${p.description}</p>
 
-          <div>
-            <p class="variants-label">Escolha o pacote:</p>
-            <div class="variants-grid" id="variantsGrid">${variantsHtml}</div>
-          </div>
+          <div>${variantsArea}</div>
 
           <div class="buy-row">
             <div class="qty-ctrl">
@@ -676,6 +703,36 @@ ttq.page();
     updateTotalPreview();
   }
 
+  // Grade dinâmica: escolher um valor de uma dimensão (Tamanho/Cor) e achar a variação
+  function selectDim(d, val) {
+    if (!currentProduct) return;
+    window._selDims = window._selDims || [];
+    window._selDims[d] = val;
+    const vs = currentProduct.variants;
+    // 1º tenta a combinação exata de todas as dimensões escolhidas
+    let idx = vs.findIndex(v => (v.options || []).every((o, i) => o === window._selDims[i]));
+    // se a combinação não existe, pega a primeira variação que tem o valor clicado e sincroniza as outras dimensões
+    if (idx < 0) {
+      idx = vs.findIndex(v => (v.options || [])[d] === val);
+      if (idx >= 0) window._selDims = (vs[idx].options || []).slice();
+    }
+    if (idx < 0) idx = 0;
+    selectedVariantIdx = idx;
+    document.querySelectorAll('.dim-btn').forEach(b => {
+      const bd = parseInt(b.dataset.dim);
+      b.classList.toggle('selected', window._selDims[bd] === b.dataset.val);
+    });
+    const v = vs[idx];
+    const priceEl = document.getElementById('dimPrice');
+    if (priceEl) priceEl.textContent = fmt(v.price);
+    // Troca a foto principal para a foto desta variação (quando existir)
+    if (v.image && window._mediaList) {
+      const mi = window._mediaList.findIndex(m => m.type === 'img' && m.src.endsWith(v.image.replace(/^\/?/, '/')));
+      if (mi >= 0) setMainImage(mi);
+    }
+    updateTotalPreview();
+  }
+
   function changeQty(delta) {
     qty = Math.max(1, qty + delta);
     const el = document.getElementById('qtyVal');
@@ -706,6 +763,7 @@ ttq.page();
         name:  currentProduct.name,
         img: fixImg((currentProduct.images && currentProduct.images[0]) || currentProduct.image || ''),
         pack:  v.units,
+        packLabel: v.label || null,
         qty,
         price: v.price,
         total: v.price * qty,

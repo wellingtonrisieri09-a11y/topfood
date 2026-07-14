@@ -407,11 +407,30 @@
       background: var(--red); color: #fff; border-color: var(--red);
     }
     .cat-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 20px 12px;
-      justify-items: center;
+      display: flex;
+      gap: 18px;
+      overflow-x: auto;
+      padding: 6px 2px 12px;
+      scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
     }
+    .cat-grid::-webkit-scrollbar { display: none; }
+    .cat-grid .cat-card { flex: 0 0 auto; width: 140px; scroll-snap-align: start; }
+    /* Setas do carrossel de categorias (estilo Instagram) */
+    .cat-arrow {
+      position: absolute; top: 52px; z-index: 5;
+      width: 38px; height: 38px; border-radius: 50%;
+      background: #fff; border: none; cursor: pointer;
+      box-shadow: 0 2px 12px rgba(0,0,0,.4);
+      font-size: 1.5rem; line-height: 1; font-weight: 700; color: #222;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 0 3px; transition: transform .15s, opacity .2s;
+    }
+    .cat-arrow:hover { transform: scale(1.12); }
+    .cat-arrow#cat-prev { left: -8px; }
+    .cat-arrow#cat-next { right: -8px; }
+    .cat-arrow[hidden] { display: none; }
     .cat-card {
       background: transparent;
       border: none;
@@ -440,7 +459,7 @@
       position: absolute; inset: -3px;
       border-radius: 50%;
       background: conic-gradient(from 180deg, #CC0000 0%, #FF6B6B 30%, #FFD700 50%, #FF6B6B 70%, #CC0000 100%);
-      opacity: 0;
+      opacity: 1;
       transition: opacity 0.3s;
       animation: ring-spin 3s linear infinite paused;
     }
@@ -1337,7 +1356,7 @@
     ═══════════════════════════════════════ */
     @media (max-width: 1024px) {
       .products-grid { grid-template-columns: repeat(2, 1fr); }
-      .cat-grid { grid-template-columns: repeat(5, 1fr); }
+      .cat-grid { grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); }
       .cat-img-wrap { width: 95px; height: 95px; }
       .footer-top { grid-template-columns: 1fr 1fr; }
       .hero-slider { margin: 14px 3% 0; }
@@ -1400,6 +1419,8 @@
 .bnr-btn:hover{background:#aa0000}
 .bnr-right{flex:1;display:flex;align-items:center;justify-content:center;height:100%}
 .bnr-img{max-height:420px;max-width:100%;object-fit:contain;filter:drop-shadow(0 8px 40px rgba(0,0,0,.9))}
+.slide.slide-imgbnr{padding:0;min-height:0;cursor:pointer;background:#0a0a0a}
+.slide.slide-imgbnr .imgbnr{display:block;width:100%;height:auto}
 </style>
 
   <style id="copa-css">
@@ -1523,10 +1544,8 @@
 <!-- ▓▓▓ NAV ▓▓▓ -->
 <nav class="nav-bar">
   <a href="#top" class="active">🏠 Início</a>
-  <a href="#pastel">🥟 Pastel</a>
-  <a href="#churros">🍬 Churros</a>
-  <a href="#hamburger">🍔 Hambúrguer</a>
-  <a href="#fritas">🍟 Fritas</a>
+  <a href="#categorias">🗂️ Categorias</a>
+  <span id="nav-cats" style="display:contents"></span>
   <a href="sobre.html">ℹ️ Sobre</a>
   <a href="contato.html">📬 Contato</a>
   <a href="https://wa.me/5511988856367" target="_blank" class="nav-cta">📞 Falar com Vendedor</a>
@@ -1539,41 +1558,21 @@
 <div class="hero-slider" id="heroSlider">
   <div class="slider-track" id="sliderTrack">
 
-        <!-- Banner 1: Batata Frita -->
-    <div class="slide slide-banner">
-      <div class="bnr-wrap">
-        <div class="bnr-left">
-          <span class="bnr-tag">&#9733; LANCAMENTO</span>
-          <h2 class="bnr-title">
-            <span class="t1">CAIXA PARA</span>
-            <span class="t2">BATATA<br>FRITA</span>
-            <span class="t3"><em>TOP</em>FOOD!</span>
-          </h2>
-          <p class="bnr-desc">Resistente à gordura e ao calor.<br>Mantém sua batata <b>crocante</b> e <b>sequinha</b> até o último pedaço!</p>
-          <a href="#fritas" class="bnr-btn">Ver produto &rarr;</a>
-        </div>
-        <div class="bnr-right">
-          <img class="bnr-img" src="images/05 - fritas abertas 2.webp" alt="Caixa para batata frita TopFood — resistente à gordura e ao calor" width="1200" height="1604" fetchpriority="high">
-        </div>
-      </div>
+        <!-- Banner 1: Pastel (arte Wellington) -->
+    <div class="slide slide-imgbnr" onclick="filterCategory('pastel')" role="link" aria-label="Embalagens para pastel">
+      <img class="imgbnr" src="images/banners/banner-pastel.webp?v=1000" alt="A embalagem que destaca o seu pastel — TopFood" width="1920" height="1000" fetchpriority="high">
     </div>
     <!-- Banner 2: Burguer -->
-    <div class="slide slide-banner">
-      <div class="bnr-wrap">
-        <div class="bnr-left">
-          <span class="bnr-tag">&#9733; LANCAMENTO</span>
-          <h2 class="bnr-title">
-            <span class="t1">CAIXA PARA</span>
-            <span class="t2">BURGUER</span>
-            <span class="t3"><em>TOP</em>FOOD!</span>
-          </h2>
-          <p class="bnr-desc">Resistente à gordura e ao calor.<br>Mantém seu burguer <b>protegido</b>, <b>quente</b> e com muito mais sabor!</p>
-          <a href="#hambúrguer" class="bnr-btn">Ver produto &rarr;</a>
-        </div>
-        <div class="bnr-right">
-          <img class="bnr-img" src="images/04 - Hamburguer.webp" alt="Caixa para hambúrguer TopFood — mantém o burguer protegido e quente" width="1200" height="1134" loading="lazy">
-        </div>
-      </div>
+    <div class="slide slide-imgbnr" onclick="filterCategory('hamburger')" role="link" aria-label="Embalagens para hambúrguer">
+      <img class="imgbnr" src="images/banners/banner-burguer.webp?v=1000" alt="A embalagem que destaca o seu sabor — caixa para hambúrguer TopFood" width="1920" height="1000">
+    </div>
+    <!-- Banner 3: Fritas -->
+    <div class="slide slide-imgbnr" onclick="filterCategory('batata')" role="link" aria-label="Embalagens para batata frita">
+      <img class="imgbnr" src="images/banners/banner-fritas.webp?v=1000" alt="A embalagem que destaca o seu sabor — embalagem para batata frita TopFood" width="1920" height="1000">
+    </div>
+    <!-- Banner 4: Churros -->
+    <div class="slide slide-imgbnr" onclick="filterCategory('churros')" role="link" aria-label="Embalagens para churros">
+      <img class="imgbnr" src="images/banners/banner-churros.webp?v=1000" alt="A embalagem que destaca o seu churros — TopFood" width="1920" height="1000">
     </div>
 
   </div><!-- /slider-track -->
@@ -1587,6 +1586,7 @@
     <button class="slider-dot active" onclick="slideTo(0)" aria-label="Slide 1"></button>
     <button class="slider-dot"        onclick="slideTo(1)" aria-label="Slide 2"></button>
     <button class="slider-dot"        onclick="slideTo(2)" aria-label="Slide 3"></button>
+    <button class="slider-dot"        onclick="slideTo(3)" aria-label="Slide 4"></button>
   </div>
 
   <!-- Barra de progresso -->
@@ -1624,74 +1624,10 @@
       <h2>Categorias</h2>
       <a href="#produtos" class="see-all">Ver todos ›</a>
     </div>
-    <div class="cat-grid">
-
-      <div class="cat-card" onclick="document.getElementById('pastel').scrollIntoView({behavior:'smooth'})">
-        <div class="cat-ring">
-          <div class="cat-img-wrap">
-            <img class="cat-img" src="images/01 - Pastel.webp" alt="Embalagem pillow box preta para pastel com design chalk art exclusivo — TopFood" width="1200" height="899" />
-          </div>
-          <div class="cat-badge">🥟</div>
-        </div>
-        <div class="cat-label">
-          <h3>Pastel</h3>
-          <p>Pillow box preta</p>
-        </div>
-      </div>
-
-      <div class="cat-card" onclick="document.getElementById('churros').scrollIntoView({behavior:'smooth'})">
-        <div class="cat-ring">
-          <div class="cat-img-wrap">
-            <img class="cat-img" src="images/02 - churrros fechado.webp" alt="Caixa tubular fechada para churros com design chalk art resistente à gordura — TopFood" width="1200" height="2745" />
-          </div>
-          <div class="cat-badge">🍬</div>
-        </div>
-        <div class="cat-label">
-          <h3>Churros</h3>
-          <p>Caixa tubular longa</p>
-        </div>
-      </div>
-
-      <div class="cat-card" onclick="document.getElementById('burger').scrollIntoView({behavior:'smooth'})">
-        <div class="cat-ring">
-          <div class="cat-img-wrap">
-            <img class="cat-img" src="images/04 - Hamburguer.webp" alt="Caixa para hambúrguer TopFood — mantém o burguer protegido e quente" width="1200" height="1134" loading="lazy" />
-          </div>
-          <div class="cat-badge">🍔</div>
-        </div>
-        <div class="cat-label">
-          <h3>Hambúrguer</h3>
-          <p>Caixa delivery</p>
-        </div>
-      </div>
-
-      <div class="cat-card" onclick="document.getElementById('fritas').scrollIntoView({behavior:'smooth'})">
-        <div class="cat-ring">
-          <div class="cat-img-wrap">
-            <img class="cat-img" src="images/05 - fritas abertas.webp" alt="Caixa para batata frita TopFood — resistente à gordura e ao calor" width="1200" height="1334" />
-          </div>
-          <div class="cat-badge">🍟</div>
-        </div>
-        <div class="cat-label">
-          <h3>Fritas</h3>
-          <p>Cone e balde</p>
-        </div>
-      </div>
-
-
-      <div class="cat-card" onclick="filterCategory('pipoca')">
-        <div class="cat-ring">
-          <div class="cat-img-wrap">
-            <img class="cat-img" src="images/pipoca.webp" alt="Caixa de pipoca TopFood — embalagem para cinema, eventos e pipoqueiros" width="800" height="800" loading="lazy" />
-          </div>
-          <div class="cat-badge">🍿</div>
-        </div>
-        <div class="cat-label">
-          <h3>Pipoca</h3>
-          <p>Balde e caixa</p>
-        </div>
-      </div>
-
+    <div class="cat-wrap" style="position:relative">
+      <button class="cat-arrow" id="cat-prev" onclick="catScroll(-1)" aria-label="Categorias anteriores" hidden>‹</button>
+      <div class="cat-grid" id="cat-grid"></div>
+      <button class="cat-arrow" id="cat-next" onclick="catScroll(1)" aria-label="Próximas categorias">›</button>
     </div>
   </div>
 </div>

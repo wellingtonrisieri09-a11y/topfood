@@ -61,6 +61,93 @@
   const BADGE_CLASS = { green:'badge-hot', blue:'badge-new', orange:'badge-sale', red:'badge-sale' };
   const BADGE_LABEL = { green:'Mais Vendido', blue:'Novidade', orange:'Promoção', red:'Promoção' };
 
+  // ─── Categorias (rótulo + emoji) — geradas dinamicamente a partir dos produtos ───
+  const CAT_META = {
+    pastel:           { label: 'Pastel',                    emoji: '🥟' },
+    churros:          { label: 'Churros',                   emoji: '🍬' },
+    hamburger:        { label: 'Hambúrguer',                emoji: '🍔' },
+    fritas:           { label: 'Fritas',                    emoji: '🍟' },
+    batata:           { label: 'Batata',                    emoji: '🥔' },
+    pizza:            { label: 'Pizza',                     emoji: '🍕' },
+    assados:          { label: 'Assados e Marmitas',        emoji: '🍗' },
+    espetinho:        { label: 'Espetinho',                 emoji: '🍢' },
+    'hot-dog':        { label: 'Hot Dog',                   emoji: '🌭' },
+    doces:            { label: 'Doces e Salgados',          emoji: '🍩' },
+    oriental:         { label: 'Oriental',                  emoji: '🍣' },
+    porcoes:          { label: 'Porções',                   emoji: '🍱' },
+    pipoca:           { label: 'Pipoca',                    emoji: '🍿' },
+    presente:         { label: 'Presente',                  emoji: '🎁' },
+    'envio-presente': { label: 'Envio e Presente',          emoji: '🎁' },
+    papelao:          { label: 'Papelão e Envio',           emoji: '📦' },
+    metalizadas:      { label: 'Metalizadas',               emoji: '✨' },
+    urnas:            { label: 'Urnas',                     emoji: '🗳️' },
+    displays:         { label: 'Displays',                  emoji: '🗂️' },
+    outros:           { label: 'Outros',                    emoji: '📦' },
+  };
+  function catLabelOf(c) { return (CAT_META[c] && CAT_META[c].label) || (c ? c.charAt(0).toUpperCase() + c.slice(1) : ''); }
+  function catEmojiOf(c) { return (CAT_META[c] && CAT_META[c].emoji) || '📦'; }
+
+  // Clique numa categoria: aplica o filtro da vitrine e rola até os produtos
+  function filterCategory(cat) {
+    const sel = document.getElementById('category-filter');
+    if (sel) { sel.value = cat || ''; }
+    if (typeof filterProductsGrid === 'function') filterProductsGrid();
+    const alvo = document.getElementById('produtos');
+    if (alvo) alvo.scrollIntoView({ behavior: 'smooth' });
+    // Marca o link ativo no menu
+    document.querySelectorAll('.nav-bar a').forEach(a => a.classList.toggle('active', a.dataset.cat === cat));
+  }
+
+  // Monta a vitrine de categorias (cartões com foto + contagem) e o menu superior
+  function renderCategoryUI(cats, products) {
+    const grid = document.getElementById('cat-grid');
+    if (grid) {
+      grid.innerHTML = cats.map(c => {
+        const doCat = products.filter(p => p.category === c);
+        const comFoto = doCat.find(p => p.image || (p.images && p.images[0]));
+        const img = comFoto ? ((comFoto.images && comFoto.images[0]) || comFoto.image) : '';
+        const src = img ? (img.startsWith('http') || img.startsWith('/') ? img : '/' + img) : '';
+        return `<div class="cat-card" onclick="filterCategory('${c}')">
+          <div class="cat-ring">
+            <div class="cat-img-wrap">${src ? `<img class="cat-img" src="${src}" alt="${catLabelOf(c)} — TopFood Embalagens" loading="lazy" />` : ''}</div>
+            <div class="cat-badge">${catEmojiOf(c)}</div>
+          </div>
+          <div class="cat-label">
+            <h3>${catLabelOf(c)}</h3>
+            <p>${doCat.length} produto${doCat.length !== 1 ? 's' : ''}</p>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    const nav = document.getElementById('nav-cats');
+    if (nav) {
+      nav.innerHTML = cats.map(c =>
+        `<a href="#produtos" data-cat="${c}" onclick="filterCategory('${c}');return false;">${catEmojiOf(c)} ${catLabelOf(c)}</a>`
+      ).join('');
+    }
+    // Setas do carrossel: esconde nas pontas e acompanha a rolagem
+    if (grid && !grid._arrowsWired) {
+      grid._arrowsWired = true;
+      grid.addEventListener('scroll', updateCatArrows, { passive: true });
+      window.addEventListener('resize', updateCatArrows);
+    }
+    updateCatArrows();
+  }
+
+  // Desliza o carrossel de categorias (estilo Instagram)
+  function catScroll(dir) {
+    const g = document.getElementById('cat-grid');
+    if (g) g.scrollBy({ left: dir * g.clientWidth * 0.8, behavior: 'smooth' });
+  }
+  function updateCatArrows() {
+    const g = document.getElementById('cat-grid');
+    const prev = document.getElementById('cat-prev');
+    const next = document.getElementById('cat-next');
+    if (!g || !prev || !next) return;
+    prev.hidden = g.scrollLeft <= 5;
+    next.hidden = g.scrollLeft >= g.scrollWidth - g.clientWidth - 5;
+  }
+
   function renderProducts(list) {
     const grid = document.getElementById('products-grid');
     if (!grid) return;
@@ -75,20 +162,35 @@
       PRICES[p.id] = {
         values: p.variants.map(v => v.price),
         units:  p.variants.map(v => v.units),
+        labels: p.variants.map(v => v.label || null),
         weight_per_unit: p.weight_per_unit || 15,
         no_frete: p.no_frete || false,
       };
     });
     ALL_PRODUCTS = active;
+    // Filtro de categorias dinâmico — inclui as categorias novas (Starprint) sem mexer no HTML
+    const catSel = document.getElementById('category-filter');
+    const cats = [...new Set(active.map(p => p.category).filter(Boolean))];
+    cats.sort((a, b) => catLabelOf(a).localeCompare(catLabelOf(b), 'pt-BR'));
+    if (catSel) {
+      const atual = catSel.value;
+      catSel.innerHTML = '<option value="">Todas as categorias</option>' +
+        cats.map(c => `<option value="${c}">${catLabelOf(c)}</option>`).join('');
+      if (cats.includes(atual)) catSel.value = atual;
+    }
+    renderCategoryUI(cats, active);
     // Gera HTML dos cards
     grid.innerHTML = active.map(p => {
       const badgeCls = p.badge && p.badgeColor ? (BADGE_CLASS[p.badgeColor] || 'badge-hot') : '';
       const badgeLbl = p.badge || (p.badgeColor ? BADGE_LABEL[p.badgeColor] : '');
       const badgeHtml = badgeLbl ? `<div class="product-badges"><span class="badge ${badgeCls}">${badgeLbl}</span></div>` : '';
       const v0 = p.variants[0];
-      const optionsHtml = p.variants.map((v, i) =>
-        `<option value="${i}">Pacote ${v.units} unidades</option>`
-      ).join('');
+      const optionsHtml = p.variants.map((v, i) => {
+        const lbl = v.label
+          ? `${String(v.label).replace(/</g,'&lt;').replace(/"/g,'&quot;')} — ${v.units} un`
+          : `Pacote ${v.units} unidades`;
+        return `<option value="${i}">${lbl}</option>`;
+      }).join('');
       const catLabel = p.category.charAt(0).toUpperCase() + p.category.slice(1);
       const priceInit = `R$ ${v0.price.toFixed(2).replace('.',',')}`;
       const unitInit  = `R$ ${(v0.price/v0.units).toFixed(2).replace('.',',')}/un`;
@@ -244,10 +346,11 @@
     const qty = parseInt(document.getElementById(qtyId).textContent);
     const price = PRICES[key].values[idx];
     const pack = PRICES[key].units[idx];
+    const packLabel = (PRICES[key].labels || [])[idx] || null;
     const id = selId + '-' + idx;
     const ex = cart.find(c => c.id === id);
     if (ex) { ex.qty += qty; ex.total = ex.price * ex.qty; }
-    else cart.push({ id, name, img, pack, qty, price, total: price * qty, no_frete: !!(PRICES[key] && PRICES[key].no_frete) });
+    else cart.push({ id, name, img, pack, packLabel, qty, price, total: price * qty, no_frete: !!(PRICES[key] && PRICES[key].no_frete) });
     saveCartLocal();
     renderCart();
     showToast(`✅ ${name} adicionado!`);
@@ -259,6 +362,17 @@
   function removeFromCart(id) {
     cart = cart.filter(c => c.id !== id);
     selectedShipping = null;
+    saveCartLocal();
+    renderCart();
+  }
+
+  // Ajusta a quantidade de pacotes de um item já no carrinho (botões + / −)
+  function changeCartQty(id, d) {
+    const item = cart.find(c => c.id === id);
+    if (!item) return;
+    item.qty = Math.max(1, item.qty + d);
+    item.total = item.price * item.qty;
+    selectedShipping = null; // frete precisa ser recalculado
     saveCartLocal();
     renderCart();
   }
@@ -396,8 +510,13 @@
         <img class="cart-item-img" src="${fixImgPath(item.img)}" alt="${item.name}" onerror="this.style.background='#eee'" />
         <div class="cart-item-info">
           <h4>${item.name}</h4>
-          <small>${item.pack} un × ${item.qty} pacote(s)</small>
+          <small>${item.packLabel ? item.packLabel + ' · ' : ''}${item.pack} un por pacote</small>
           <div class="cart-item-bottom">
+            <span style="display:inline-flex;align-items:center;gap:8px">
+              <button onclick="changeCartQty('${item.id}',-1)" aria-label="Diminuir" style="width:26px;height:26px;border:1.5px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-weight:700;line-height:1">−</button>
+              <b style="min-width:16px;text-align:center">${item.qty}</b>
+              <button onclick="changeCartQty('${item.id}',1)" aria-label="Aumentar" style="width:26px;height:26px;border:1.5px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-weight:700;line-height:1">+</button>
+            </span>
             <span class="cart-item-price">R$ ${item.total.toFixed(2).replace('.', ',')}</span>
             <button class="remove-item" onclick="removeFromCart('${item.id}')">🗑</button>
           </div>
@@ -637,7 +756,7 @@
         body: JSON.stringify({
           customer: custInfo,
           items: cart.map(i => ({
-            id: i.id, name: i.name, qty: i.qty, pack: i.pack,
+            id: i.id, name: i.name, qty: i.qty, pack: i.pack, pack_label: i.packLabel || undefined,
             unit_price: i.price, total: i.total
           })),
           shipping: selectedShipping
@@ -709,7 +828,7 @@
     await saveOrderToServer('whatsapp', 'Pedido via WhatsApp');
 
     let msg = '🛒 *Olá! Quero fazer um pedido na TopFood Embalagens:*\n\n';
-    cart.forEach(item => { msg += `• *${item.name}* (${item.pack} un) × ${item.qty} = R$ ${item.total.toFixed(2).replace('.', ',')}\n`; });
+    cart.forEach(item => { msg += `• *${item.name}* (${item.packLabel ? item.packLabel + ', ' : ''}${item.pack} un) × ${item.qty} = R$ ${item.total.toFixed(2).replace('.', ',')}\n`; });
     if (selectedShipping) msg += `\n🚚 *Frete ${selectedShipping.nome}:* R$ ${selectedShipping.preco.toFixed(2).replace('.', ',')}`;
     msg += `\n\n*Total: R$ ${total.toFixed(2).replace('.', ',')}*\n\nPode confirmar disponibilidade e prazo? Obrigado!`;
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -1031,7 +1150,7 @@
 
   // ─── HERO SLIDER ──────────────────────────
   (function() {
-    const TOTAL   = 2;
+    const TOTAL   = document.querySelectorAll('#sliderTrack .slide').length || 2;
     const DELAY   = 5200;
     let current   = 0;
     let timer     = null;
@@ -1213,7 +1332,13 @@
             <img class="ck-item-img" src="${fixImgPath(escHtml(item.img))}" alt="${escHtml(item.name)}" onerror="this.style.background='#eee'" />
             <div class="ck-item-info">
               <h4>${escHtml(item.name)}</h4>
-              <small>${item.pack} un × ${item.qty} pacote${item.qty !== 1 ? 's' : ''}</small>
+              <small>${item.packLabel ? item.packLabel + ' · ' : ''}${item.pack} un por pacote</small>
+              <span style="display:inline-flex;align-items:center;gap:8px;margin-top:6px">
+                <button onclick="changeCartQty('${item.id}',-1); renderCheckoutStep()" aria-label="Diminuir" style="width:24px;height:24px;border:1.5px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-weight:700;line-height:1">−</button>
+                <b style="min-width:14px;text-align:center;font-size:.85rem">${item.qty}</b>
+                <button onclick="changeCartQty('${item.id}',1); renderCheckoutStep()" aria-label="Aumentar" style="width:24px;height:24px;border:1.5px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-weight:700;line-height:1">+</button>
+                <span style="font-size:.72rem;color:var(--gray)">pacote${item.qty !== 1 ? 's' : ''}</span>
+              </span>
             </div>
             <div class="ck-item-right">
               <span class="ck-item-price">${fmt(item.total)}</span>
@@ -1648,7 +1773,7 @@
     msg += `*E-mail:*  ${checkoutData.email || 'Não informado'}\n`;
     if (checkoutData.phone) msg += `*Telefone:* ${checkoutData.phone}\n`;
     msg += `\n*Itens do pedido:*\n`;
-    cart.forEach(i => { msg += `• *${i.name}* (${i.pack} un) × ${i.qty} = R$ ${fmt(i.total)}\n`; });
+    cart.forEach(i => { msg += `• *${i.name}* (${i.packLabel ? i.packLabel + ', ' : ''}${i.pack} un) × ${i.qty} = R$ ${fmt(i.total)}\n`; });
     msg += `\nSubtotal: R$ ${fmt(subtotal)}`;
     if (discount > 0) msg += `\n🏷️ Desconto (${appliedCoupon.code}): − R$ ${fmt(discount)}`;
     msg += `\n🚚 Frete ${selectedShipping.nome}: R$ ${fmt(frete)}`;

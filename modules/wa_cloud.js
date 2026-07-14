@@ -120,7 +120,7 @@ function registerWaCloudRoutes(app, requireAuth, requireOwner) {
     const c = cfg();
     const s = readSettings();
     res.json({ ok: true, configurado: configured(), enabled: c.enabled,
-      phone_number_id: c.phoneNumberId ? "•••" + c.phoneNumberId.slice(-4) : "",
+      phone_number_id: c.phoneNumberId ? "•••" + String(c.phoneNumberId).slice(-4) : "",
       webhook_url: (process.env.BASE_URL || "https://topfoodembalagens.com.br").replace(/\/$/, "") + "/api/wa/webhook",
       verify_token: c.verifyToken,
       diag: {
