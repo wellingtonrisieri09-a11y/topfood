@@ -268,37 +268,44 @@ function renderCustos(readData) {
   const zFix = num(settings.custo_taxa_amz_fixo, 2);        // R$ fixo Amazon (plano individual R$2/item; profissional 0)
   const fPct = num(settings.custo_taxa_fiscal_pct, 4.5);    // % imposto — Simples Nacional 1ª faixa indústria (confirmar c/ contador)
   const vPct = num(settings.custo_taxa_vendedor_pct, 15);   // % comissão do vendedor (10–20)
+  // custos de produção (unitários): papel por quilo, acabamento e impressão por hora
+  const pKg = num(settings.custo_papel_kg, 0);              // R$ por kg de papel
+  const aHr = num(settings.custo_acab_hora, 0);             // R$ por hora de acabamento
+  const iHr = num(settings.custo_impr_hora, 0);             // R$ por hora de impressão
 
   const linhas = [];
   for (const p of produtos) {
     (p.variants || []).forEach((v, i) => {
       const detalhe = Array.isArray(v.options) && v.options.length ? v.options.join(" · ")
                     : (v.label || "");
-      // custo antigo (campo único) sem destrinchar cai na coluna Papel
-      const temQuebra = v.cost_papel != null || v.cost_acabamento != null || v.cost_impressao != null;
+      // custo legado em R$ (antes do modelo kg/hora) segura o lucro até preencher as quantidades
+      const legado = (parseFloat(v.cost_papel) || 0) + (parseFloat(v.cost_acabamento) || 0) + (parseFloat(v.cost_impressao) || 0)
+                   || (parseFloat(v.cost) || 0);
       linhas.push({
         pid: p.id, vidx: i,
         produto: i === 0 ? p.name : "",
         variacao: `${detalhe ? detalhe + " — " : ""}${v.units} un`,
         preco: parseFloat(v.price) || 0,
-        papel: temQuebra ? (parseFloat(v.cost_papel) || 0) : (parseFloat(v.cost) || 0),
-        acab:  temQuebra ? (parseFloat(v.cost_acabamento) || 0) : 0,
-        impr:  temQuebra ? (parseFloat(v.cost_impressao) || 0) : 0,
+        legado,
+        papelKg: v.papel_kg ?? "",
+        acabH:   v.acab_horas ?? "",
+        imprH:   v.impr_horas ?? "",
       });
     });
   }
 
-  const inCusto = (l, campo, valor, titulo) =>
-    `<input type="number" class="in-custo in-${campo}" data-pid="${esc(l.pid)}" data-vidx="${l.vidx}" step="0.01" min="0" value="${valor || ""}" placeholder="0,00" title="${titulo}">`;
+  const inQtd = (l, campo, valor, titulo, sufixo) =>
+    `<input type="number" class="in-custo in-${campo}" data-pid="${esc(l.pid)}" data-vidx="${l.vidx}" step="0.01" min="0" value="${valor}" placeholder="${sufixo}" title="${titulo}">
+     <div class="mini c-r${campo}">—</div>`;
 
   const rows = linhas.map(l => `
-    <tr data-preco="${l.preco}">
+    <tr data-preco="${l.preco}" data-legado="${l.legado}">
       <td class="prod">${esc(l.produto)}</td>
       <td>${esc(l.variacao)}</td>
       <td class="dir">R$ ${money(l.preco)}</td>
-      <td class="dir">${inCusto(l, "papel", l.papel, "Custo do papel")}</td>
-      <td class="dir">${inCusto(l, "acab", l.acab, "Custo do acabamento")}</td>
-      <td class="dir">${inCusto(l, "impr", l.impr, "Custo da impressão")}</td>
+      <td class="dir">${inQtd(l, "papel", l.papelKg, "Quilos de papel usados neste pacote", "kg")}</td>
+      <td class="dir">${inQtd(l, "acab", l.acabH, "Horas de acabamento deste pacote", "horas")}</td>
+      <td class="dir">${inQtd(l, "impr", l.imprH, "Horas de impressão deste pacote", "horas")}</td>
       <td class="dir c-totmp" style="font-weight:800;color:#92400e">—</td>
       <td class="dir c-imposto">—</td>
       <td class="dir c-asaas">—</td>
@@ -364,6 +371,7 @@ function renderCustos(readData) {
   .barra a.sec, .barra button.sec { background: #374151; }
   .in-custo { width: 62px; padding: 5px 5px; border: 1px solid #f0c36d; background: #fffbeb; border-radius: 6px;
               font-size: 11px; text-align: right; color: #92400e; font-weight: 700; }
+  .mini { font-size: 8.5px; color: #92400e; margin-top: 2px; white-space: nowrap; }
   .cred { background: #f8f7ff; border: 1px solid #e9e5ff; border-radius: 10px; padding: 12px 14px; margin-top: 14px; }
   .cred summary { font-size: 11px; font-weight: 800; color: #7c3aed; cursor: pointer; }
   .cred input { padding: 7px 9px; border: 1px solid #d1d5db; border-radius: 7px; font-size: 12px; margin: 6px 6px 0 0; }
@@ -422,13 +430,20 @@ function renderCustos(readData) {
     <div class="grupo" style="border-color:#1d4ed8"><b>Comissão vendedor</b>
       <div><label>% da venda</label><input type="number" id="tx-vpct" step="0.01" value="${vPct}"></div>
     </div>
+    <div class="grupo" style="border-color:#92400e"><b>Custos de produção (unitários)</b>
+      <div style="display:flex;gap:8px">
+        <div><label>Papel R$/kg</label><input type="number" id="tx-pkg" step="0.01" value="${pKg}"></div>
+        <div><label>Acabam. R$/h</label><input type="number" id="tx-ahr" step="0.01" value="${aHr}"></div>
+        <div><label>Impres. R$/h</label><input type="number" id="tx-ihr" step="0.01" value="${iHr}"></div>
+      </div>
+    </div>
     <span style="font-size:10px;color:#6b7280;max-width:250px">Asaas: R$ 1,99/venda (PIX/boleto; cartão ≈ 2,99% + R$ 0,49). Imposto: 4,5% = Simples 1ª faixa indústria — <b>confirme com o contador</b>. ML/Shopee/Amazon: confira a % da sua categoria (Shopee 2026: 20% c/ frete grátis + fixo por faixa de preço; Amazon: 10–15% + R$2/item no plano individual). Campos amarelos = <b>custo de matéria-prima por pacote</b>, edite e salve.</span>
   </div>
 
   <div class="tb-wrap"><table id="tb">
     <thead><tr>
       <th>Produto</th><th>Variação / Pacote</th><th>Preço venda</th>
-      <th>Custo Papel</th><th>Custo Acabamento</th><th>Custo Impressão</th><th>Total mat.-prima</th>
+      <th>Papel (kg)</th><th>Acabamento (horas)</th><th>Impressão (horas)</th><th>Total mat.-prima</th>
       <th>Imposto</th><th>Taxa Asaas</th><th>Lucro SITE</th><th>Lucro c/ VENDEDOR</th>
       <th>Taxa ML</th><th>Lucro ML</th><th>Taxa Shopee</th><th>Lucro Shopee</th><th>Taxa Amazon</th><th>Lucro Amazon</th>
     </tr></thead>
@@ -439,7 +454,7 @@ function renderCustos(readData) {
     <b>Lucro SITE</b> = preço − matéria-prima − imposto − taxa Asaas &nbsp;·&nbsp;
     <b>Lucro c/ VENDEDOR</b> = Lucro SITE − comissão do vendedor &nbsp;·&nbsp;
     <b>Lucro ML / Shopee / Amazon</b> = preço − matéria-prima − imposto − taxa do canal (frete dos marketplaces não incluso).<br>
-    Campos amarelos = custos POR PACOTE destrinchados em <b>Papel + Acabamento + Impressão</b>; o Total mat.-prima é a soma e vira o campo "custo" da página Produtos ao salvar.<br>
+    Campos amarelos = quantidades POR PACOTE: <b>papel em kg</b>, <b>acabamento e impressão em horas</b>. O R$ de cada um = quantidade × custo unitário (configurado em "Custos de produção" acima); o Total mat.-prima é a soma e vira o campo "custo" da página Produtos ao salvar. Valores antigos em R$ aparecem como "(antigo)" até você preencher as quantidades.<br>
     🔒 Área restrita com login próprio — não compartilhe este acesso. O catálogo de vendas (sem custos) é o /catalogo.
   </p>
 
@@ -465,12 +480,23 @@ function recalc(){
   var spct=parseFloat(document.getElementById('tx-spct').value)||0, sfix=parseFloat(document.getElementById('tx-sfix').value)||0;
   var zpct=parseFloat(document.getElementById('tx-zpct').value)||0, zfix=parseFloat(document.getElementById('tx-zfix').value)||0;
   var fpct=parseFloat(document.getElementById('tx-fpct').value)||0, vpct=parseFloat(document.getElementById('tx-vpct').value)||0;
+  var pkg=parseFloat(document.getElementById('tx-pkg').value)||0;
+  var ahr=parseFloat(document.getElementById('tx-ahr').value)||0;
+  var ihr=parseFloat(document.getElementById('tx-ihr').value)||0;
   document.querySelectorAll('#tb tbody tr[data-preco]').forEach(function(tr){
     var preco=parseFloat(tr.dataset.preco)||0;
-    var custo=(parseFloat(tr.querySelector('.in-papel').value)||0)
-             +(parseFloat(tr.querySelector('.in-acab').value)||0)
-             +(parseFloat(tr.querySelector('.in-impr').value)||0);
-    tr.querySelector('.c-totmp').textContent = custo ? 'R$ '+fmt(custo) : '—';
+    var kg=parseFloat(tr.querySelector('.in-papel').value)||0;
+    var ha=parseFloat(tr.querySelector('.in-acab').value)||0;
+    var hi=parseFloat(tr.querySelector('.in-impr').value)||0;
+    var rPapel=kg*pkg, rAcab=ha*ahr, rImpr=hi*ihr;
+    tr.querySelector('.c-rpapel').textContent = kg ? '= R$ '+fmt(rPapel) : '—';
+    tr.querySelector('.c-racab').textContent  = ha ? '= R$ '+fmt(rAcab) : '—';
+    tr.querySelector('.c-rimpr').textContent  = hi ? '= R$ '+fmt(rImpr) : '—';
+    var custo=rPapel+rAcab+rImpr;
+    var legado=parseFloat(tr.dataset.legado)||0;
+    var usandoLegado=false;
+    if(!custo && legado){ custo=legado; usandoLegado=true; } // valor antigo em R$ segura o cálculo até preencher kg/horas
+    tr.querySelector('.c-totmp').innerHTML = custo ? 'R$ '+fmt(custo)+(usandoLegado?' <span class="pct">(antigo)</span>':'') : '—';
     var imposto=preco*fpct/100, ta=preco*apct/100+afix, comis=preco*vpct/100;
     var tm=preco*mpct/100+mfix, ts=preco*spct/100+sfix, tz=preco*zpct/100+zfix;
     tr.querySelector('.c-imposto').textContent='R$ '+fmt(imposto);
@@ -488,7 +514,7 @@ function recalc(){
     lucroCell(lz, preco-custo-imposto-tz, preco);
   });
 }
-['tx-apct','tx-afix','tx-mpct','tx-mfix','tx-spct','tx-sfix','tx-zpct','tx-zfix','tx-fpct','tx-vpct'].forEach(function(id){ document.getElementById(id).addEventListener('input', recalc); });
+['tx-apct','tx-afix','tx-mpct','tx-mfix','tx-spct','tx-sfix','tx-zpct','tx-zfix','tx-fpct','tx-vpct','tx-pkg','tx-ahr','tx-ihr'].forEach(function(id){ document.getElementById(id).addEventListener('input', recalc); });
 document.querySelectorAll('.in-custo').forEach(function(i){ i.addEventListener('input', recalc); });
 recalc();
 
@@ -503,13 +529,18 @@ async function salvarTudo(){
       custo_taxa_amz_pct:parseFloat(document.getElementById('tx-zpct').value)||0,
       custo_taxa_amz_fixo:parseFloat(document.getElementById('tx-zfix').value)||0,
       custo_taxa_fiscal_pct:parseFloat(document.getElementById('tx-fpct').value)||0,
-      custo_taxa_vendedor_pct:parseFloat(document.getElementById('tx-vpct').value)||0 };
+      custo_taxa_vendedor_pct:parseFloat(document.getElementById('tx-vpct').value)||0,
+      custo_papel_kg:parseFloat(document.getElementById('tx-pkg').value)||0,
+      custo_acab_hora:parseFloat(document.getElementById('tx-ahr').value)||0,
+      custo_impr_hora:parseFloat(document.getElementById('tx-ihr').value)||0 };
+    var pkg=taxas.custo_papel_kg, ahr=taxas.custo_acab_hora, ihr=taxas.custo_impr_hora;
     var custos=[].map.call(document.querySelectorAll('#tb tbody tr[data-preco]'),function(tr){
       var papel=tr.querySelector('.in-papel');
+      var kg=parseFloat(papel.value)||0, ha=parseFloat(tr.querySelector('.in-acab').value)||0, hi=parseFloat(tr.querySelector('.in-impr').value)||0;
       return { product_id:papel.dataset.pid, variant_idx:parseInt(papel.dataset.vidx,10),
-        cost_papel:parseFloat(papel.value)||0,
-        cost_acabamento:parseFloat(tr.querySelector('.in-acab').value)||0,
-        cost_impressao:parseFloat(tr.querySelector('.in-impr').value)||0 };
+        papel_kg:kg, acab_horas:ha, impr_horas:hi,
+        cost_papel:kg*pkg, cost_acabamento:ha*ahr, cost_impressao:hi*ihr,
+        tem_qtd:(kg>0||ha>0||hi>0) };
     });
     var r=await fetch('/custos/salvar',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
       body:JSON.stringify({taxas:taxas,custos:custos})});
@@ -641,7 +672,8 @@ function registerCatalogoRoutes(app, readData, decodeUser, writeData) {
         const permitidas = ["custo_taxa_asaas_pct", "custo_taxa_asaas_fixo", "custo_taxa_ml_pct",
                             "custo_taxa_ml_fixo", "custo_taxa_shopee_pct", "custo_taxa_shopee_fixo",
                             "custo_taxa_amz_pct", "custo_taxa_amz_fixo",
-                            "custo_taxa_fiscal_pct", "custo_taxa_vendedor_pct"];
+                            "custo_taxa_fiscal_pct", "custo_taxa_vendedor_pct",
+                            "custo_papel_kg", "custo_acab_hora", "custo_impr_hora"];
         permitidas.forEach(k => { if (taxas[k] !== undefined) s[k] = num(taxas[k], 0); });
         writeData("settings.json", s);
       }
@@ -652,11 +684,22 @@ function registerCatalogoRoutes(app, readData, decodeUser, writeData) {
           const p = products.find(pp => pp.id === c.product_id);
           const v = p && (p.variants || [])[c.variant_idx];
           if (!v) continue;
-          if (c.cost_papel !== undefined || c.cost_acabamento !== undefined || c.cost_impressao !== undefined) {
+          if (c.papel_kg !== undefined || c.acab_horas !== undefined || c.impr_horas !== undefined) {
+            // modelo kg/horas: guarda as quantidades e os R$ calculados
+            v.papel_kg   = r2(c.papel_kg);
+            v.acab_horas = r2(c.acab_horas);
+            v.impr_horas = r2(c.impr_horas);
+            if (c.tem_qtd) {
+              v.cost_papel      = r2(c.cost_papel);
+              v.cost_acabamento = r2(c.cost_acabamento);
+              v.cost_impressao  = r2(c.cost_impressao);
+              v.cost = r2(v.cost_papel + v.cost_acabamento + v.cost_impressao); // total mantém a margem da pág. Produtos
+            } // sem quantidade preenchida: preserva o custo legado em R$
+          } else if (c.cost_papel !== undefined || c.cost_acabamento !== undefined || c.cost_impressao !== undefined) {
             v.cost_papel      = r2(c.cost_papel);
             v.cost_acabamento = r2(c.cost_acabamento);
             v.cost_impressao  = r2(c.cost_impressao);
-            v.cost = r2(v.cost_papel + v.cost_acabamento + v.cost_impressao); // total mantém a margem da pág. Produtos
+            v.cost = r2(v.cost_papel + v.cost_acabamento + v.cost_impressao);
           } else if (c.cost !== undefined) {
             v.cost = r2(c.cost); // compatibilidade com o formato antigo
           }
