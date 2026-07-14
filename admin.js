@@ -111,7 +111,28 @@ function applyRoleUI() {
   document.querySelectorAll('.btn-delete-order').forEach(btn => {
     btn.style.display = STATE.canDelete ? '' : 'none';
   });
+
+  // Tema por perfil: vendedor=azul · empresa=verde · admin=vermelho (padrão)
+  document.body.classList.toggle('theme-vendedor', role === 'vendedor');
+  document.body.classList.toggle('theme-empresa',  role === 'empresa');
 }
+
+// Tela de login com a cor do perfil (via /vendedor → ?perfil=vendedor)
+(function themeLoginByUrl() {
+  const perfil = new URLSearchParams(location.search).get('perfil');
+  if (!perfil) return;
+  const titulo = document.querySelector('.login-title');
+  const logoSmall = document.querySelector('.login-logo small');
+  if (perfil === 'vendedor') {
+    document.body.classList.add('theme-vendedor');
+    if (titulo) titulo.textContent = '🧑‍💼 Área do Vendedor';
+    if (logoSmall) logoSmall.textContent = 'Painel do Vendedor';
+  } else if (perfil === 'empresa') {
+    document.body.classList.add('theme-empresa');
+    if (titulo) titulo.textContent = '🏢 Portal da Empresa';
+    if (logoSmall) logoSmall.textContent = 'Portal da Empresa';
+  }
+})();
 
 /* ══════════════════════════════════════════════════════
    API

@@ -19,6 +19,11 @@
       --radius:12px;--shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
       --shadow-md:0 4px 16px rgba(0,0,0,.10);
     }
+    /* ── Temas por perfil: admin=vermelho (padrão) · vendedor=AZUL · empresa=VERDE ── */
+    body.theme-vendedor{--red:#1d4ed8;--red-d:#1e40af;--red-l:#3b82f6;--sidebar:#0c1e3e;--sidebar-hover:#16295c;--sidebar-active:rgba(29,78,216,.22)}
+    body.theme-vendedor .login-wrap{background:linear-gradient(135deg,#0c1e3e 0%,#1e3a8a 100%)}
+    body.theme-empresa{--red:#15803d;--red-d:#166534;--red-l:#22c55e;--sidebar:#092b16;--sidebar-hover:#123f22;--sidebar-active:rgba(21,128,61,.22)}
+    body.theme-empresa .login-wrap{background:linear-gradient(135deg,#092b16 0%,#14532d 100%)}
     html{font-size:14px}
     body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
     a{text-decoration:none;color:inherit}

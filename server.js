@@ -294,7 +294,8 @@ app.use(cors({
 app.use(express.json({ limit: '15mb' }));        // Permite imagens em base64 (até ~11 MB real)
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.get('/admin', (req, res) => res.redirect(301, '/admin.html'));
-app.get('/vendedor', (req, res) => res.redirect(302, '/admin.html')); // atalho da Área do Vendedor (rodapé da loja)
+app.get('/vendedor', (req, res) => res.redirect(302, '/admin.html?perfil=vendedor')); // atalho da Área do Vendedor (tema azul)
+app.get('/empresa',  (req, res) => res.redirect(302, '/admin.html?perfil=empresa'));  // futuro Portal da Empresa (tema verde)
 app.get('/product.html', function(req, res, next) { var id = req.query.id; if (id) { return res.redirect(301, '/produto/' + encodeURIComponent(id)); } next(); });
 registerSeoRoutes(app, readData);
 app.use(express.static(path.join(__dirname), {
