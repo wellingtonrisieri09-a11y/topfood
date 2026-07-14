@@ -2938,10 +2938,21 @@ async function renderVender() {
   }
 
   root.innerHTML = `
-    <div style="display:grid;gap:16px;max-width:720px">
+    <div style="display:grid;gap:16px;max-width:720px;padding-bottom:86px">
 
       <div class="card" style="padding:18px">
-        <h3 style="margin:0 0 4px"><i class="fa fa-user" style="color:var(--red)"></i> Cliente</h3>
+        <h3 style="margin:0 0 4px"><i class="fa fa-box" style="color:var(--red)"></i> 1. Produtos <span style="font-size:.72rem;color:var(--muted);font-weight:400">(preço do site — não é editável)</span></h3>
+        <p style="font-size:.78rem;color:var(--muted);margin:0 0 12px">Toque no produto para escolher cor, tamanho, pacote e quantidade.</p>
+        <div id="venda-vitrine" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px"></div>
+        <h4 style="margin:16px 0 4px">🛒 Itens da venda</h4>
+        <div id="venda-itens"></div>
+        <div class="form-row" style="margin-top:10px"><label>Frete combinado (R$) <span style="color:var(--muted);font-size:.72rem">(0 = a combinar / retirada)</span></label>
+          <input type="number" id="v-frete" value="0" min="0" step="0.01" oninput="vendaTotais()" /></div>
+        <div id="venda-total" style="font-size:1.05rem;font-weight:800;text-align:right;margin-top:6px"></div>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-user" style="color:var(--red)"></i> 2. Cliente</h3>
         <p style="font-size:.78rem;color:var(--muted);margin:0 0 12px">Nome e WhatsApp bastam para lançar. CPF/CNPJ e endereço são necessários para NF-e e etiqueta.</p>
         <div class="form-row"><label>Nome / Estabelecimento *</label><input type="text" id="v-nome" placeholder="Ex: Padaria Estrela" /></div>
         <div class="form-row"><label>WhatsApp *</label><input type="tel" id="v-fone" placeholder="Ex: 11 98888-7777" /></div>
@@ -2956,18 +2967,7 @@ async function renderVender() {
       </div>
 
       <div class="card" style="padding:18px">
-        <h3 style="margin:0 0 4px"><i class="fa fa-box" style="color:var(--red)"></i> Produtos <span style="font-size:.72rem;color:var(--muted);font-weight:400">(preço do site — não é editável)</span></h3>
-        <p style="font-size:.78rem;color:var(--muted);margin:0 0 12px">Toque no produto para escolher cor, tamanho, pacote e quantidade.</p>
-        <div id="venda-vitrine" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px"></div>
-        <h4 style="margin:16px 0 4px">🛒 Itens da venda</h4>
-        <div id="venda-itens"></div>
-        <div class="form-row" style="margin-top:10px"><label>Frete combinado (R$) <span style="color:var(--muted);font-size:.72rem">(0 = a combinar / retirada)</span></label>
-          <input type="number" id="v-frete" value="0" min="0" step="0.01" oninput="vendaTotais()" /></div>
-        <div id="venda-total" style="font-size:1.05rem;font-weight:800;text-align:right;margin-top:6px"></div>
-      </div>
-
-      <div class="card" style="padding:18px">
-        <h3 style="margin:0 0 12px"><i class="fa fa-credit-card" style="color:var(--red)"></i> Pagamento</h3>
+        <h3 style="margin:0 0 12px"><i class="fa fa-credit-card" style="color:var(--red)"></i> 3. Pagamento</h3>
         <div style="display:flex;gap:18px;font-size:.9rem">
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="v-pag" value="pix" checked /> PIX</label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="v-pag" value="card" /> Cartão de crédito</label>
@@ -2988,6 +2988,15 @@ async function renderVender() {
         <div id="venda-resumo" style="margin:12px 0"></div>
         <h4 style="margin:14px 0 8px">🧾 Vendas do mês</h4>
         <div id="minhas-vendas" style="overflow-x:auto"></div>
+      </div>
+
+      <!-- barra fixa: total + lançar sempre à vista no celular -->
+      <div id="venda-sticky" style="position:fixed;left:12px;right:12px;bottom:12px;z-index:900;display:none">
+        <div style="max-width:696px;margin:0 auto;background:#1C1C1C;color:#fff;border-radius:14px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.35)">
+          <div style="min-width:0"><div id="venda-sticky-total" style="font-weight:800;font-size:1rem;white-space:nowrap"></div>
+            <div id="venda-sticky-itens" style="font-size:.7rem;color:#9CA3AF"></div></div>
+          <button class="btn btn-primary" onclick="vendaLancar()" style="white-space:nowrap;padding:11px 18px;font-weight:700"><i class="fa fa-paper-plane"></i> Lançar pedido</button>
+        </div>
       </div>
     </div>`;
 
@@ -3169,6 +3178,15 @@ function vendaTotais() {
   const sub   = VENDA.itens.reduce((s, i) => s + i.qty * i.price, 0);
   const frete = parseFloat(document.getElementById('v-frete')?.value) || 0;
   el.innerHTML = `Subtotal: R$ ${fmt(sub)} &nbsp;·&nbsp; Frete: R$ ${fmt(frete)} &nbsp;·&nbsp; <span style="color:var(--red)">Total: R$ ${fmt(sub + frete)}</span>`;
+  // barra fixa (aparece quando tem item na venda)
+  const bar = document.getElementById('venda-sticky');
+  if (bar) {
+    bar.style.display = VENDA.itens.length ? 'block' : 'none';
+    const t = document.getElementById('venda-sticky-total');
+    const n = document.getElementById('venda-sticky-itens');
+    if (t) t.textContent = 'Total: R$ ' + fmt(sub + frete);
+    if (n) n.textContent = VENDA.itens.reduce((s, i) => s + i.qty, 0) + ' pacote(s) no pedido';
+  }
 }
 
 async function vendaLancar() {
