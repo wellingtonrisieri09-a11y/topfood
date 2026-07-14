@@ -1685,7 +1685,7 @@ registerAnunciosRoutes(app, requireAuth);
 registerWaCloudRoutes(app, requireAuth, requireOwner);
 registerVendedorRoutes(app, { readData, writeData, requireAuth });
 registerEmpresasRoutes(app, { readData, writeData, requireAdminPlus, requireAuth });
-registerCatalogoRoutes(app, readData, decodeUser);
+registerCatalogoRoutes(app, readData, decodeUser, writeData);
 
 // Limpar blacklist e reservas expiradas a cada 30min
 setInterval(() => { try { cleanBlacklist(); releaseExpiredReservations(); } catch(e){} }, 30 * 60 * 1000);

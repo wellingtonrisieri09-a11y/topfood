@@ -194,22 +194,76 @@ function renderCatalogo(readData) {
 }
 
 // ============================================================
-// TABELA DE CUSTOS — /custos (SÓ owner/admin)
-// Catálogo interno com custo de matéria-prima, taxas (Asaas/ML)
-// e lucro líquido por canal. Taxas editáveis e salvas em settings.
+// TABELA DE CUSTOS — /custos
+// COFRE SEPARADO: login e senha próprios (independentes do
+// painel), guardados em settings. Custos de matéria-prima
+// EDITÁVEIS na própria tabela + taxas Asaas/ML → lucro líquido.
+// Acesso inicial: wellington / lucro2026 (trocável na página).
 // ============================================================
+const jwtCustos = require("jsonwebtoken");
+const CUSTOS_COOKIE = "tf_custos";
+const CUSTOS_SECRET = () => (process.env.JWT_SECRET || "TROQUE_NO_DOT_ENV") + "-custos";
+const CUSTOS_DEFAULT_USER = "wellington";
+const CUSTOS_DEFAULT_PASS = "lucro2026";
+
 function num(v, fallback) { const n = parseFloat(v); return isNaN(n) ? fallback : n; }
+
+function custosAuth(req) {
+  const t = req.cookies?.[CUSTOS_COOKIE];
+  if (!t) return null;
+  try {
+    const p = jwtCustos.verify(t, CUSTOS_SECRET());
+    return p && p.area === "custos" ? p : null;
+  } catch { return null; }
+}
+
+function renderCustosLogin(erro) {
+  return `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>Área Restrita — Custos</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:Arial,Helvetica,sans-serif; min-height:100vh; display:flex; align-items:center;
+         justify-content:center; background:linear-gradient(135deg,#2e1065 0%,#4c1d95 100%); padding:20px; }
+  .card { background:#fff; border-radius:18px; padding:40px 34px; width:100%; max-width:380px; text-align:center;
+          box-shadow:0 20px 60px rgba(0,0,0,.4); }
+  .cadeado { font-size:44px; }
+  h1 { font-size:19px; margin:10px 0 4px; }
+  p.sub { font-size:12px; color:#6b7280; margin-bottom:22px; }
+  input { width:100%; padding:12px 14px; border:1px solid #d1d5db; border-radius:9px; font-size:14px; margin-bottom:10px; }
+  button { width:100%; background:#7c3aed; color:#fff; border:none; padding:13px; border-radius:9px;
+           font-weight:800; font-size:15px; cursor:pointer; margin-top:4px; }
+  .erro { background:#fee2e2; color:#b91c1c; font-size:12px; padding:9px 12px; border-radius:8px; margin-bottom:12px; }
+  .volta { display:block; margin-top:16px; font-size:12px; color:#6b7280; text-decoration:none; }
+</style></head><body>
+<div class="card">
+  <div class="cadeado">🔐</div>
+  <h1>Custos & Lucro Líquido</h1>
+  <p class="sub">Área restrita do proprietário — acesso exclusivo, separado do painel.</p>
+  ${erro ? `<div class="erro">${esc(erro)}</div>` : ""}
+  <form method="POST" action="/custos/login">
+    <input type="text" name="user" placeholder="Usuário" autocomplete="username" required>
+    <input type="password" name="pass" placeholder="Senha" autocomplete="current-password" required>
+    <button type="submit">Entrar</button>
+  </form>
+  <a class="volta" href="/admin.html">← voltar ao painel</a>
+</div>
+</body></html>`;
+}
 
 function renderCustos(readData) {
   const settings = readData("settings.json") || {};
   const produtos = (readData("products.json") || []).filter(p => p.active !== false);
   const hoje = new Date().toLocaleDateString("pt-BR");
 
-  // taxas salvas (padrões editáveis na própria página)
-  const aPct = num(settings.custo_taxa_asaas_pct, 0.99);   // % Asaas sobre a venda
-  const aFix = num(settings.custo_taxa_asaas_fixo, 0.49);  // R$ fixo por venda Asaas
-  const mPct = num(settings.custo_taxa_ml_pct, 12);        // % Mercado Livre
-  const mFix = num(settings.custo_taxa_ml_fixo, 6);        // R$ fixo por venda ML
+  // Taxas salvas (padrões pré-preenchidos com referências reais; tudo editável na página)
+  // Asaas (site oficial, tabela padrão): PIX e boleto R$ 1,99 fixo; cartão ~2,99% + R$ 0,49
+  const aPct = num(settings.custo_taxa_asaas_pct, 0);       // % Asaas sobre a venda (PIX/boleto = 0%)
+  const aFix = num(settings.custo_taxa_asaas_fixo, 1.99);   // R$ fixo por venda Asaas (PIX/boleto)
+  const mPct = num(settings.custo_taxa_ml_pct, 12);         // % Mercado Livre (clássico — varia por categoria)
+  const mFix = num(settings.custo_taxa_ml_fixo, 6);         // R$ fixo ML (custo fixo p/ itens < R$79)
+  const fPct = num(settings.custo_taxa_fiscal_pct, 4.5);    // % imposto — Simples Nacional 1ª faixa indústria (confirmar c/ contador)
+  const vPct = num(settings.custo_taxa_vendedor_pct, 15);   // % comissão do vendedor (10–20)
 
   const linhas = [];
   for (const p of produtos) {
@@ -217,6 +271,7 @@ function renderCustos(readData) {
       const detalhe = Array.isArray(v.options) && v.options.length ? v.options.join(" · ")
                     : (v.label || "");
       linhas.push({
+        pid: p.id, vidx: i,
         produto: i === 0 ? p.name : "",
         variacao: `${detalhe ? detalhe + " — " : ""}${v.units} un`,
         preco: parseFloat(v.price) || 0,
@@ -230,9 +285,11 @@ function renderCustos(readData) {
       <td class="prod">${esc(l.produto)}</td>
       <td>${esc(l.variacao)}</td>
       <td class="dir">R$ ${money(l.preco)}</td>
-      <td class="dir custo">${l.custo ? "R$ " + money(l.custo) : '<span class="falta">cadastrar</span>'}</td>
+      <td class="dir"><input type="number" class="in-custo" data-pid="${esc(l.pid)}" data-vidx="${l.vidx}" step="0.01" min="0" value="${l.custo || ""}" placeholder="0,00"></td>
+      <td class="dir c-imposto">—</td>
       <td class="dir c-asaas">—</td>
       <td class="dir c-lsite">—</td>
+      <td class="dir c-lvend">—</td>
       <td class="dir c-ml">—</td>
       <td class="dir c-lml">—</td>
     </tr>`).join("");
@@ -285,16 +342,25 @@ function renderCustos(readData) {
            display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
   .barra button, .barra a { background: #7c3aed; color: #fff; border: none; padding: 10px 20px;
            border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; text-decoration: none; }
-  .barra a.sec { background: #374151; }
-  @media print { body { background:#fff } .folha { max-width:none; padding:0 } .no-print { display:none !important } }
+  .barra a.sec, .barra button.sec { background: #374151; }
+  .in-custo { width: 92px; padding: 5px 7px; border: 1px solid #f0c36d; background: #fffbeb; border-radius: 6px;
+              font-size: 12px; text-align: right; color: #92400e; font-weight: 700; }
+  .cred { background: #f8f7ff; border: 1px solid #e9e5ff; border-radius: 10px; padding: 12px 14px; margin-top: 14px; }
+  .cred summary { font-size: 11px; font-weight: 800; color: #7c3aed; cursor: pointer; }
+  .cred input { padding: 7px 9px; border: 1px solid #d1d5db; border-radius: 7px; font-size: 12px; margin: 6px 6px 0 0; }
+  .cred button { background: #7c3aed; color: #fff; border: none; padding: 8px 16px; border-radius: 7px;
+                 font-weight: 700; font-size: 11px; cursor: pointer; margin-top: 6px; }
+  @media print { body { background:#fff } .folha { max-width:none; padding:0 } .no-print { display:none !important }
+                 .in-custo { border:none; background:none; } }
 </style>
 </head>
 <body>
 
 <div class="barra no-print">
-  <button onclick="window.print()">🖨️ Baixar PDF / Imprimir</button>
-  <a class="sec" href="/catalogo">📖 Ver catálogo de vendas</a>
-  <a class="sec" href="/admin.html">← Painel</a>
+  <button onclick="salvarTudo()">💾 Salvar custos e taxas</button>
+  <button class="sec" onclick="window.print()">🖨️ PDF / Imprimir</button>
+  <a class="sec" href="/catalogo">📖 Catálogo de vendas</a>
+  <button class="sec" onclick="sairCustos()">🚪 Sair</button>
 </div>
 
 <div class="folha">
@@ -318,61 +384,107 @@ function renderCustos(readData) {
         <div><label>+ fixo R$</label><input type="number" id="tx-mfix" step="0.01" value="${mFix}"></div>
       </div>
     </div>
-    <button onclick="salvarTaxas()">💾 Salvar taxas</button>
-    <span style="font-size:10px;color:#6b7280;max-width:220px">Ajuste conforme seu plano no Asaas e a categoria no ML — a tabela recalcula na hora.</span>
+    <div class="grupo" style="border-color:#0891b2"><b>Imposto (fiscal)</b>
+      <div><label>% da venda</label><input type="number" id="tx-fpct" step="0.01" value="${fPct}"></div>
+    </div>
+    <div class="grupo" style="border-color:#1d4ed8"><b>Comissão vendedor</b>
+      <div><label>% da venda</label><input type="number" id="tx-vpct" step="0.01" value="${vPct}"></div>
+    </div>
+    <span style="font-size:10px;color:#6b7280;max-width:250px">Asaas: R$ 1,99/venda é a tarifa padrão de PIX e boleto (cartão ≈ 2,99% + R$ 0,49). Imposto: 4,5% = Simples 1ª faixa indústria — <b>confirme com o contador</b>. ML: confira a % da sua categoria. Campos amarelos = <b>custo de matéria-prima por pacote</b>, edite direto e salve.</span>
   </div>
 
   <table id="tb">
     <thead><tr>
       <th>Produto</th><th>Variação / Pacote</th><th>Preço venda</th><th>Custo mat.-prima</th>
-      <th>Taxa Asaas</th><th>Lucro venda SITE</th><th>Taxa ML</th><th>Lucro venda ML</th>
+      <th>Imposto</th><th>Taxa Asaas</th><th>Lucro SITE</th><th>Lucro c/ VENDEDOR</th><th>Taxa ML</th><th>Lucro ML</th>
     </tr></thead>
-    <tbody>${rows || '<tr><td colspan="8" style="text-align:center;padding:20px;color:#6b7280">Nenhum produto ativo.</td></tr>'}</tbody>
+    <tbody>${rows || '<tr><td colspan="10" style="text-align:center;padding:20px;color:#6b7280">Nenhum produto ativo.</td></tr>'}</tbody>
   </table>
 
   <p class="nota">
-    Lucro SITE = preço − custo matéria-prima − taxa Asaas · Lucro ML = preço − custo matéria-prima − taxa ML (frete do ML não incluso).<br>
-    Linhas com custo "cadastrar": preencha o campo <b>custo</b> do pacote na página Produtos do painel para o cálculo aparecer.<br>
-    🔒 Documento interno com custos e margens — não enviar a vendedores nem clientes. O catálogo de vendas (sem custos) é o /catalogo.
+    <b>Lucro SITE</b> = preço − matéria-prima − imposto − taxa Asaas &nbsp;·&nbsp;
+    <b>Lucro c/ VENDEDOR</b> = Lucro SITE − comissão do vendedor &nbsp;·&nbsp;
+    <b>Lucro ML</b> = preço − matéria-prima − imposto − taxa ML (frete do ML não incluso).<br>
+    Campos amarelos = custo de matéria-prima por pacote (o mesmo campo "custo" da página Produtos — salvar aqui atualiza lá também).<br>
+    🔒 Área restrita com login próprio — não compartilhe este acesso. O catálogo de vendas (sem custos) é o /catalogo.
   </p>
+
+  <details class="cred no-print">
+    <summary>🔑 Trocar usuário e senha desta área</summary>
+    <div>
+      <input type="password" id="cr-atual" placeholder="Senha atual">
+      <input type="text" id="cr-user" placeholder="Novo usuário">
+      <input type="password" id="cr-pass" placeholder="Nova senha (mín. 6)">
+      <button onclick="trocarCred()">Trocar acesso</button>
+    </div>
+  </details>
 </div>
 
 <script>
 function fmt(n){ return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function lucroCell(el, v, preco){
+  el.innerHTML='<span class="'+(v>=0?'lucro-pos':'lucro-neg')+'">R$ '+fmt(v)+'</span> <span class="pct">('+(preco?Math.round(v/preco*100):0)+'%)</span>';
+}
 function recalc(){
   var apct=parseFloat(document.getElementById('tx-apct').value)||0, afix=parseFloat(document.getElementById('tx-afix').value)||0;
   var mpct=parseFloat(document.getElementById('tx-mpct').value)||0, mfix=parseFloat(document.getElementById('tx-mfix').value)||0;
+  var fpct=parseFloat(document.getElementById('tx-fpct').value)||0, vpct=parseFloat(document.getElementById('tx-vpct').value)||0;
   document.querySelectorAll('#tb tbody tr[data-preco]').forEach(function(tr){
-    var preco=parseFloat(tr.dataset.preco)||0, custo=parseFloat(tr.dataset.custo)||0;
-    var ta=preco*apct/100+afix, tm=preco*mpct/100+mfix;
+    var preco=parseFloat(tr.dataset.preco)||0;
+    var custo=parseFloat(tr.querySelector('.in-custo').value)||0;
+    var imposto=preco*fpct/100, ta=preco*apct/100+afix, tm=preco*mpct/100+mfix, comis=preco*vpct/100;
+    tr.querySelector('.c-imposto').textContent='R$ '+fmt(imposto);
     tr.querySelector('.c-asaas').textContent='R$ '+fmt(ta);
     tr.querySelector('.c-ml').textContent='R$ '+fmt(tm);
-    var ls=tr.querySelector('.c-lsite'), lm=tr.querySelector('.c-lml');
-    if(!custo){ ls.innerHTML='<span class="falta">sem custo</span>'; lm.innerHTML='<span class="falta">sem custo</span>'; return; }
-    var vs=preco-custo-ta, vm=preco-custo-tm;
-    ls.innerHTML='<span class="'+(vs>=0?'lucro-pos':'lucro-neg')+'">R$ '+fmt(vs)+'</span> <span class="pct">('+(preco?Math.round(vs/preco*100):0)+'%)</span>';
-    lm.innerHTML='<span class="'+(vm>=0?'lucro-pos':'lucro-neg')+'">R$ '+fmt(vm)+'</span> <span class="pct">('+(preco?Math.round(vm/preco*100):0)+'%)</span>';
+    var ls=tr.querySelector('.c-lsite'), lv=tr.querySelector('.c-lvend'), lm=tr.querySelector('.c-lml');
+    if(!custo){ ls.innerHTML=lv.innerHTML=lm.innerHTML='<span class="falta">sem custo</span>'; return; }
+    lucroCell(ls, preco-custo-imposto-ta, preco);
+    lucroCell(lv, preco-custo-imposto-ta-comis, preco);
+    lucroCell(lm, preco-custo-imposto-tm, preco);
   });
 }
-['tx-apct','tx-afix','tx-mpct','tx-mfix'].forEach(function(id){ document.getElementById(id).addEventListener('input', recalc); });
+['tx-apct','tx-afix','tx-mpct','tx-mfix','tx-fpct','tx-vpct'].forEach(function(id){ document.getElementById(id).addEventListener('input', recalc); });
+document.querySelectorAll('.in-custo').forEach(function(i){ i.addEventListener('input', recalc); });
 recalc();
-async function salvarTaxas(){
+
+async function salvarTudo(){
   try{
-    var r=await fetch('/api/admin/settings',{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({
-      custo_taxa_asaas_pct:parseFloat(document.getElementById('tx-apct').value)||0,
+    var taxas={ custo_taxa_asaas_pct:parseFloat(document.getElementById('tx-apct').value)||0,
       custo_taxa_asaas_fixo:parseFloat(document.getElementById('tx-afix').value)||0,
       custo_taxa_ml_pct:parseFloat(document.getElementById('tx-mpct').value)||0,
-      custo_taxa_ml_fixo:parseFloat(document.getElementById('tx-mfix').value)||0
-    })});
-    alert(r.ok?'Taxas salvas! Da próxima vez a tabela já abre com elas.':'Erro ao salvar — faça login no painel de novo.');
+      custo_taxa_ml_fixo:parseFloat(document.getElementById('tx-mfix').value)||0,
+      custo_taxa_fiscal_pct:parseFloat(document.getElementById('tx-fpct').value)||0,
+      custo_taxa_vendedor_pct:parseFloat(document.getElementById('tx-vpct').value)||0 };
+    var custos=[].map.call(document.querySelectorAll('.in-custo'),function(i){
+      return { product_id:i.dataset.pid, variant_idx:parseInt(i.dataset.vidx,10), cost:parseFloat(i.value)||0 };
+    });
+    var r=await fetch('/custos/salvar',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({taxas:taxas,custos:custos})});
+    var d=await r.json();
+    alert(d.ok?'✅ Custos e taxas salvos! (os custos também atualizam na página Produtos)':'Erro: '+(d.error||'tente de novo'));
   }catch(e){ alert('Erro ao salvar: '+e.message); }
+}
+async function trocarCred(){
+  try{
+    var r=await fetch('/custos/credenciais',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({ senha_atual:document.getElementById('cr-atual').value,
+        novo_user:document.getElementById('cr-user').value, nova_senha:document.getElementById('cr-pass').value })});
+    var d=await r.json();
+    alert(d.ok?'✅ Acesso trocado! Use o novo usuário e senha na próxima entrada.':'Erro: '+(d.error||''));
+  }catch(e){ alert('Erro: '+e.message); }
+}
+async function sairCustos(){
+  await fetch('/custos/logout',{method:'POST',credentials:'same-origin'});
+  location.reload();
 }
 </script>
 </body>
 </html>`;
 }
 
-function registerCatalogoRoutes(app, readData, decodeUser) {
+function registerCatalogoRoutes(app, readData, decodeUser, writeData) {
+  const bcryptC = require("bcryptjs");
+
   app.get("/catalogo", (req, res) => {
     // material comercial interno — só pra quem está logado no painel
     // (vendedor, admin, sócio...); quem cair aqui sem login vai pro login azul
@@ -383,18 +495,98 @@ function registerCatalogoRoutes(app, readData, decodeUser) {
     res.send(renderCatalogo(readData));
   });
 
-  // Tabela de custos/lucro: SÓ owner e admin — custo nunca chega
-  // a vendedor, sócio limitado, empresa ou público
+  // ── /custos — COFRE com login próprio (independente do painel) ──
   app.get("/custos", (req, res) => {
-    const u = decodeUser(req);
-    if (!u) return res.redirect("/admin.html");
-    if (!["owner", "admin"].includes(u.role)) return res.status(403).send("Acesso restrito ao administrador.");
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-store");
+    if (!custosAuth(req)) return res.send(renderCustosLogin());
     res.send(renderCustos(readData));
   });
 
-  console.log("✅ Catálogo registrado: /catalogo (equipe) + /custos (owner/admin)");
+  app.post("/custos/login", async (req, res) => {
+    const { user, pass } = req.body || {};
+    const s = readData("settings.json") || {};
+    const userOk = String(user || "").toLowerCase().trim() ===
+      String(s.custos_user || CUSTOS_DEFAULT_USER).toLowerCase().trim();
+    let passOk = false;
+    if (s.custos_pass_hash) passOk = await bcryptC.compare(String(pass || ""), s.custos_pass_hash);
+    else {
+      // primeiro acesso: senha padrão — já grava o hash pra não ficar em texto
+      passOk = String(pass || "") === CUSTOS_DEFAULT_PASS;
+      if (userOk && passOk) {
+        writeData("settings.json", { ...s,
+          custos_user: s.custos_user || CUSTOS_DEFAULT_USER,
+          custos_pass_hash: bcryptC.hashSync(CUSTOS_DEFAULT_PASS, 10) });
+      }
+    }
+    if (!userOk || !passOk) {
+      await new Promise(r => setTimeout(r, 500));
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      return res.status(401).send(renderCustosLogin("Usuário ou senha incorretos."));
+    }
+    const token = jwtCustos.sign({ area: "custos" }, CUSTOS_SECRET(), { expiresIn: "8h" });
+    res.cookie(CUSTOS_COOKIE, token, {
+      httpOnly: true, sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 8 * 60 * 60 * 1000,
+    });
+    res.redirect("/custos");
+  });
+
+  app.post("/custos/logout", (req, res) => {
+    res.clearCookie(CUSTOS_COOKIE);
+    res.json({ ok: true });
+  });
+
+  // Salva taxas + custos de matéria-prima (atualiza o campo 'cost' dos produtos)
+  app.post("/custos/salvar", (req, res) => {
+    if (!custosAuth(req)) return res.status(401).json({ ok: false, error: "Sessão expirada — entre de novo" });
+    try {
+      const { taxas, custos } = req.body || {};
+      if (taxas && typeof taxas === "object") {
+        const s = readData("settings.json") || {};
+        const permitidas = ["custo_taxa_asaas_pct", "custo_taxa_asaas_fixo", "custo_taxa_ml_pct",
+                            "custo_taxa_ml_fixo", "custo_taxa_fiscal_pct", "custo_taxa_vendedor_pct"];
+        permitidas.forEach(k => { if (taxas[k] !== undefined) s[k] = num(taxas[k], 0); });
+        writeData("settings.json", s);
+      }
+      if (Array.isArray(custos) && custos.length) {
+        const products = readData("products.json");
+        for (const c of custos) {
+          const p = products.find(pp => pp.id === c.product_id);
+          const v = p && (p.variants || [])[c.variant_idx];
+          if (v) v.cost = Math.round((parseFloat(c.cost) || 0) * 100) / 100;
+        }
+        writeData("products.json", products);
+      }
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, error: e.message });
+    }
+  });
+
+  // Troca usuário/senha desta área (exige a senha atual)
+  app.post("/custos/credenciais", async (req, res) => {
+    if (!custosAuth(req)) return res.status(401).json({ ok: false, error: "Sessão expirada — entre de novo" });
+    try {
+      const { senha_atual, novo_user, nova_senha } = req.body || {};
+      const s = readData("settings.json") || {};
+      const atualOk = s.custos_pass_hash
+        ? await bcryptC.compare(String(senha_atual || ""), s.custos_pass_hash)
+        : String(senha_atual || "") === CUSTOS_DEFAULT_PASS;
+      if (!atualOk) return res.status(401).json({ ok: false, error: "Senha atual incorreta" });
+      if (!novo_user || !String(novo_user).trim()) return res.status(400).json({ ok: false, error: "Informe o novo usuário" });
+      if (!nova_senha || String(nova_senha).length < 6) return res.status(400).json({ ok: false, error: "Nova senha: mínimo 6 caracteres" });
+      s.custos_user = String(novo_user).toLowerCase().trim();
+      s.custos_pass_hash = bcryptC.hashSync(String(nova_senha), 10);
+      writeData("settings.json", s);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, error: e.message });
+    }
+  });
+
+  console.log("✅ Catálogo registrado: /catalogo (equipe) + /custos (cofre com login próprio)");
 }
 
 module.exports = { registerCatalogoRoutes };
