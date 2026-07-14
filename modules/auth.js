@@ -24,6 +24,16 @@ function setSessionCookie(res, token) {
   });
 }
 
+// Decodifica o usuário do request SEM exigir auth (retorna null se não logado).
+// Usado por middlewares que precisam saber o papel antes das rotas (ex.: lockdown do vendedor).
+function decodeUser(req) {
+  const bearerHeader = req.headers["authorization"] || "";
+  const bearerToken  = bearerHeader.startsWith("Bearer ") ? bearerHeader.slice(7).trim() : "";
+  const token = req.cookies?.[COOKIE_NAME] || req.headers["x-session-token"] || bearerToken;
+  if (!token || isTokenBlacklisted(token)) return null;
+  try { return jwt.verify(token, JWT_SECRET); } catch { return null; }
+}
+
 // ─── middleware requireAuth ─────────────────────────────────────────────────
 function requireAuth(req, res, next) {
   const bearerHeader = req.headers["authorization"] || "";
@@ -220,4 +230,5 @@ module.exports = {
   requireAuth,
   requireOwner,
   requireAdminPlus,
+  decodeUser,
 };

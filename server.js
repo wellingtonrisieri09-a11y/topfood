@@ -3,7 +3,8 @@ const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
 const { readData, writeData, readSettings, db, auditLog, blacklistToken, isTokenBlacklisted, releaseExpiredReservations, cleanBlacklist } = require('./db');
 const { registerSeoRoutes, seoTitle, seoContent } = require('./modules/seo');
-const { registerAuthRoutes, requireAuth, requireOwner, requireAdminPlus } = require('./modules/auth');
+const { registerAuthRoutes, requireAuth, requireOwner, requireAdminPlus, decodeUser } = require('./modules/auth');
+const { registerVendedorRoutes } = require('./modules/vendedor');
 const { registerFeedRoutes }   = require('./modules/feeds');
 const { registerBudgetRoutes } = require('./modules/budget');
 const { registerBackupRoutes } = require('./modules/backup');
@@ -38,6 +39,7 @@ const ROLE_PERMISSIONS = {
   socio:      { pages: ['overview','orders','reports','campaigns'],   canDelete: true,  canSettings: false },
   secretaria: { pages: ['orders','customers','abandoned','contact'],  canDelete: false, canSettings: false },
   designer:   { pages: ['orders'],                                    canDelete: false, canSettings: false },
+  vendedor:   { pages: ['vender'],                                    canDelete: false, canSettings: false },
 };
 function hasPermission(role, resource) {
   const p = ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.designer;
@@ -301,6 +303,29 @@ app.use(express.static(path.join(__dirname), {
 }));
 
 // ============================================================
+// LOCKDOWN VENDEDOR — vendedor só acessa o próprio módulo.
+// Nada de settings, pedidos gerais, clientes, eco etc.
+// (cookie-parser aqui em cima p/ o decodeUser enxergar o cookie
+// também — o registerAuthRoutes registra de novo mais abaixo, ok)
+// ============================================================
+app.use(require('cookie-parser')());
+const VENDEDOR_ADMIN_ALLOW = new Set(['/login', '/logout', '/me', '/change-password']);
+app.use('/api/admin', (req, res, next) => {
+  const u = decodeUser(req);
+  if (u && u.role === 'vendedor' && !VENDEDOR_ADMIN_ALLOW.has(req.path)) {
+    return res.status(403).json({ error: 'Acesso negado para seu perfil.' });
+  }
+  next();
+});
+app.use('/api/eco', (req, res, next) => {
+  const u = decodeUser(req);
+  if (u && u.role === 'vendedor') {
+    return res.status(403).json({ error: 'Acesso negado para seu perfil.' });
+  }
+  next();
+});
+
+// ============================================================
 // RATE LIMITING — Protege login contra força bruta
 // ============================================================
 
@@ -326,7 +351,7 @@ app.get('/api/admin/users', requireAuth, requireRole('users'), (req, res) => {
 });
 
 app.post('/api/admin/users', requireAuth, requireRole('users'), (req, res) => {
-  const { name, username, password, role } = req.body;
+  const { name, username, password, role, comissao_pct } = req.body;
   if (!name || !username || !password || !role) return res.status(400).json({ error: 'Dados obrigatórios ausentes.' });
   if (!ROLE_PERMISSIONS[role]) return res.status(400).json({ error: 'Perfil inválido.' });
 
@@ -345,6 +370,7 @@ app.post('/api/admin/users', requireAuth, requireRole('users'), (req, res) => {
     created_at: new Date().toISOString(),
     last_login: null,
   };
+  if (role === 'vendedor') newUser.comissao_pct = require('./modules/vendedor').clampPct(comissao_pct);
   users.push(newUser);
   writeData('users.json', users);
   console.log(`👤 Usuário criado: ${newUser.username} (${newUser.role})`);
@@ -358,11 +384,13 @@ app.put('/api/admin/users/:id', requireAuth, requireRole('users'), (req, res) =>
   const idx   = users.findIndex(u => u.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
-  const { name, role, active, password } = req.body;
+  const { name, role, active, password, comissao_pct } = req.body;
   if (name)               users[idx].name   = name.trim();
   if (role && ROLE_PERMISSIONS[role]) users[idx].role = role;
   if (typeof active === 'boolean') users[idx].active = active;
   if (password && password.length >= 6) users[idx].password_hash = require('bcryptjs').hashSync(password, 10);
+  if (comissao_pct != null && users[idx].role === 'vendedor')
+    users[idx].comissao_pct = require('./modules/vendedor').clampPct(comissao_pct);
 
   // Não permite desativar o único admin
   if (users[idx].role === 'admin' && users[idx].active === false) {
@@ -1648,6 +1676,7 @@ registerGuiaRoutes(app);
 registerMarketingRoutes(app, requireAuth);
 registerAnunciosRoutes(app, requireAuth);
 registerWaCloudRoutes(app, requireAuth, requireOwner);
+registerVendedorRoutes(app, { readData, writeData, requireAuth });
 
 // Limpar blacklist e reservas expiradas a cada 30min
 setInterval(() => { try { cleanBlacklist(); releaseExpiredReservations(); } catch(e){} }, 30 * 60 * 1000);

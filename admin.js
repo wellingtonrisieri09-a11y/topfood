@@ -4,13 +4,14 @@
 ══════════════════════════════════════════════════════ */
 // Permissões espelhadas do servidor (para UI)
 const ROLE_PERMISSIONS = {
-  owner:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','newsletter','contact','settings','nfe','users'], canDelete: true  },
-  admin:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','contact','settings','nfe','users'], canDelete: true  },
-  socio:      { pages: ['overview','orders','reports','adcenter','campaigns'],                                                                 canDelete: true  },
+  owner:      { pages: ['overview','orders','vender','comissoes','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','newsletter','contact','settings','nfe','users'], canDelete: true  },
+  admin:      { pages: ['overview','orders','vender','comissoes','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','contact','settings','nfe','users'], canDelete: true  },
+  socio:      { pages: ['overview','orders','vender','comissoes','reports','adcenter','campaigns'],                                            canDelete: true  },
   secretaria: { pages: ['orders','customers','abandoned','contact'],                                                                canDelete: false },
   designer:   { pages: ['orders'],                                                                                                  canDelete: false },
+  vendedor:   { pages: ['vender'],                                                                                                  canDelete: false },
 };
-const ROLE_LABELS = { owner:'Proprietário', admin:'Administrador', socio:'Sócio', secretaria:'Secretária', designer:'Designer' };
+const ROLE_LABELS = { owner:'Proprietário', admin:'Administrador', socio:'Sócio', secretaria:'Secretária', designer:'Designer', vendedor:'Vendedor' };
 
 let STATE = {
   orders: [],
@@ -201,7 +202,8 @@ const PAGE_TITLES = {
   customers:'Clientes', abandoned:'Carrinhos Abandonados',
   reports:'Relatórios', campaigns:'Campanhas & SEO',
   newsletter:'Newsletter — Leads', contact:'Mensagens de Contato', settings:'Configurações',
-  users:'Usuários do Painel'
+  users:'Usuários do Painel',
+  vender:'Vender — Novo Pedido', comissoes:'Comissões dos Vendedores'
 };
 function navigate(page) {
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
@@ -230,6 +232,8 @@ function navigate(page) {
   if(page==='settings')   loadSettingsForm();
   if(page==='nfe')        loadNfeConfig();
   if(page==='users')     loadUsers();
+  if(page==='vender')    renderVender();
+  if(page==='comissoes') renderComissoes();
 }
 function refreshPage() { navigate(STATE.currentPage); toast('Dados atualizados!'); }
 
@@ -612,7 +616,7 @@ function renderUsers() {
     <tr>
       <td><b>${esc(u.name)}</b></td>
       <td><code style="background:var(--bg);padding:2px 8px;border-radius:5px;font-size:.78rem">${esc(u.username)}</code></td>
-      <td><span class="badge ${u.role==='owner'?'red':u.role==='admin'?'red':u.role==='socio'?'purple':u.role==='secretaria'?'blue':'green'}">${ROLE_LABELS[u.role]||u.role}</span></td>
+      <td><span class="badge ${u.role==='owner'?'red':u.role==='admin'?'red':u.role==='socio'?'purple':u.role==='secretaria'?'blue':u.role==='vendedor'?'yellow':'green'}">${ROLE_LABELS[u.role]||u.role}${u.role==='vendedor'?` — ${u.comissao_pct??10}%`:''}</span></td>
       <td><span class="badge ${u.active?'green':'gray'}">${u.active?'Ativo':'Inativo'}</span></td>
       <td style="color:var(--muted);font-size:.78rem">${u.last_login?fmtDate(u.last_login):'Nunca'}</td>
       <td style="color:var(--muted);font-size:.78rem">${fmtDate(u.created_at)}</td>
@@ -642,7 +646,12 @@ function openUserModal(id) {
         <option value="socio"      ${u?.role==='socio'?'selected':''}>Sócio — visão geral, métricas</option>
         <option value="secretaria" ${u?.role==='secretaria'?'selected':''}>Secretária — pedidos e clientes</option>
         <option value="designer"   ${u?.role==='designer'?'selected':''}>Designer — somente pedidos</option>
+        <option value="vendedor"   ${u?.role==='vendedor'?'selected':''}>Vendedor — vende e ganha comissão</option>
       </select>
+    </div>
+    <div class="form-row" id="um-comissao-row" style="display:${u?.role==='vendedor'?'block':'none'}">
+      <label>Comissão do vendedor (%)</label>
+      <input type="number" id="um-comissao" min="0" max="50" step="0.5" value="${u?.comissao_pct??10}" placeholder="Ex: 10, 15, 20" />
     </div>
     <div style="padding:10px 14px;background:var(--blue-l);border-radius:8px;font-size:.78rem;color:var(--blue);line-height:1.6" id="um-role-hint"></div>`;
   // Atualiza hint de permissão ao mudar role
@@ -651,11 +660,14 @@ function openUserModal(id) {
     socio:'Visão geral, pedidos, relatórios e campanhas. Pode excluir pedidos. Sem acesso a configurações.',
     secretaria:'Pedidos, clientes, carrinhos abandonados e mensagens. Não pode excluir pedidos.',
     designer:'Acesso apenas à página de pedidos (consulta). Sem exclusão.',
+    vendedor:'Acesso apenas à página Vender: lança pedidos com preço do site, manda link de pagamento e acompanha as próprias comissões. Não vê os demais pedidos nem configurações.',
   };
   const updateHint = () => {
     const r = document.getElementById('um-role')?.value||'admin';
     const h = document.getElementById('um-role-hint');
     if(h) h.textContent = '🔐 ' + (roleHints[r]||'');
+    const cr = document.getElementById('um-comissao-row');
+    if(cr) cr.style.display = r==='vendedor' ? 'block' : 'none';
   };
   setTimeout(()=>{ document.getElementById('um-role')?.addEventListener('change',updateHint); updateHint(); }, 50);
 
@@ -675,14 +687,19 @@ async function saveUser(id) {
   if(!id && password.length < 6) return toast('Senha deve ter ao menos 6 caracteres.','error');
   if(id && password && password.length < 6) return toast('Senha deve ter ao menos 6 caracteres.','error');
 
+  const comissao_pct = parseFloat(document.getElementById('um-comissao')?.value);
+
   try {
     if(id) {
       const body = { name, role };
       if(password) body.password = password;
+      if(role==='vendedor' && !isNaN(comissao_pct)) body.comissao_pct = comissao_pct;
       await api('/api/admin/users/'+id, { method:'PUT', body:JSON.stringify(body) });
       toast('Usuário atualizado!');
     } else {
-      await api('/api/admin/users', { method:'POST', body:JSON.stringify({ name, username, password, role }) });
+      const body = { name, username, password, role };
+      if(role==='vendedor' && !isNaN(comissao_pct)) body.comissao_pct = comissao_pct;
+      await api('/api/admin/users', { method:'POST', body:JSON.stringify(body) });
       toast('Usuário criado com sucesso!');
     }
     closeModal();
@@ -2889,6 +2906,298 @@ const DEMO_PRODUCTS = [
   {id:'fritas',name:'Embalagem de Fritas — Cone e Balde',category:'fritas',description:'Cone e balde para fritas.',image:'images/05 - fritas abertas.png',badge:'',badgeColor:'',stars:4,active:true,sold:124,variants:[{units:50,price:38},{units:100,price:72},{units:250,price:168}]},
 ];
 const DEMO_SETTINGS = {store_name:'TopFood Embalagens',store_email:'contato@topfoodembalagens.com.br',whatsapp:'5511988856367',instagram:'',admin_password:'topfood2026',mp_access_token:'',mp_public_key:'',seo_title:'TopFood Embalagens — Embalagens que valorizam seu alimento',seo_description:'Embalagens food service para restaurantes.',seo_keywords:'embalagens food service',featured_banner:'Novidades 2026 chegando!',min_order_units:50,free_shipping_above:0};
+/* ══════════════════════════════════════════════════════
+   M11-F1 — VENDER (área do vendedor) + COMISSÕES
+══════════════════════════════════════════════════════ */
+const VENDA = { itens: [], produtos: [] };
+const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+
+function vendaCopy(text, msg) {
+  const done = () => toast(msg || 'Copiado!');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => vendaCopyFallback(text, done));
+  } else vendaCopyFallback(text, done);
+}
+function vendaCopyFallback(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); } catch(e) { toast('Não consegui copiar — copie manualmente.', 'error'); }
+  ta.remove();
+}
+
+async function renderVender() {
+  const root = document.getElementById('vender-root');
+  if (!root) return;
+  if (!VENDA.produtos.length) {
+    try {
+      VENDA.produtos = (STATE.products && STATE.products.length)
+        ? STATE.products.filter(p => p.active !== false)
+        : (await (await fetch('/api/products')).json()).filter(p => p.active !== false);
+    } catch(e) { VENDA.produtos = []; }
+  }
+
+  root.innerHTML = `
+    <div style="display:grid;gap:16px;max-width:720px">
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-user" style="color:var(--red)"></i> Cliente</h3>
+        <p style="font-size:.78rem;color:var(--muted);margin:0 0 12px">Nome e WhatsApp bastam para lançar. CPF/CNPJ e endereço são necessários para NF-e e etiqueta.</p>
+        <div class="form-row"><label>Nome / Estabelecimento *</label><input type="text" id="v-nome" placeholder="Ex: Padaria Estrela" /></div>
+        <div class="form-row"><label>WhatsApp *</label><input type="tel" id="v-fone" placeholder="Ex: 11 98888-7777" /></div>
+        <div class="form-row"><label>CPF ou CNPJ <span style="color:var(--muted);font-size:.72rem">(p/ nota fiscal)</span></label><input type="text" id="v-doc" placeholder="Somente números" /></div>
+        <div class="form-row"><label>E-mail</label><input type="email" id="v-email" placeholder="opcional" /></div>
+        <div class="form-row"><label>Endereço</label><input type="text" id="v-end" placeholder="Rua, número, bairro" /></div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px">
+          <div class="form-row"><label>Cidade</label><input type="text" id="v-cidade" /></div>
+          <div class="form-row"><label>UF</label><select id="v-uf"><option value="">—</option>${UFS.map(u=>`<option ${u==='SP'?'selected':''}>${u}</option>`).join('')}</select></div>
+          <div class="form-row"><label>CEP</label><input type="text" id="v-cep" placeholder="00000-000" /></div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 12px"><i class="fa fa-box" style="color:var(--red)"></i> Produtos <span style="font-size:.72rem;color:var(--muted);font-weight:400">(preço do site — não é editável)</span></h3>
+        <div style="display:grid;grid-template-columns:2fr 1.4fr .8fr auto;gap:8px;align-items:end">
+          <div class="form-row" style="margin:0"><label>Produto</label>
+            <select id="v-prod" onchange="vendaPacotes()">${VENDA.produtos.map((p,i)=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}</select></div>
+          <div class="form-row" style="margin:0"><label>Pacote</label><select id="v-pacote"></select></div>
+          <div class="form-row" style="margin:0"><label>Qtd</label><input type="number" id="v-qty" value="1" min="1" /></div>
+          <button class="btn btn-primary" onclick="vendaAddItem()" style="height:38px"><i class="fa fa-plus"></i></button>
+        </div>
+        <div id="venda-itens" style="margin-top:14px"></div>
+        <div class="form-row" style="margin-top:10px"><label>Frete combinado (R$) <span style="color:var(--muted);font-size:.72rem">(0 = a combinar / retirada)</span></label>
+          <input type="number" id="v-frete" value="0" min="0" step="0.01" oninput="vendaTotais()" /></div>
+        <div id="venda-total" style="font-size:1.05rem;font-weight:800;text-align:right;margin-top:6px"></div>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 12px"><i class="fa fa-credit-card" style="color:var(--red)"></i> Pagamento</h3>
+        <div style="display:flex;gap:18px;font-size:.9rem">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="v-pag" value="pix" checked /> PIX</label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="v-pag" value="card" /> Cartão de crédito</label>
+        </div>
+        <p style="font-size:.75rem;color:var(--muted);margin:8px 0 0">O cliente paga direto para a TopFood pelo link — o dinheiro não passa pelo vendedor. Sem boleto na venda por vendedor.</p>
+        <div class="form-row" style="margin-top:10px"><label>Observações</label><input type="text" id="v-obs" placeholder="opcional" /></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:14px;padding:13px;font-size:1rem" onclick="vendaLancar()" id="v-lancar">
+          <i class="fa fa-paper-plane"></i> Lançar pedido e gerar cobrança</button>
+      </div>
+
+      <div id="venda-result"></div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-list-check" style="color:var(--red)"></i> Minhas vendas</h3>
+        <div id="venda-resumo" style="margin:8px 0"></div>
+        <div id="minhas-vendas" style="overflow-x:auto"></div>
+      </div>
+    </div>`;
+
+  vendaPacotes();
+  vendaRenderItens();
+  vendaLoadMinhas();
+}
+
+function vendaPacotes() {
+  const pid = document.getElementById('v-prod')?.value;
+  const p = VENDA.produtos.find(x => x.id === pid);
+  const sel = document.getElementById('v-pacote');
+  if (!sel || !p) return;
+  sel.innerHTML = (p.variants||[]).map(v => `<option value="${v.units}">${v.units} un — R$ ${fmt(v.price)}</option>`).join('');
+}
+
+function vendaAddItem() {
+  const pid   = document.getElementById('v-prod')?.value;
+  const units = parseInt(document.getElementById('v-pacote')?.value, 10);
+  const qty   = Math.max(1, parseInt(document.getElementById('v-qty')?.value, 10) || 1);
+  const p = VENDA.produtos.find(x => x.id === pid);
+  const v = p && (p.variants||[]).find(vv => Number(vv.units) === units);
+  if (!p || !v) return toast('Selecione produto e pacote.', 'error');
+  const existing = VENDA.itens.find(i => i.product_id === pid && i.units === units);
+  if (existing) existing.qty += qty;
+  else VENDA.itens.push({ product_id: pid, name: p.name, units, qty, price: v.price });
+  vendaRenderItens();
+}
+
+function vendaRemItem(idx) { VENDA.itens.splice(idx, 1); vendaRenderItens(); }
+
+function vendaRenderItens() {
+  const box = document.getElementById('venda-itens');
+  if (!box) return;
+  box.innerHTML = !VENDA.itens.length
+    ? '<p style="color:var(--muted);font-size:.82rem;text-align:center;padding:8px">Nenhum item ainda — adicione acima.</p>'
+    : `<table style="width:100%;font-size:.82rem;border-collapse:collapse">
+        ${VENDA.itens.map((i, idx) => `
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:7px 4px">${escapeHtml(i.name)} <b>(${i.units} un)</b></td>
+          <td style="padding:7px 4px;text-align:center;white-space:nowrap">${i.qty} × R$ ${fmt(i.price)}</td>
+          <td style="padding:7px 4px;text-align:right;font-weight:700;white-space:nowrap">R$ ${fmt(i.qty * i.price)}</td>
+          <td style="padding:7px 4px;text-align:right"><button class="btn btn-ghost btn-icon" onclick="vendaRemItem(${idx})" style="color:var(--red)"><i class="fa fa-times"></i></button></td>
+        </tr>`).join('')}
+      </table>`;
+  vendaTotais();
+}
+
+function vendaTotais() {
+  const el = document.getElementById('venda-total');
+  if (!el) return;
+  const sub   = VENDA.itens.reduce((s, i) => s + i.qty * i.price, 0);
+  const frete = parseFloat(document.getElementById('v-frete')?.value) || 0;
+  el.innerHTML = `Subtotal: R$ ${fmt(sub)} &nbsp;·&nbsp; Frete: R$ ${fmt(frete)} &nbsp;·&nbsp; <span style="color:var(--red)">Total: R$ ${fmt(sub + frete)}</span>`;
+}
+
+async function vendaLancar() {
+  const nome = document.getElementById('v-nome')?.value.trim();
+  const fone = document.getElementById('v-fone')?.value.trim();
+  if (!nome) return toast('Informe o nome do cliente.', 'error');
+  if (!fone) return toast('Informe o WhatsApp do cliente.', 'error');
+  if (!VENDA.itens.length) return toast('Adicione ao menos um produto.', 'error');
+
+  const btn = document.getElementById('v-lancar');
+  btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Lançando...';
+  try {
+    const body = {
+      customer: {
+        name: nome, phone: fone,
+        doc:   document.getElementById('v-doc')?.value.trim() || '',
+        email: document.getElementById('v-email')?.value.trim() || '',
+        address: document.getElementById('v-end')?.value.trim() || '',
+        city:  document.getElementById('v-cidade')?.value.trim() || '',
+        state: document.getElementById('v-uf')?.value || '',
+        cep:   document.getElementById('v-cep')?.value.trim() || '',
+      },
+      items: VENDA.itens.map(i => ({ product_id: i.product_id, units: i.units, qty: i.qty })),
+      shipping_price: parseFloat(document.getElementById('v-frete')?.value) || 0,
+      payment_method: document.querySelector('input[name="v-pag"]:checked')?.value || 'pix',
+      notes: document.getElementById('v-obs')?.value.trim() || '',
+    };
+    const r = await api('/api/vendedor/orders', { method: 'POST', body: JSON.stringify(body) });
+    VENDA.itens = [];
+    vendaRenderItens();
+    vendaShowResult(r);
+    vendaLoadMinhas();
+    toast('Pedido ' + r.order.id + ' lançado!');
+  } catch(e) {
+    toast('Erro ao lançar pedido: ' + e.message, 'error');
+  }
+  btn.disabled = false; btn.innerHTML = '<i class="fa fa-paper-plane"></i> Lançar pedido e gerar cobrança';
+}
+
+function vendaShowResult(r) {
+  const box = document.getElementById('venda-result');
+  if (!box) return;
+  const o = r.order;
+  const foneDigits = String(o.customer.phone || '').replace(/\D/g, '');
+  const wa = foneDigits ? (foneDigits.startsWith('55') ? foneDigits : '55' + foneDigits) : '';
+  const msg = `Olá ${o.customer.name}! Seu pedido ${o.id} na TopFood Embalagens ficou em R$ ${fmt(o.total)}.`
+    + (o.payment_link ? ` Pague por aqui: ${o.payment_link}` : '');
+  box.innerHTML = `
+    <div class="card" style="padding:18px;border:2px solid var(--green);background:var(--green-l,#f0fdf4)">
+      <h3 style="margin:0 0 8px;color:var(--green)"><i class="fa fa-check-circle"></i> Pedido ${o.id} lançado — R$ ${fmt(o.total)}</h3>
+      ${o.payment_link ? `
+        <p style="font-size:.82rem;margin:0 0 10px;word-break:break-all">Link de pagamento: <a href="${o.payment_link}" target="_blank" rel="noopener">${o.payment_link}</a></p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${wa ? `<a class="btn btn-wa" href="https://wa.me/${wa}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Mandar no WhatsApp</a>` : ''}
+          <button class="btn btn-secondary" onclick="vendaCopy('${o.payment_link}','Link copiado!')"><i class="fa fa-copy"></i> Copiar link</button>
+          ${o.pix_copy_paste ? `<button class="btn btn-secondary" onclick="vendaCopy(document.getElementById('venda-cp').value,'PIX copia-e-cola copiado!')"><i class="fa fa-qrcode"></i> Copiar PIX copia-e-cola</button><input type="hidden" id="venda-cp" value="${escapeHtml(o.pix_copy_paste)}">` : ''}
+        </div>`
+      : `<p style="font-size:.82rem;margin:0;color:var(--orange)">⚠️ ${escapeHtml(r.charge_error || 'Cobrança automática não gerada')} — combine o pagamento com o cliente; o admin confirma manualmente no painel.</p>`}
+      <p style="font-size:.78rem;color:var(--muted);margin:10px 0 0">Sua comissão prevista neste pedido: <b>R$ ${fmt(o.comissao_prevista)}</b> (${o.comissao_pct}% sobre os produtos) — vale após o pagamento.</p>
+    </div>`;
+  box.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function vendaLoadMinhas() {
+  const box = document.getElementById('minhas-vendas');
+  const resumo = document.getElementById('venda-resumo');
+  if (!box) return;
+  try {
+    const [mine, com] = await Promise.all([
+      api('/api/vendedor/my-orders'),
+      api('/api/vendedor/comissoes'),
+    ]);
+    if (resumo) {
+      const me = (com.vendedores || [])[0];
+      resumo.innerHTML = STATE.role === 'vendedor'
+        ? `<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem">
+             <span>📅 <b>${com.mes}</b></span>
+             <span>✅ Pedidos pagos: <b>${me ? me.pedidos_pagos : 0}</b></span>
+             <span>💰 Comissão do mês: <b style="color:var(--green)">R$ ${fmt(me ? me.comissao : 0)}</b></span>
+           </div>`
+        : '';
+    }
+    box.innerHTML = !(mine.orders || []).length
+      ? '<p style="color:var(--muted);font-size:.82rem">Nenhuma venda lançada ainda.</p>'
+      : `<table style="width:100%;font-size:.8rem;border-collapse:collapse;min-width:560px">
+          <thead><tr style="text-align:left;color:var(--muted)">
+            <th style="padding:6px 4px">Pedido</th><th>Cliente</th><th>Total</th><th>Status</th><th>Comissão</th><th></th>
+          </tr></thead>
+          <tbody>${mine.orders.map(o => `
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:7px 4px;font-weight:700">${o.id}</td>
+              <td>${escapeHtml(o.customer.name)}</td>
+              <td style="white-space:nowrap">R$ ${fmt(o.total)}</td>
+              <td><span class="badge ${o.status}">${statusLabel(o.status)}</span></td>
+              <td style="white-space:nowrap;${o.comissao_valor ? 'color:var(--green);font-weight:700' : 'color:var(--muted)'}">R$ ${fmt(o.comissao_valor || o.comissao_prevista)}${o.comissao_valor ? '' : ' <span style="font-size:.68rem">(prev.)</span>'}</td>
+              <td>${o.payment_link ? `<button class="btn btn-ghost btn-icon" title="Copiar link de pagamento" onclick="vendaCopy('${o.payment_link}','Link copiado!')"><i class="fa fa-link"></i></button>` : ''}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+  } catch(e) {
+    box.innerHTML = '<p style="color:var(--red);font-size:.82rem">Erro ao carregar vendas.</p>';
+  }
+}
+
+async function renderComissoes() {
+  const root = document.getElementById('comissoes-root');
+  if (!root) return;
+  const mes = document.getElementById('com-mes')?.value || new Date().toISOString().slice(0, 7);
+  root.innerHTML = `
+    <div class="card" style="padding:18px;max-width:860px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+        <h3 style="margin:0"><i class="fa fa-hand-holding-dollar" style="color:var(--red)"></i> Comissões por vendedor</h3>
+        <input type="month" id="com-mes" value="${mes}" onchange="renderComissoes()" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px" />
+      </div>
+      <div id="com-body">Carregando…</div>
+    </div>`;
+  try {
+    const d = await api('/api/vendedor/comissoes?mes=' + mes);
+    const body = document.getElementById('com-body');
+    if (!(d.vendedores || []).length) {
+      body.innerHTML = '<p style="color:var(--muted);font-size:.85rem">Nenhuma venda de vendedor neste mês.</p>';
+      return;
+    }
+    body.innerHTML = `
+      <div style="overflow-x:auto"><table style="width:100%;font-size:.82rem;border-collapse:collapse;min-width:620px">
+        <thead><tr style="text-align:left;color:var(--muted)">
+          <th style="padding:6px 4px">Vendedor</th><th>Pedidos (pagos)</th><th>Total vendido</th><th>Base (sem frete)</th><th>Comissão a pagar</th>
+        </tr></thead>
+        <tbody>${d.vendedores.map(v => `
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:8px 4px;font-weight:700">${escapeHtml(v.nome)}</td>
+            <td>${v.pedidos_pagos} de ${v.pedidos}</td>
+            <td style="white-space:nowrap">R$ ${fmt(v.total_vendido)}</td>
+            <td style="white-space:nowrap">R$ ${fmt(v.base_comissao)}</td>
+            <td style="white-space:nowrap;color:var(--green);font-weight:800">R$ ${fmt(v.comissao)}</td>
+          </tr>`).join('')}</tbody>
+      </table></div>
+      <p style="font-size:.72rem;color:var(--muted);margin:10px 0 0">Comissão = % do vendedor sobre o valor dos produtos (sem frete) dos pedidos <b>pagos</b> no mês. O % usado é o que estava combinado no momento de cada venda.</p>
+      <h4 style="margin:18px 0 8px">Vendas do mês</h4>
+      <div style="overflow-x:auto"><table style="width:100%;font-size:.78rem;border-collapse:collapse;min-width:620px">
+        <thead><tr style="text-align:left;color:var(--muted)"><th style="padding:5px 4px">Pedido</th><th>Cliente</th><th>Total</th><th>Status</th><th>%</th><th>Comissão</th></tr></thead>
+        <tbody>${d.pedidos.map(o => `
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:6px 4px;font-weight:700">${o.id}</td>
+            <td>${escapeHtml(o.customer.name)}</td>
+            <td style="white-space:nowrap">R$ ${fmt(o.total)}</td>
+            <td><span class="badge ${o.status}">${statusLabel(o.status)}</span></td>
+            <td>${o.comissao_pct}%</td>
+            <td style="white-space:nowrap">R$ ${fmt(o.comissao_valor || 0)}</td>
+          </tr>`).join('')}</tbody>
+      </table></div>`;
+  } catch(e) {
+    const body = document.getElementById('com-body');
+    if (body) body.innerHTML = '<p style="color:var(--red);font-size:.85rem">Erro ao carregar comissões.</p>';
+  }
+}
+
 const DEMO_ABANDONED = [
   {id:'AB-001',date:'2026-05-25T08:45:00Z',cep:'01310-100',items:[{name:'Embalagem de Pastel (pacote 100 un)',qty:2,price:85},{name:'Embalagem de Fritas (pacote 50 un)',qty:1,price:38}],total:208,recovered:false},
   {id:'AB-002',date:'2026-05-24T17:20:00Z',cep:'20040-020',items:[{name:'Embalagem de Hamburguer (pacote 250 un)',qty:1,price:185}],total:185,recovered:false},

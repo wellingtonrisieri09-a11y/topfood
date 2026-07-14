@@ -319,6 +319,8 @@
       <div class="nav-label">Principal</div>
       <div class="nav-item active" data-page="overview" onclick="navigate('overview')"><i class="fa fa-chart-pie nav-icon"></i><span>Visão Geral</span></div>
       <div class="nav-item" data-page="orders" onclick="navigate('orders')"><i class="fa fa-box nav-icon"></i><span>Pedidos</span><span class="nav-badge" id="badge-orders">0</span></div>
+      <div class="nav-item" data-page="vender" onclick="navigate('vender')"><i class="fa fa-cart-plus nav-icon"></i><span>Vender</span></div>
+      <div class="nav-item" data-page="comissoes" onclick="navigate('comissoes')"><i class="fa fa-hand-holding-dollar nav-icon"></i><span>Comissões</span></div>
       <div class="nav-item" data-page="products" onclick="navigate('products')"><i class="fa fa-tag nav-icon"></i><span>Produtos</span></div>
       <div class="nav-label">Clientes</div>
       <div class="nav-item" data-page="customers" onclick="navigate('customers')"><i class="fa fa-users nav-icon"></i><span>Clientes</span></div>
@@ -1121,6 +1123,18 @@
             </div>
           </div>
         </div>
+      </section>
+
+      <!-- ── VENDER (M11-F1: vendedor externo) ──── -->
+      <section id="page-vender" class="page">
+        <div class="page-header"><h1><i class="fa fa-cart-plus"></i> Vender — Novo Pedido</h1></div>
+        <div id="vender-root"></div>
+      </section>
+
+      <!-- ── COMISSÕES (M11-F1) ─────────────────── -->
+      <section id="page-comissoes" class="page">
+        <div class="page-header"><h1><i class="fa fa-hand-holding-dollar"></i> Comissões dos Vendedores</h1></div>
+        <div id="comissoes-root"></div>
       </section>
 
       <!-- ── USUÁRIOS ───────────────────────────── -->
