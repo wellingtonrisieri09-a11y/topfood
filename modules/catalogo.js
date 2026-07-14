@@ -278,20 +278,22 @@ function renderCustos(readData) {
     (p.variants || []).forEach((v, i) => {
       const detalhe = Array.isArray(v.options) && v.options.length ? v.options.join(" · ")
                     : (v.label || "");
-      // custo legado em R$ (antes do modelo kg/hora) segura o lucro até preencher as quantidades
+      // custo legado em R$ (antes do modelo formato×gramatura) segura o lucro até preencher
       const legado = (parseFloat(v.cost_papel) || 0) + (parseFloat(v.cost_acabamento) || 0) + (parseFloat(v.cost_impressao) || 0)
                    || (parseFloat(v.cost) || 0);
-      // kg de papel AUTOMÁTICO: peso unitário (gramas, do cadastro do produto) × unidades do pacote
-      const pesoG = parseFloat(p.weight_per_unit) || 0;
-      const kgAuto = pesoG > 0 ? Math.round(pesoG * (v.units || 0) / 1000 * 100) / 100 : "";
       linhas.push({
         pid: p.id, vidx: i,
         produto: i === 0 ? p.name : "",
         variacao: `${detalhe ? detalhe + " — " : ""}${v.units} un`,
+        units: v.units || 0,
         preco: parseFloat(v.price) || 0,
         legado,
-        papelKg: v.papel_kg ?? kgAuto,   // salvo manualmente vence; senão vem do peso do cadastro
-        kgAuto,
+        // papel: formato (cm) × gramatura (g/m²) × preço do fornecedor (R$/kg)
+        fmtL:    v.papel_fmt_l ?? "",
+        fmtA:    v.papel_fmt_a ?? "",
+        gram:    v.papel_gram ?? "",
+        precoKg: v.papel_preco_kg ?? "",
+        pesoUnCadastro: parseFloat(p.weight_per_unit) || 0,  // fallback: peso unitário (g) do cadastro
         acabH:   v.acab_horas ?? "",
         imprH:   v.impr_horas ?? "",
       });
@@ -303,11 +305,22 @@ function renderCustos(readData) {
      <div class="mini c-r${campo}">—</div>`;
 
   const rows = linhas.map(l => `
-    <tr data-preco="${l.preco}" data-legado="${l.legado}">
+    <tr data-preco="${l.preco}" data-legado="${l.legado}" data-units="${l.units}" data-pesocad="${l.pesoUnCadastro}">
       <td class="prod">${esc(l.produto)}</td>
       <td>${esc(l.variacao)}</td>
       <td class="dir">R$ ${money(l.preco)}</td>
-      <td class="dir">${inQtd(l, "papel", l.papelKg, l.kgAuto ? `Calculado do cadastro: peso unitário × ${"" + l.variacao.match(/\d+ un/)} = ${l.kgAuto} kg (pode ajustar)` : "Quilos de papel usados neste pacote — dica: cadastre o peso unitário (g) no produto e este campo preenche sozinho", "kg")}</td>
+      <td class="dir">
+        <div style="display:flex;gap:3px;justify-content:flex-end;align-items:center">
+          <input type="number" class="in-custo in-fmtl" data-pid="${esc(l.pid)}" data-vidx="${l.vidx}" step="0.1" min="0" style="width:46px" value="${l.fmtL}" placeholder="L cm" title="Largura do formato (cm)">
+          <span style="font-size:10px;color:#92400e">×</span>
+          <input type="number" class="in-custo in-fmta" step="0.1" min="0" style="width:46px" value="${l.fmtA}" placeholder="A cm" title="Altura do formato (cm)">
+        </div>
+        <div style="display:flex;gap:3px;justify-content:flex-end;margin-top:3px">
+          <input type="number" class="in-custo in-gram" step="1" min="0" style="width:50px" value="${l.gram}" placeholder="g/m²" title="Gramatura do papel (g/m²): 200, 250, 300, 350...">
+          <input type="number" class="in-custo in-pkgrow" step="0.01" min="0" style="width:50px" value="${l.precoKg}" placeholder="R$/kg" title="Preço do fornecedor deste papel (R$/kg) — vazio usa o padrão do topo">
+        </div>
+        <div class="mini c-rpapel">—</div>
+      </td>
       <td class="dir">${inQtd(l, "acab", l.acabH, "Horas de acabamento deste pacote", "horas")}</td>
       <td class="dir">${inQtd(l, "impr", l.imprH, "Horas de impressão deste pacote", "horas")}</td>
       <td class="dir c-totmp" style="font-weight:800;color:#92400e">—</td>
@@ -447,7 +460,7 @@ function renderCustos(readData) {
   <div class="tb-wrap"><table id="tb">
     <thead><tr>
       <th>Produto</th><th>Variação / Pacote</th><th>Preço venda</th>
-      <th>Papel (kg)</th><th>Acabamento (horas)</th><th>Impressão (horas)</th><th>Total mat.-prima</th>
+      <th>Papel: formato (cm) · gramatura · R$/kg</th><th>Acabamento (horas)</th><th>Impressão (horas)</th><th>Total mat.-prima</th>
       <th>Imposto</th><th>Taxa Asaas</th><th>Lucro SITE</th><th>Lucro c/ VENDEDOR</th>
       <th>Taxa ML</th><th>Lucro ML</th><th>Taxa Shopee</th><th>Lucro Shopee</th><th>Taxa Amazon</th><th>Lucro Amazon</th>
     </tr></thead>
@@ -459,7 +472,7 @@ function renderCustos(readData) {
     <b>Lucro c/ VENDEDOR</b> = Lucro SITE − comissão do vendedor &nbsp;·&nbsp;
     <b>Lucro ML / Shopee / Amazon</b> = preço − matéria-prima − imposto − taxa do canal (frete dos marketplaces não incluso).<br>
     Campos amarelos = quantidades POR PACOTE: <b>papel em kg</b>, <b>acabamento e impressão em horas</b>. O R$ de cada um = quantidade × custo unitário (configurado em "Custos de produção" acima); o Total mat.-prima é a soma e vira o campo "custo" da página Produtos ao salvar. Valores antigos em R$ aparecem como "(antigo)" até você preencher as quantidades.<br>
-    📦 <b>Papel (kg) preenche sozinho</b> quando o produto tem o <b>peso unitário em gramas</b> cadastrado (página Produtos): peso × unidades do pacote ÷ 1000. Ex.: caixa de 30 g × 100 un = 3 kg. Você pode ajustar o valor na mão — o ajuste manual vence.<br>
+    📦 <b>Papel</b> = formato (L × A em cm) × gramatura (g/m²) = peso da unidade; × unidades do pacote = kg; × R$/kg do fornecedor = custo. Ex.: 25×25 cm em 300 g/m² = 18,8 g/un → 100 un = 1,88 kg → a R$ 8/kg = R$ 15,00. O R$/kg da linha vence o padrão do topo (cada papel tem seu preço). Sem formato preenchido, usa o peso unitário do cadastro do produto.<br>
     🔒 Área restrita com login próprio — não compartilhe este acesso. O catálogo de vendas (sem custos) é o /catalogo.
   </p>
 
@@ -490,17 +503,31 @@ function recalc(){
   var ihr=parseFloat(document.getElementById('tx-ihr').value)||0;
   document.querySelectorAll('#tb tbody tr[data-preco]').forEach(function(tr){
     var preco=parseFloat(tr.dataset.preco)||0;
-    var kg=parseFloat(tr.querySelector('.in-papel').value)||0;
+    var units=parseFloat(tr.dataset.units)||0;
+    // PAPEL: peso da unidade = (L cm × A cm ÷ 10000) m² × gramatura g/m²
+    //        kg do pacote = peso un × unidades ÷ 1000
+    //        custo = kg × R$/kg (da linha; vazio usa o padrão do topo)
+    var L=parseFloat(tr.querySelector('.in-fmtl').value)||0;
+    var A=parseFloat(tr.querySelector('.in-fmta').value)||0;
+    var gram=parseFloat(tr.querySelector('.in-gram').value)||0;
+    var precoKg=parseFloat(tr.querySelector('.in-pkgrow').value)||pkg;
+    var pesoUnG=0;
+    if(L&&A&&gram) pesoUnG=(L*A/10000)*gram;
+    else if(parseFloat(tr.dataset.pesocad)) pesoUnG=parseFloat(tr.dataset.pesocad); // fallback: peso unitário do cadastro
+    var kgPacote=pesoUnG*units/1000;
+    var rPapel=kgPacote*precoKg;
+    tr.querySelector('.c-rpapel').textContent = pesoUnG
+      ? Math.round(pesoUnG*10)/10+'g/un · '+(Math.round(kgPacote*100)/100)+'kg = R$ '+fmt(rPapel)
+      : '—';
     var ha=parseFloat(tr.querySelector('.in-acab').value)||0;
     var hi=parseFloat(tr.querySelector('.in-impr').value)||0;
-    var rPapel=kg*pkg, rAcab=ha*ahr, rImpr=hi*ihr;
-    tr.querySelector('.c-rpapel').textContent = kg ? '= R$ '+fmt(rPapel) : '—';
+    var rAcab=ha*ahr, rImpr=hi*ihr;
     tr.querySelector('.c-racab').textContent  = ha ? '= R$ '+fmt(rAcab) : '—';
     tr.querySelector('.c-rimpr').textContent  = hi ? '= R$ '+fmt(rImpr) : '—';
     var custo=rPapel+rAcab+rImpr;
     var legado=parseFloat(tr.dataset.legado)||0;
     var usandoLegado=false;
-    if(!custo && legado){ custo=legado; usandoLegado=true; } // valor antigo em R$ segura o cálculo até preencher kg/horas
+    if(!custo && legado){ custo=legado; usandoLegado=true; } // valor antigo em R$ segura o cálculo até preencher formato/horas
     tr.querySelector('.c-totmp').innerHTML = custo ? 'R$ '+fmt(custo)+(usandoLegado?' <span class="pct">(antigo)</span>':'') : '—';
     var imposto=preco*fpct/100, ta=preco*apct/100+afix, comis=preco*vpct/100;
     var tm=preco*mpct/100+mfix, ts=preco*spct/100+sfix, tz=preco*zpct/100+zfix;
@@ -540,11 +567,18 @@ async function salvarTudo(){
       custo_impr_hora:parseFloat(document.getElementById('tx-ihr').value)||0 };
     var pkg=taxas.custo_papel_kg, ahr=taxas.custo_acab_hora, ihr=taxas.custo_impr_hora;
     var custos=[].map.call(document.querySelectorAll('#tb tbody tr[data-preco]'),function(tr){
-      var papel=tr.querySelector('.in-papel');
-      var kg=parseFloat(papel.value)||0, ha=parseFloat(tr.querySelector('.in-acab').value)||0, hi=parseFloat(tr.querySelector('.in-impr').value)||0;
-      return { product_id:papel.dataset.pid, variant_idx:parseInt(papel.dataset.vidx,10),
+      var ref=tr.querySelector('.in-fmtl');
+      var units=parseFloat(tr.dataset.units)||0;
+      var L=parseFloat(ref.value)||0, A=parseFloat(tr.querySelector('.in-fmta').value)||0;
+      var gram=parseFloat(tr.querySelector('.in-gram').value)||0;
+      var precoKg=parseFloat(tr.querySelector('.in-pkgrow').value)||0;
+      var pesoUnG = (L&&A&&gram) ? (L*A/10000)*gram : (parseFloat(tr.dataset.pesocad)||0);
+      var kg=pesoUnG*units/1000;
+      var ha=parseFloat(tr.querySelector('.in-acab').value)||0, hi=parseFloat(tr.querySelector('.in-impr').value)||0;
+      return { product_id:ref.dataset.pid, variant_idx:parseInt(ref.dataset.vidx,10),
+        papel_fmt_l:L, papel_fmt_a:A, papel_gram:gram, papel_preco_kg:precoKg,
         papel_kg:kg, acab_horas:ha, impr_horas:hi,
-        cost_papel:kg*pkg, cost_acabamento:ha*ahr, cost_impressao:hi*ihr,
+        cost_papel:kg*(precoKg||pkg), cost_acabamento:ha*ahr, cost_impressao:hi*ihr,
         tem_qtd:(kg>0||ha>0||hi>0) };
     });
     var r=await fetch('/custos/salvar',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
@@ -690,7 +724,11 @@ function registerCatalogoRoutes(app, readData, decodeUser, writeData) {
           const v = p && (p.variants || [])[c.variant_idx];
           if (!v) continue;
           if (c.papel_kg !== undefined || c.acab_horas !== undefined || c.impr_horas !== undefined) {
-            // modelo kg/horas: guarda as quantidades e os R$ calculados
+            // modelo formato×gramatura×R$/kg + horas: guarda tudo e os R$ calculados
+            v.papel_fmt_l     = r2(c.papel_fmt_l);
+            v.papel_fmt_a     = r2(c.papel_fmt_a);
+            v.papel_gram      = r2(c.papel_gram);
+            v.papel_preco_kg  = r2(c.papel_preco_kg);
             v.papel_kg   = r2(c.papel_kg);
             v.acab_horas = r2(c.acab_horas);
             v.impr_horas = r2(c.impr_horas);
