@@ -6,6 +6,7 @@ const { registerSeoRoutes, seoTitle, seoContent } = require('./modules/seo');
 const { registerAuthRoutes, requireAuth, requireOwner, requireAdminPlus, decodeUser } = require('./modules/auth');
 const { registerVendedorRoutes } = require('./modules/vendedor');
 const { registerEmpresasRoutes } = require('./modules/empresas');
+const { registerCatalogoRoutes } = require('./modules/catalogo');
 const { registerFeedRoutes }   = require('./modules/feeds');
 const { registerBudgetRoutes } = require('./modules/budget');
 const { registerBackupRoutes } = require('./modules/backup');
@@ -1684,6 +1685,7 @@ registerAnunciosRoutes(app, requireAuth);
 registerWaCloudRoutes(app, requireAuth, requireOwner);
 registerVendedorRoutes(app, { readData, writeData, requireAuth });
 registerEmpresasRoutes(app, { readData, writeData, requireAdminPlus, requireAuth });
+registerCatalogoRoutes(app, readData);
 
 // Limpar blacklist e reservas expiradas a cada 30min
 setInterval(() => { try { cleanBlacklist(); releaseExpiredReservations(); } catch(e){} }, 30 * 60 * 1000);

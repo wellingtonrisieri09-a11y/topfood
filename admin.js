@@ -2966,7 +2966,10 @@ async function renderVender() {
     <div style="display:grid;gap:16px;max-width:720px;padding-bottom:86px">
 
       <div class="card" style="padding:18px">
-        <h3 style="margin:0 0 4px"><i class="fa fa-box" style="color:var(--red)"></i> 1. Produtos <span style="font-size:.72rem;color:var(--muted);font-weight:400">(preço do site — não é editável)</span></h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <h3 style="margin:0 0 4px"><i class="fa fa-box" style="color:var(--red)"></i> 1. Produtos <span style="font-size:.72rem;color:var(--muted);font-weight:400">(preço do site — não é editável)</span></h3>
+          <a class="btn btn-secondary" href="/catalogo" target="_blank" rel="noopener" style="font-size:.78rem"><i class="fa fa-book"></i> Catálogo PDF</a>
+        </div>
         <p style="font-size:.78rem;color:var(--muted);margin:0 0 12px">Toque no produto para escolher cor, tamanho, pacote e quantidade.</p>
         <div id="venda-vitrine" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px"></div>
         <h4 style="margin:16px 0 4px">🛒 Itens da venda</h4>
