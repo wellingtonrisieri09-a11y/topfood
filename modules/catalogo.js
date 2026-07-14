@@ -317,9 +317,8 @@ function renderCustos(readData) {
           <span style="font-size:10px;color:#92400e">×</span>
           <input type="number" class="in-custo in-fmta" step="0.1" min="0" style="width:46px" value="${l.fmtA}" placeholder="A cm" title="Altura do formato (cm)">
         </div>
-        <div style="display:flex;gap:3px;justify-content:flex-end;margin-top:3px">
-          <input type="number" class="in-custo in-gram" step="1" min="0" style="width:50px" value="${l.gram}" placeholder="g/m²" title="Gramatura do papel (g/m²): 200, 250, 300, 350...">
-          <input type="number" class="in-custo in-pkgrow" step="0.01" min="0" style="width:50px" value="${l.precoKg}" placeholder="R$/kg" title="Preço do fornecedor deste papel (R$/kg) — vazio usa o padrão do topo">
+        <div style="display:flex;justify-content:flex-end;margin-top:3px">
+          <input type="number" class="in-custo in-gram" step="1" min="0" style="width:64px" value="${l.gram}" placeholder="g/m²" title="Gramatura do papel (g/m²): 200, 250, 300, 350... — o preço do kg é o do topo (Papel R$/kg)">
         </div>
         <div class="mini c-rpapel">—</div>
       </td>
@@ -474,7 +473,7 @@ function renderCustos(readData) {
   <div class="tb-wrap"><table id="tb">
     <thead><tr>
       <th>Produto</th><th>Variação / Pacote</th><th>Preço venda</th>
-      <th>Papel: formato (cm) · gramatura · R$/kg</th><th>Acabamento: horas · R$/h</th><th>Impressão: horas · R$/h</th><th>Total mat.-prima</th>
+      <th>Papel: formato (cm) · gramatura</th><th>Acabamento: horas · R$/h</th><th>Impressão: horas · R$/h</th><th>Total mat.-prima</th>
       <th>Imposto</th><th>Taxa Asaas</th><th>Lucro SITE</th><th>Lucro c/ VENDEDOR</th>
       <th>Taxa ML</th><th>Lucro ML</th><th>Taxa Shopee</th><th>Lucro Shopee</th><th>Taxa Amazon</th><th>Lucro Amazon</th>
     </tr></thead>
@@ -486,7 +485,7 @@ function renderCustos(readData) {
     <b>Lucro c/ VENDEDOR</b> = Lucro SITE − comissão do vendedor &nbsp;·&nbsp;
     <b>Lucro ML / Shopee / Amazon</b> = preço − matéria-prima − imposto − taxa do canal (frete dos marketplaces não incluso).<br>
     Campos amarelos = quantidades POR PACOTE: <b>papel em kg</b>, <b>acabamento e impressão em horas</b>. O R$ de cada um = quantidade × custo unitário (configurado em "Custos de produção" acima); o Total mat.-prima é a soma e vira o campo "custo" da página Produtos ao salvar. Valores antigos em R$ aparecem como "(antigo)" até você preencher as quantidades.<br>
-    📦 <b>Papel</b> = formato (L × A em cm) × gramatura (g/m²) = peso da unidade; × unidades do pacote = kg; × R$/kg do fornecedor = custo. Ex.: 25×25 cm em 300 g/m² = 18,8 g/un → 100 un = 1,88 kg → a R$ 8/kg = R$ 15,00. O R$/kg da linha vence o padrão do topo (cada papel tem seu preço). Sem formato preenchido, usa o peso unitário do cadastro do produto.<br>
+    📦 <b>Papel</b> = formato (L × A em cm) × gramatura (g/m²) = peso da unidade; × unidades do pacote = kg; × <b>Papel R$/kg do topo</b> = custo. Ex.: 25×25 cm em 300 g/m² = 18,8 g/un → 100 un = 1,88 kg → a R$ 8/kg = R$ 15,00. Sem formato preenchido, usa o peso unitário do cadastro do produto.<br>
     ⚙️ <b>Acabamento e Impressão</b> = horas do trabalho × valor da hora. O R$/h de cada linha vence o padrão do topo — a hora pode variar por trabalho (ex.: acabamento R$ 50/h, impressão R$ 60/h num produto; outro valor em outro).<br>
     🔒 Área restrita com login próprio — não compartilhe este acesso. O catálogo de vendas (sem custos) é o /catalogo.
   </p>
@@ -525,7 +524,7 @@ function recalc(){
     var L=parseFloat(tr.querySelector('.in-fmtl').value)||0;
     var A=parseFloat(tr.querySelector('.in-fmta').value)||0;
     var gram=parseFloat(tr.querySelector('.in-gram').value)||0;
-    var precoKg=parseFloat(tr.querySelector('.in-pkgrow').value)||pkg;
+    var precoKg=pkg; // preço do kg vem só do topo (Papel R$/kg)
     var pesoUnG=0;
     if(L&&A&&gram) pesoUnG=(L*A/10000)*gram;
     else if(parseFloat(tr.dataset.pesocad)) pesoUnG=parseFloat(tr.dataset.pesocad); // fallback: peso unitário do cadastro
@@ -588,7 +587,7 @@ async function salvarTudo(){
       var units=parseFloat(tr.dataset.units)||0;
       var L=parseFloat(ref.value)||0, A=parseFloat(tr.querySelector('.in-fmta').value)||0;
       var gram=parseFloat(tr.querySelector('.in-gram').value)||0;
-      var precoKg=parseFloat(tr.querySelector('.in-pkgrow').value)||0;
+      var precoKg=0; // kg sempre pelo padrão do topo
       var pesoUnG = (L&&A&&gram) ? (L*A/10000)*gram : (parseFloat(tr.dataset.pesocad)||0);
       var kg=pesoUnG*units/1000;
       var ha=parseFloat(tr.querySelector('.in-acab').value)||0, hi=parseFloat(tr.querySelector('.in-impr').value)||0;
