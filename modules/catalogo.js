@@ -367,6 +367,7 @@ function renderCustos(readData) {
 
 <div class="barra no-print">
   <button onclick="salvarTudo()">💾 Salvar custos e taxas</button>
+  <button style="background:#15803d" onclick="exportarExcel()">📊 Exportar Excel</button>
   <button class="sec" onclick="window.print()">🖨️ PDF / Imprimir</button>
   <a class="sec" href="/catalogo">📖 Catálogo de vendas</a>
   <button class="sec" onclick="sairCustos()">🚪 Sair</button>
@@ -510,6 +511,46 @@ async function trocarCred(){
 async function sairCustos(){
   await fetch('/custos/logout',{method:'POST',credentials:'same-origin'});
   location.reload();
+}
+
+// Exporta a tabela (com os valores calculados na tela) em Excel (.xls)
+function exportarExcel(){
+  var hoje = new Date().toLocaleDateString('pt-BR');
+  var taxasTxt = 'Asaas: '+document.getElementById('tx-apct').value+'% + R$'+document.getElementById('tx-afix').value
+    +' | ML: '+document.getElementById('tx-mpct').value+'% + R$'+document.getElementById('tx-mfix').value
+    +' | Shopee: '+document.getElementById('tx-spct').value+'% + R$'+document.getElementById('tx-sfix').value
+    +' | Amazon: '+document.getElementById('tx-zpct').value+'% + R$'+document.getElementById('tx-zfix').value
+    +' | Imposto: '+document.getElementById('tx-fpct').value+'% | Comissão vendedor: '+document.getElementById('tx-vpct').value+'%';
+
+  var ths = [].map.call(document.querySelectorAll('#tb thead th'), function(t){ return t.textContent; });
+  var head = '<tr>' + ths.map(function(h){
+    return '<th style="background:#7c3aed;color:#fff;border:1px solid #5b21b6;padding:6px">'+h+'</th>';
+  }).join('') + '</tr>';
+
+  var body = [].map.call(document.querySelectorAll('#tb tbody tr[data-preco]'), function(tr){
+    return '<tr>' + [].map.call(tr.children, function(td, i){
+      var inp = td.querySelector('input');
+      var val = inp ? (inp.value ? 'R$ ' + parseFloat(inp.value).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '') : td.innerText.trim();
+      var neg = td.querySelector('.lucro-neg'), pos = td.querySelector('.lucro-pos');
+      var cor = neg ? 'color:#dc2626;font-weight:bold' : (pos ? 'color:#15803d;font-weight:bold' : '');
+      var alinha = i < 2 ? 'text-align:left' : 'text-align:right';
+      return '<td style="border:1px solid #ddd;padding:5px;'+alinha+';'+cor+'">'+val+'</td>';
+    }).join('') + '</tr>';
+  }).join('');
+
+  var html = '\\ufeff<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8">'
+    + '<style>td,th{font-family:Arial;font-size:12px}</style></head><body>'
+    + '<table><tr><td colspan="14" style="font-size:16px;font-weight:bold;color:#7c3aed">TopFood Embalagens — Tabela de Custos e Lucro Líquido ('+hoje+')</td></tr>'
+    + '<tr><td colspan="14" style="font-size:10px;color:#666">'+taxasTxt+'</td></tr>'
+    + '<tr><td colspan="14" style="font-size:10px;color:#b91c1c">USO INTERNO — NÃO DISTRIBUIR</td></tr>'
+    + '<tr></tr>' + head + body + '</table></body></html>';
+
+  var blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tabela-custos-topfood-' + new Date().toISOString().slice(0,10) + '.xls';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 30000);
 }
 </script>
 </body>
