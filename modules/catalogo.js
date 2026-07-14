@@ -295,7 +295,9 @@ function renderCustos(readData) {
         precoKg: v.papel_preco_kg ?? "",
         pesoUnCadastro: parseFloat(p.weight_per_unit) || 0,  // fallback: peso unitário (g) do cadastro
         acabH:   v.acab_horas ?? "",
+        acabRHr: v.acab_preco_hora ?? "",   // R$/h desta linha (vazio = padrão do topo)
         imprH:   v.impr_horas ?? "",
+        imprRHr: v.impr_preco_hora ?? "",
       });
     });
   }
@@ -321,8 +323,20 @@ function renderCustos(readData) {
         </div>
         <div class="mini c-rpapel">—</div>
       </td>
-      <td class="dir">${inQtd(l, "acab", l.acabH, "Horas de acabamento deste pacote", "horas")}</td>
-      <td class="dir">${inQtd(l, "impr", l.imprH, "Horas de impressão deste pacote", "horas")}</td>
+      <td class="dir">
+        <div style="display:flex;gap:3px;justify-content:flex-end">
+          <input type="number" class="in-custo in-acab" step="0.01" min="0" style="width:50px" value="${l.acabH}" placeholder="horas" title="Horas de acabamento deste trabalho">
+          <input type="number" class="in-custo in-ahrrow" step="0.01" min="0" style="width:50px" value="${l.acabRHr}" placeholder="R$/h" title="Valor da hora de acabamento DESTE trabalho — vazio usa o padrão do topo">
+        </div>
+        <div class="mini c-racab">—</div>
+      </td>
+      <td class="dir">
+        <div style="display:flex;gap:3px;justify-content:flex-end">
+          <input type="number" class="in-custo in-impr" step="0.01" min="0" style="width:50px" value="${l.imprH}" placeholder="horas" title="Horas de impressão (máquina) deste trabalho">
+          <input type="number" class="in-custo in-ihrrow" step="0.01" min="0" style="width:50px" value="${l.imprRHr}" placeholder="R$/h" title="Valor da hora de impressão DESTE trabalho — vazio usa o padrão do topo">
+        </div>
+        <div class="mini c-rimpr">—</div>
+      </td>
       <td class="dir c-totmp" style="font-weight:800;color:#92400e">—</td>
       <td class="dir c-imposto">—</td>
       <td class="dir c-asaas">—</td>
@@ -460,7 +474,7 @@ function renderCustos(readData) {
   <div class="tb-wrap"><table id="tb">
     <thead><tr>
       <th>Produto</th><th>Variação / Pacote</th><th>Preço venda</th>
-      <th>Papel: formato (cm) · gramatura · R$/kg</th><th>Acabamento (horas)</th><th>Impressão (horas)</th><th>Total mat.-prima</th>
+      <th>Papel: formato (cm) · gramatura · R$/kg</th><th>Acabamento: horas · R$/h</th><th>Impressão: horas · R$/h</th><th>Total mat.-prima</th>
       <th>Imposto</th><th>Taxa Asaas</th><th>Lucro SITE</th><th>Lucro c/ VENDEDOR</th>
       <th>Taxa ML</th><th>Lucro ML</th><th>Taxa Shopee</th><th>Lucro Shopee</th><th>Taxa Amazon</th><th>Lucro Amazon</th>
     </tr></thead>
@@ -473,6 +487,7 @@ function renderCustos(readData) {
     <b>Lucro ML / Shopee / Amazon</b> = preço − matéria-prima − imposto − taxa do canal (frete dos marketplaces não incluso).<br>
     Campos amarelos = quantidades POR PACOTE: <b>papel em kg</b>, <b>acabamento e impressão em horas</b>. O R$ de cada um = quantidade × custo unitário (configurado em "Custos de produção" acima); o Total mat.-prima é a soma e vira o campo "custo" da página Produtos ao salvar. Valores antigos em R$ aparecem como "(antigo)" até você preencher as quantidades.<br>
     📦 <b>Papel</b> = formato (L × A em cm) × gramatura (g/m²) = peso da unidade; × unidades do pacote = kg; × R$/kg do fornecedor = custo. Ex.: 25×25 cm em 300 g/m² = 18,8 g/un → 100 un = 1,88 kg → a R$ 8/kg = R$ 15,00. O R$/kg da linha vence o padrão do topo (cada papel tem seu preço). Sem formato preenchido, usa o peso unitário do cadastro do produto.<br>
+    ⚙️ <b>Acabamento e Impressão</b> = horas do trabalho × valor da hora. O R$/h de cada linha vence o padrão do topo — a hora pode variar por trabalho (ex.: acabamento R$ 50/h, impressão R$ 60/h num produto; outro valor em outro).<br>
     🔒 Área restrita com login próprio — não compartilhe este acesso. O catálogo de vendas (sem custos) é o /catalogo.
   </p>
 
@@ -521,9 +536,11 @@ function recalc(){
       : '—';
     var ha=parseFloat(tr.querySelector('.in-acab').value)||0;
     var hi=parseFloat(tr.querySelector('.in-impr').value)||0;
-    var rAcab=ha*ahr, rImpr=hi*ihr;
-    tr.querySelector('.c-racab').textContent  = ha ? '= R$ '+fmt(rAcab) : '—';
-    tr.querySelector('.c-rimpr').textContent  = hi ? '= R$ '+fmt(rImpr) : '—';
+    var ahrRow=parseFloat(tr.querySelector('.in-ahrrow').value)||ahr;  // R$/h da linha vence o padrão
+    var ihrRow=parseFloat(tr.querySelector('.in-ihrrow').value)||ihr;
+    var rAcab=ha*ahrRow, rImpr=hi*ihrRow;
+    tr.querySelector('.c-racab').textContent  = ha ? ha+'h × R$'+fmt(ahrRow)+' = R$ '+fmt(rAcab) : '—';
+    tr.querySelector('.c-rimpr').textContent  = hi ? hi+'h × R$'+fmt(ihrRow)+' = R$ '+fmt(rImpr) : '—';
     var custo=rPapel+rAcab+rImpr;
     var legado=parseFloat(tr.dataset.legado)||0;
     var usandoLegado=false;
@@ -575,10 +592,12 @@ async function salvarTudo(){
       var pesoUnG = (L&&A&&gram) ? (L*A/10000)*gram : (parseFloat(tr.dataset.pesocad)||0);
       var kg=pesoUnG*units/1000;
       var ha=parseFloat(tr.querySelector('.in-acab').value)||0, hi=parseFloat(tr.querySelector('.in-impr').value)||0;
+      var ahrRow=parseFloat(tr.querySelector('.in-ahrrow').value)||0, ihrRow=parseFloat(tr.querySelector('.in-ihrrow').value)||0;
       return { product_id:ref.dataset.pid, variant_idx:parseInt(ref.dataset.vidx,10),
         papel_fmt_l:L, papel_fmt_a:A, papel_gram:gram, papel_preco_kg:precoKg,
         papel_kg:kg, acab_horas:ha, impr_horas:hi,
-        cost_papel:kg*(precoKg||pkg), cost_acabamento:ha*ahr, cost_impressao:hi*ihr,
+        acab_preco_hora:ahrRow, impr_preco_hora:ihrRow,
+        cost_papel:kg*(precoKg||pkg), cost_acabamento:ha*(ahrRow||ahr), cost_impressao:hi*(ihrRow||ihr),
         tem_qtd:(kg>0||ha>0||hi>0) };
     });
     var r=await fetch('/custos/salvar',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
@@ -732,6 +751,8 @@ function registerCatalogoRoutes(app, readData, decodeUser, writeData) {
             v.papel_kg   = r2(c.papel_kg);
             v.acab_horas = r2(c.acab_horas);
             v.impr_horas = r2(c.impr_horas);
+            v.acab_preco_hora = r2(c.acab_preco_hora);   // R$/h específico da linha (0 = padrão)
+            v.impr_preco_hora = r2(c.impr_preco_hora);
             if (c.tem_qtd) {
               v.cost_papel      = r2(c.cost_papel);
               v.cost_acabamento = r2(c.cost_acabamento);
