@@ -285,6 +285,8 @@ function renderCustos(readData) {
       linhas.push({
         pid: p.id, vidx: i,
         produto: i === 0 ? p.name : "",
+        foto: i === 0 ? ((p.images && p.images[0]) || p.image || "") : "",
+        pname: (p.name || "").toLowerCase(),
         variacao: `${detalhe ? detalhe + " — " : ""}${v.units} un`,
         units: v.units || 0,
         preco: parseFloat(v.price) || 0,
@@ -298,8 +300,8 @@ function renderCustos(readData) {
      <div class="mini c-r${campo}">—</div>`;
 
   const rows = linhas.map(l => `
-    <tr data-preco="${l.preco}" data-units="${l.units}">
-      <td class="prod">${esc(l.produto)}</td>
+    <tr data-preco="${l.preco}" data-units="${l.units}" data-pname="${esc(l.pname)}">
+      <td class="prod">${l.foto ? `<img src="${encodeURI("/" + String(l.foto).replace(/^\//, ""))}" alt="" loading="lazy" style="width:34px;height:34px;object-fit:cover;border-radius:6px;vertical-align:middle;margin-right:7px;border:1px solid #eee">` : ""}${esc(l.produto)}</td>
       <td>${esc(l.variacao)}</td>
       <td class="dir">R$ ${money(l.preco)}</td>
       <td class="dir">
@@ -433,6 +435,11 @@ function renderCustos(readData) {
     <span style="font-size:10px;color:#6b7280;max-width:250px">Asaas: R$ 1,99/venda (PIX/boleto; cartão ≈ 2,99% + R$ 0,49). Imposto: 4,5% = Simples 1ª faixa indústria — <b>confirme com o contador</b>. ML/Shopee/Amazon: confira a % da sua categoria (Shopee 2026: 20% c/ frete grátis + fixo por faixa de preço; Amazon: 10–15% + R$2/item no plano individual). Campo amarelo = <b>custo POR UNIDADE com tudo embutido</b> (papel + impressão + acabamento) — edite e salve.</span>
   </div>
 
+  <div class="no-print" style="margin:12px 0 8px">
+    <input id="busca-prod" type="search" placeholder="🔍 Buscar produto pelo nome..." oninput="filtrarProdutos()"
+      style="width:100%;max-width:440px;padding:10px 14px;border:2px solid #7c3aed;border-radius:10px;font-size:13px;outline:none">
+    <span id="busca-info" style="font-size:11px;color:#6b7280;margin-left:10px"></span>
+  </div>
   <div class="tb-wrap"><table id="tb">
     <thead><tr>
       <th>Produto</th><th>Variação / Pacote</th><th>Preço venda</th>
@@ -468,6 +475,17 @@ function renderCustos(readData) {
 function fmt(n){ return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function lucroCell(el, v, preco){
   el.innerHTML='<span class="'+(v>=0?'lucro-pos':'lucro-neg')+'">R$ '+fmt(v)+'</span> <span class="pct">('+(preco?Math.round(v/preco*100):0)+'%)</span>';
+}
+function filtrarProdutos(){
+  var q=(document.getElementById('busca-prod').value||'').toLowerCase().trim();
+  var produtosVisiveis={};
+  document.querySelectorAll('#tb tbody tr[data-preco]').forEach(function(tr){
+    var mostra=!q||tr.dataset.pname.indexOf(q)>=0;
+    tr.style.display=mostra?'':'none';
+    if(mostra)produtosVisiveis[tr.dataset.pname]=1;
+  });
+  var info=document.getElementById('busca-info');
+  if(info)info.textContent=q?Object.keys(produtosVisiveis).length+' produto(s) encontrado(s)':'';
 }
 function recalc(){
   var apct=parseFloat(document.getElementById('tx-apct').value)||0, afix=parseFloat(document.getElementById('tx-afix').value)||0;
