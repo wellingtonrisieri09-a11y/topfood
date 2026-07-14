@@ -3350,7 +3350,7 @@ async function loadMetrics(force) {
       return;
     }
     const f = (r.data && r.data.fontes) || {};
-    box.innerHTML = mktOrganico(f.busca_google) + mktLocal(f.google_meu_negocio) + mktAds(f.anuncios_pagos);
+    box.innerHTML = mktAnalytics(f.analytics) + mktOrganico(f.busca_google) + mktLocal(f.google_meu_negocio) + mktAds(f.anuncios_pagos);
   } catch (e) {
     box.innerHTML = '<p style="color:#CC0000">Erro ao carregar métricas: ' + (e.message || e) + '</p>';
   }
@@ -3363,6 +3363,23 @@ function mktStat(label, val) {
 function mktRow(items) { return '<div style="display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 4px">' + items.join('') + '</div>'; }
 function mktBlock(title, inner) {
   return '<div style="border-top:1px solid rgba(128,128,128,.15);padding:12px 0"><div style="font-weight:700;margin-bottom:6px">' + title + '</div>' + inner + '</div>';
+}
+function mktAnalytics(a) {
+  if (!a || a.indisponivel) return mktBlock('📈 Site (Google Analytics 4)', '<p style="opacity:.6">' + ((a && a.indisponivel) || 'aguardando primeira sincronização do Windsor…') + '</p>');
+  const stats = mktRow([
+    mktStat('Sessões', a.sessoes || 0), mktStat('Visitantes', a.usuarios || 0),
+    mktStat('Novos', a.novos_usuarios || 0), mktStat('Eventos-chave', a.eventos_chave || 0)
+  ]);
+  const pgs = (a.top_paginas || []).slice(0, 6).map(function (p) {
+    return '<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid rgba(128,128,128,.1);font-size:.8rem"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">' + p.pagina + '</span><b>' + p.sessoes + ' sessões</b></div>';
+  }).join('');
+  const orig = (a.origens_trafego || []).slice(0, 6).map(function (o) {
+    return '<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid rgba(128,128,128,.1);font-size:.8rem"><span>' + o.origem + '</span><b>' + o.sessoes + '</b></div>';
+  }).join('');
+  return mktBlock('📈 Site (Google Analytics 4) — últimos 30 dias',
+    stats
+    + (pgs ? '<div style="font-size:.78rem;opacity:.7;margin:10px 0 4px">📄 Páginas mais visitadas:</div>' + pgs : '')
+    + (orig ? '<div style="font-size:.78rem;opacity:.7;margin:10px 0 4px">🚪 De onde vêm os visitantes:</div>' + orig : ''));
 }
 function mktOrganico(g) {
   if (!g || g.indisponivel) return mktBlock('🔍 Orgânico (Google)', '<p style="opacity:.6">' + ((g && g.indisponivel) || 'sem dados') + '</p>');

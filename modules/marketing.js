@@ -54,6 +54,34 @@ const TTL = 6 * 60 * 60 * 1000; // 6h
 async function buildDossie() {
   const d = { gerado_em: new Date().toISOString(), periodo: 'últimos 30 dias', fontes: {} };
 
+  // ── Google Analytics 4 (site) — única fonte ativa no plano gratuito do Windsor ──
+  try {
+    const dias = await win('googleanalytics4', ['date', 'sessions', 'totalusers', 'newusers', 'conversions'], 'last_30dT');
+    const sum = k => dias.reduce((a, r) => a + num(r, k), 0);
+    let topPaginas = [];
+    try {
+      const pgs = await win('googleanalytics4', ['pagetitle', 'sessions'], 'last_30dT');
+      topPaginas = pgs.filter(r => r.pagetitle && String(r.pagetitle).trim())
+        .sort((a, b) => num(b, 'sessions') - num(a, 'sessions')).slice(0, 10)
+        .map(r => ({ pagina: String(r.pagetitle).slice(0, 80), sessoes: num(r, 'sessions') }));
+    } catch (_) {}
+    let origens = [];
+    try {
+      const src = await win('googleanalytics4', ['source', 'medium', 'sessions'], 'last_30dT');
+      origens = src.filter(r => r.source && String(r.source).trim())
+        .sort((a, b) => num(b, 'sessions') - num(a, 'sessions')).slice(0, 10)
+        .map(r => ({ origem: r.source + (r.medium ? ' / ' + r.medium : ''), sessoes: num(r, 'sessions') }));
+    } catch (_) {}
+    d.fontes.analytics = {
+      sessoes: sum('sessions'),
+      usuarios: sum('totalusers'),
+      novos_usuarios: sum('newusers'),
+      eventos_chave: sum('conversions'),
+      top_paginas: topPaginas,
+      origens_trafego: origens
+    };
+  } catch (e) { d.fontes.analytics = { indisponivel: e.message }; }
+
   // ── Google Search Console (orgânico) ──
   try {
     const rows = await win('searchconsole', ['query', 'clicks', 'impressions', 'position'], 'last_30d');
