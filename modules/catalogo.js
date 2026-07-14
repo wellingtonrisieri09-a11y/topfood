@@ -274,22 +274,32 @@ function renderCustos(readData) {
     (p.variants || []).forEach((v, i) => {
       const detalhe = Array.isArray(v.options) && v.options.length ? v.options.join(" · ")
                     : (v.label || "");
+      // custo antigo (campo único) sem destrinchar cai na coluna Papel
+      const temQuebra = v.cost_papel != null || v.cost_acabamento != null || v.cost_impressao != null;
       linhas.push({
         pid: p.id, vidx: i,
         produto: i === 0 ? p.name : "",
         variacao: `${detalhe ? detalhe + " — " : ""}${v.units} un`,
         preco: parseFloat(v.price) || 0,
-        custo: parseFloat(v.cost) || 0,
+        papel: temQuebra ? (parseFloat(v.cost_papel) || 0) : (parseFloat(v.cost) || 0),
+        acab:  temQuebra ? (parseFloat(v.cost_acabamento) || 0) : 0,
+        impr:  temQuebra ? (parseFloat(v.cost_impressao) || 0) : 0,
       });
     });
   }
 
+  const inCusto = (l, campo, valor, titulo) =>
+    `<input type="number" class="in-custo in-${campo}" data-pid="${esc(l.pid)}" data-vidx="${l.vidx}" step="0.01" min="0" value="${valor || ""}" placeholder="0,00" title="${titulo}">`;
+
   const rows = linhas.map(l => `
-    <tr data-preco="${l.preco}" data-custo="${l.custo}">
+    <tr data-preco="${l.preco}">
       <td class="prod">${esc(l.produto)}</td>
       <td>${esc(l.variacao)}</td>
       <td class="dir">R$ ${money(l.preco)}</td>
-      <td class="dir"><input type="number" class="in-custo" data-pid="${esc(l.pid)}" data-vidx="${l.vidx}" step="0.01" min="0" value="${l.custo || ""}" placeholder="0,00"></td>
+      <td class="dir">${inCusto(l, "papel", l.papel, "Custo do papel")}</td>
+      <td class="dir">${inCusto(l, "acab", l.acab, "Custo do acabamento")}</td>
+      <td class="dir">${inCusto(l, "impr", l.impr, "Custo da impressão")}</td>
+      <td class="dir c-totmp" style="font-weight:800;color:#92400e">—</td>
       <td class="dir c-imposto">—</td>
       <td class="dir c-asaas">—</td>
       <td class="dir c-lsite">—</td>
@@ -333,7 +343,7 @@ function renderCustos(readData) {
   .taxas .grupo b { font-size: 11px; display: block; margin-bottom: 4px; }
 
   .tb-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 10.5px; min-width: 1150px; }
+  table { width: 100%; border-collapse: collapse; font-size: 10.5px; min-width: 1330px; }
   th { background: #f4f4f5; text-align: right; padding: 6px 6px; font-size: 8.5px; text-transform: uppercase;
        letter-spacing: .3px; color: #374151; border-bottom: 2px solid #7c3aed; }
   th:first-child, th:nth-child(2) { text-align: left; }
@@ -352,7 +362,7 @@ function renderCustos(readData) {
   .barra button, .barra a { background: #7c3aed; color: #fff; border: none; padding: 10px 20px;
            border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; text-decoration: none; }
   .barra a.sec, .barra button.sec { background: #374151; }
-  .in-custo { width: 76px; padding: 5px 6px; border: 1px solid #f0c36d; background: #fffbeb; border-radius: 6px;
+  .in-custo { width: 62px; padding: 5px 5px; border: 1px solid #f0c36d; background: #fffbeb; border-radius: 6px;
               font-size: 11px; text-align: right; color: #92400e; font-weight: 700; }
   .cred { background: #f8f7ff; border: 1px solid #e9e5ff; border-radius: 10px; padding: 12px 14px; margin-top: 14px; }
   .cred summary { font-size: 11px; font-weight: 800; color: #7c3aed; cursor: pointer; }
@@ -417,18 +427,19 @@ function renderCustos(readData) {
 
   <div class="tb-wrap"><table id="tb">
     <thead><tr>
-      <th>Produto</th><th>Variação / Pacote</th><th>Preço venda</th><th>Custo mat.-prima</th>
+      <th>Produto</th><th>Variação / Pacote</th><th>Preço venda</th>
+      <th>Custo Papel</th><th>Custo Acabamento</th><th>Custo Impressão</th><th>Total mat.-prima</th>
       <th>Imposto</th><th>Taxa Asaas</th><th>Lucro SITE</th><th>Lucro c/ VENDEDOR</th>
       <th>Taxa ML</th><th>Lucro ML</th><th>Taxa Shopee</th><th>Lucro Shopee</th><th>Taxa Amazon</th><th>Lucro Amazon</th>
     </tr></thead>
-    <tbody>${rows || '<tr><td colspan="14" style="text-align:center;padding:20px;color:#6b7280">Nenhum produto ativo.</td></tr>'}</tbody>
+    <tbody>${rows || '<tr><td colspan="17" style="text-align:center;padding:20px;color:#6b7280">Nenhum produto ativo.</td></tr>'}</tbody>
   </table></div>
 
   <p class="nota">
     <b>Lucro SITE</b> = preço − matéria-prima − imposto − taxa Asaas &nbsp;·&nbsp;
     <b>Lucro c/ VENDEDOR</b> = Lucro SITE − comissão do vendedor &nbsp;·&nbsp;
     <b>Lucro ML / Shopee / Amazon</b> = preço − matéria-prima − imposto − taxa do canal (frete dos marketplaces não incluso).<br>
-    Campos amarelos = custo de matéria-prima por pacote (o mesmo campo "custo" da página Produtos — salvar aqui atualiza lá também).<br>
+    Campos amarelos = custos POR PACOTE destrinchados em <b>Papel + Acabamento + Impressão</b>; o Total mat.-prima é a soma e vira o campo "custo" da página Produtos ao salvar.<br>
     🔒 Área restrita com login próprio — não compartilhe este acesso. O catálogo de vendas (sem custos) é o /catalogo.
   </p>
 
@@ -456,7 +467,10 @@ function recalc(){
   var fpct=parseFloat(document.getElementById('tx-fpct').value)||0, vpct=parseFloat(document.getElementById('tx-vpct').value)||0;
   document.querySelectorAll('#tb tbody tr[data-preco]').forEach(function(tr){
     var preco=parseFloat(tr.dataset.preco)||0;
-    var custo=parseFloat(tr.querySelector('.in-custo').value)||0;
+    var custo=(parseFloat(tr.querySelector('.in-papel').value)||0)
+             +(parseFloat(tr.querySelector('.in-acab').value)||0)
+             +(parseFloat(tr.querySelector('.in-impr').value)||0);
+    tr.querySelector('.c-totmp').textContent = custo ? 'R$ '+fmt(custo) : '—';
     var imposto=preco*fpct/100, ta=preco*apct/100+afix, comis=preco*vpct/100;
     var tm=preco*mpct/100+mfix, ts=preco*spct/100+sfix, tz=preco*zpct/100+zfix;
     tr.querySelector('.c-imposto').textContent='R$ '+fmt(imposto);
@@ -490,8 +504,12 @@ async function salvarTudo(){
       custo_taxa_amz_fixo:parseFloat(document.getElementById('tx-zfix').value)||0,
       custo_taxa_fiscal_pct:parseFloat(document.getElementById('tx-fpct').value)||0,
       custo_taxa_vendedor_pct:parseFloat(document.getElementById('tx-vpct').value)||0 };
-    var custos=[].map.call(document.querySelectorAll('.in-custo'),function(i){
-      return { product_id:i.dataset.pid, variant_idx:parseInt(i.dataset.vidx,10), cost:parseFloat(i.value)||0 };
+    var custos=[].map.call(document.querySelectorAll('#tb tbody tr[data-preco]'),function(tr){
+      var papel=tr.querySelector('.in-papel');
+      return { product_id:papel.dataset.pid, variant_idx:parseInt(papel.dataset.vidx,10),
+        cost_papel:parseFloat(papel.value)||0,
+        cost_acabamento:parseFloat(tr.querySelector('.in-acab').value)||0,
+        cost_impressao:parseFloat(tr.querySelector('.in-impr').value)||0 };
     });
     var r=await fetch('/custos/salvar',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
       body:JSON.stringify({taxas:taxas,custos:custos})});
@@ -629,10 +647,19 @@ function registerCatalogoRoutes(app, readData, decodeUser, writeData) {
       }
       if (Array.isArray(custos) && custos.length) {
         const products = readData("products.json");
+        const r2 = x => Math.round((parseFloat(x) || 0) * 100) / 100;
         for (const c of custos) {
           const p = products.find(pp => pp.id === c.product_id);
           const v = p && (p.variants || [])[c.variant_idx];
-          if (v) v.cost = Math.round((parseFloat(c.cost) || 0) * 100) / 100;
+          if (!v) continue;
+          if (c.cost_papel !== undefined || c.cost_acabamento !== undefined || c.cost_impressao !== undefined) {
+            v.cost_papel      = r2(c.cost_papel);
+            v.cost_acabamento = r2(c.cost_acabamento);
+            v.cost_impressao  = r2(c.cost_impressao);
+            v.cost = r2(v.cost_papel + v.cost_acabamento + v.cost_impressao); // total mantém a margem da pág. Produtos
+          } else if (c.cost !== undefined) {
+            v.cost = r2(c.cost); // compatibilidade com o formato antigo
+          }
         }
         writeData("products.json", products);
       }
