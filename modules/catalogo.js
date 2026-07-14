@@ -193,6 +193,185 @@ function renderCatalogo(readData) {
 </html>`;
 }
 
+// ============================================================
+// TABELA DE CUSTOS — /custos (SÓ owner/admin)
+// Catálogo interno com custo de matéria-prima, taxas (Asaas/ML)
+// e lucro líquido por canal. Taxas editáveis e salvas em settings.
+// ============================================================
+function num(v, fallback) { const n = parseFloat(v); return isNaN(n) ? fallback : n; }
+
+function renderCustos(readData) {
+  const settings = readData("settings.json") || {};
+  const produtos = (readData("products.json") || []).filter(p => p.active !== false);
+  const hoje = new Date().toLocaleDateString("pt-BR");
+
+  // taxas salvas (padrões editáveis na própria página)
+  const aPct = num(settings.custo_taxa_asaas_pct, 0.99);   // % Asaas sobre a venda
+  const aFix = num(settings.custo_taxa_asaas_fixo, 0.49);  // R$ fixo por venda Asaas
+  const mPct = num(settings.custo_taxa_ml_pct, 12);        // % Mercado Livre
+  const mFix = num(settings.custo_taxa_ml_fixo, 6);        // R$ fixo por venda ML
+
+  const linhas = [];
+  for (const p of produtos) {
+    (p.variants || []).forEach((v, i) => {
+      const detalhe = Array.isArray(v.options) && v.options.length ? v.options.join(" · ")
+                    : (v.label || "");
+      linhas.push({
+        produto: i === 0 ? p.name : "",
+        variacao: `${detalhe ? detalhe + " — " : ""}${v.units} un`,
+        preco: parseFloat(v.price) || 0,
+        custo: parseFloat(v.cost) || 0,
+      });
+    });
+  }
+
+  const rows = linhas.map(l => `
+    <tr data-preco="${l.preco}" data-custo="${l.custo}">
+      <td class="prod">${esc(l.produto)}</td>
+      <td>${esc(l.variacao)}</td>
+      <td class="dir">R$ ${money(l.preco)}</td>
+      <td class="dir custo">${l.custo ? "R$ " + money(l.custo) : '<span class="falta">cadastrar</span>'}</td>
+      <td class="dir c-asaas">—</td>
+      <td class="dir c-lsite">—</td>
+      <td class="dir c-ml">—</td>
+      <td class="dir c-lml">—</td>
+    </tr>`).join("");
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Tabela de Custos e Lucro — TopFood (interno)</title>
+<style>
+  @page { size: A4 landscape; margin: 10mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #111; background: #f1f5f9; }
+  .folha { max-width: 1050px; margin: 0 auto; background: #fff; padding: 22px 26px; }
+  .topo { display: flex; justify-content: space-between; align-items: center; gap: 10px;
+          border-bottom: 4px solid #7c3aed; padding-bottom: 10px; flex-wrap: wrap; }
+  .marca { font-size: 20px; font-weight: 900; }
+  .marca span { color: #CC0000; }
+  .tag { background: #7c3aed; color: #fff; font-size: 10px; font-weight: 800; padding: 3px 10px;
+         border-radius: 12px; letter-spacing: 1px; }
+  h1 { font-size: 15px; color: #7c3aed; text-transform: uppercase; letter-spacing: 2px; text-align: center; margin: 14px 0 2px; }
+  .vig { text-align: center; font-size: 10px; color: #6b7280; margin-bottom: 12px; }
+
+  .taxas { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; background: #f8f7ff;
+           border: 1px solid #e9e5ff; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+  .taxas label { font-size: 10px; font-weight: 700; color: #4b5563; display: block; text-transform: uppercase; }
+  .taxas input { width: 86px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 7px; font-size: 13px; margin-top: 3px; }
+  .taxas button { background: #7c3aed; color: #fff; border: none; padding: 9px 18px; border-radius: 8px;
+                  font-weight: 700; font-size: 12px; cursor: pointer; }
+  .taxas .grupo { border-left: 3px solid #ddd; padding-left: 12px; }
+  .taxas .grupo b { font-size: 11px; display: block; margin-bottom: 4px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  th { background: #f4f4f5; text-align: right; padding: 7px 8px; font-size: 9.5px; text-transform: uppercase;
+       letter-spacing: .4px; color: #374151; border-bottom: 2px solid #7c3aed; }
+  th:first-child, th:nth-child(2) { text-align: left; }
+  td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; }
+  td.dir { text-align: right; white-space: nowrap; }
+  td.prod { font-weight: 800; }
+  td.custo { color: #b45309; }
+  .falta { color: #dc2626; font-size: 10px; font-style: italic; }
+  .lucro-pos { color: #15803d; font-weight: 800; }
+  .lucro-neg { color: #dc2626; font-weight: 800; }
+  .pct { font-size: 9.5px; color: #6b7280; font-weight: 400; }
+
+  .nota { font-size: 9.5px; color: #6b7280; margin-top: 10px; line-height: 1.6; }
+  .barra { position: sticky; top: 0; z-index: 10; background: #1C1C1C; color: #fff; padding: 10px 16px;
+           display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  .barra button, .barra a { background: #7c3aed; color: #fff; border: none; padding: 10px 20px;
+           border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; text-decoration: none; }
+  .barra a.sec { background: #374151; }
+  @media print { body { background:#fff } .folha { max-width:none; padding:0 } .no-print { display:none !important } }
+</style>
+</head>
+<body>
+
+<div class="barra no-print">
+  <button onclick="window.print()">🖨️ Baixar PDF / Imprimir</button>
+  <a class="sec" href="/catalogo">📖 Ver catálogo de vendas</a>
+  <a class="sec" href="/admin.html">← Painel</a>
+</div>
+
+<div class="folha">
+  <div class="topo">
+    <div class="marca">Top<span>Food</span> Embalagens</div>
+    <span class="tag">🔒 USO INTERNO — NÃO DISTRIBUIR</span>
+  </div>
+  <h1>Tabela de Custos e Lucro Líquido</h1>
+  <p class="vig">Gerada em <b>${hoje}</b> · custo de matéria-prima vem do cadastro de produtos (campo "custo" de cada pacote)</p>
+
+  <div class="taxas no-print">
+    <div class="grupo" style="border-color:#CC0000"><b>Taxa Asaas (site)</b>
+      <div style="display:flex;gap:8px">
+        <div><label>% da venda</label><input type="number" id="tx-apct" step="0.01" value="${aPct}"></div>
+        <div><label>+ fixo R$</label><input type="number" id="tx-afix" step="0.01" value="${aFix}"></div>
+      </div>
+    </div>
+    <div class="grupo" style="border-color:#facc15"><b>Taxa Mercado Livre</b>
+      <div style="display:flex;gap:8px">
+        <div><label>% da venda</label><input type="number" id="tx-mpct" step="0.01" value="${mPct}"></div>
+        <div><label>+ fixo R$</label><input type="number" id="tx-mfix" step="0.01" value="${mFix}"></div>
+      </div>
+    </div>
+    <button onclick="salvarTaxas()">💾 Salvar taxas</button>
+    <span style="font-size:10px;color:#6b7280;max-width:220px">Ajuste conforme seu plano no Asaas e a categoria no ML — a tabela recalcula na hora.</span>
+  </div>
+
+  <table id="tb">
+    <thead><tr>
+      <th>Produto</th><th>Variação / Pacote</th><th>Preço venda</th><th>Custo mat.-prima</th>
+      <th>Taxa Asaas</th><th>Lucro venda SITE</th><th>Taxa ML</th><th>Lucro venda ML</th>
+    </tr></thead>
+    <tbody>${rows || '<tr><td colspan="8" style="text-align:center;padding:20px;color:#6b7280">Nenhum produto ativo.</td></tr>'}</tbody>
+  </table>
+
+  <p class="nota">
+    Lucro SITE = preço − custo matéria-prima − taxa Asaas · Lucro ML = preço − custo matéria-prima − taxa ML (frete do ML não incluso).<br>
+    Linhas com custo "cadastrar": preencha o campo <b>custo</b> do pacote na página Produtos do painel para o cálculo aparecer.<br>
+    🔒 Documento interno com custos e margens — não enviar a vendedores nem clientes. O catálogo de vendas (sem custos) é o /catalogo.
+  </p>
+</div>
+
+<script>
+function fmt(n){ return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function recalc(){
+  var apct=parseFloat(document.getElementById('tx-apct').value)||0, afix=parseFloat(document.getElementById('tx-afix').value)||0;
+  var mpct=parseFloat(document.getElementById('tx-mpct').value)||0, mfix=parseFloat(document.getElementById('tx-mfix').value)||0;
+  document.querySelectorAll('#tb tbody tr[data-preco]').forEach(function(tr){
+    var preco=parseFloat(tr.dataset.preco)||0, custo=parseFloat(tr.dataset.custo)||0;
+    var ta=preco*apct/100+afix, tm=preco*mpct/100+mfix;
+    tr.querySelector('.c-asaas').textContent='R$ '+fmt(ta);
+    tr.querySelector('.c-ml').textContent='R$ '+fmt(tm);
+    var ls=tr.querySelector('.c-lsite'), lm=tr.querySelector('.c-lml');
+    if(!custo){ ls.innerHTML='<span class="falta">sem custo</span>'; lm.innerHTML='<span class="falta">sem custo</span>'; return; }
+    var vs=preco-custo-ta, vm=preco-custo-tm;
+    ls.innerHTML='<span class="'+(vs>=0?'lucro-pos':'lucro-neg')+'">R$ '+fmt(vs)+'</span> <span class="pct">('+(preco?Math.round(vs/preco*100):0)+'%)</span>';
+    lm.innerHTML='<span class="'+(vm>=0?'lucro-pos':'lucro-neg')+'">R$ '+fmt(vm)+'</span> <span class="pct">('+(preco?Math.round(vm/preco*100):0)+'%)</span>';
+  });
+}
+['tx-apct','tx-afix','tx-mpct','tx-mfix'].forEach(function(id){ document.getElementById(id).addEventListener('input', recalc); });
+recalc();
+async function salvarTaxas(){
+  try{
+    var r=await fetch('/api/admin/settings',{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({
+      custo_taxa_asaas_pct:parseFloat(document.getElementById('tx-apct').value)||0,
+      custo_taxa_asaas_fixo:parseFloat(document.getElementById('tx-afix').value)||0,
+      custo_taxa_ml_pct:parseFloat(document.getElementById('tx-mpct').value)||0,
+      custo_taxa_ml_fixo:parseFloat(document.getElementById('tx-mfix').value)||0
+    })});
+    alert(r.ok?'Taxas salvas! Da próxima vez a tabela já abre com elas.':'Erro ao salvar — faça login no painel de novo.');
+  }catch(e){ alert('Erro ao salvar: '+e.message); }
+}
+</script>
+</body>
+</html>`;
+}
+
 function registerCatalogoRoutes(app, readData, decodeUser) {
   app.get("/catalogo", (req, res) => {
     // material comercial interno — só pra quem está logado no painel
@@ -203,7 +382,19 @@ function registerCatalogoRoutes(app, readData, decodeUser) {
     res.setHeader("Cache-Control", "no-cache");
     res.send(renderCatalogo(readData));
   });
-  console.log("✅ Catálogo registrado: /catalogo (interno — exige login)");
+
+  // Tabela de custos/lucro: SÓ owner e admin — custo nunca chega
+  // a vendedor, sócio limitado, empresa ou público
+  app.get("/custos", (req, res) => {
+    const u = decodeUser(req);
+    if (!u) return res.redirect("/admin.html");
+    if (!["owner", "admin"].includes(u.role)) return res.status(403).send("Acesso restrito ao administrador.");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    res.send(renderCustos(readData));
+  });
+
+  console.log("✅ Catálogo registrado: /catalogo (equipe) + /custos (owner/admin)");
 }
 
 module.exports = { registerCatalogoRoutes };
