@@ -46,8 +46,10 @@ function generateOrderId(orders) {
 
 // ─── Cobrança Asaas com link de pagamento (invoiceUrl) ────────────────────
 // billing: 'pix' → PIX (QR + copia-cola + link) | 'card' → CREDIT_CARD (link)
-// Sem boleto na venda por vendedor (decisão de negócio).
-async function createVendorCharge(order, billing) {
+//          'boleto' → BOLETO (link + linha digitável) — usado só no B2B/empresas;
+//          venda por vendedor NÃO tem boleto (decisão de negócio).
+// dueDays: prazo de vencimento (padrão 3; boleto B2B costuma usar 7+)
+async function createVendorCharge(order, billing, dueDays) {
   if (!process.env.ASAAS_API_KEY) {
     return { ok: false, error: "Asaas não configurado" };
   }
@@ -74,13 +76,14 @@ async function createVendorCharge(order, billing) {
     }
 
     const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 3);
+    dueDate.setDate(dueDate.getDate() + (parseInt(dueDays, 10) || 3));
+    const billingType = billing === "card" ? "CREDIT_CARD" : billing === "boleto" ? "BOLETO" : "PIX";
     const payload = {
       customer:    customerId || undefined,
-      billingType: billing === "card" ? "CREDIT_CARD" : "PIX",
+      billingType,
       value:       parseFloat(order.total || 0),
       dueDate:     dueDate.toISOString().split("T")[0],
-      description: `Pedido ${order.id} — TopFood Embalagens (vendedor ${order.vendedor_nome || ""})`.trim(),
+      description: `Pedido ${order.id} — TopFood Embalagens` + (order.vendedor_nome ? ` (vendedor ${order.vendedor_nome})` : ""),
       externalReference: order.id,
     };
     const res = await asaasApi().post("/payments", payload);
@@ -90,10 +93,11 @@ async function createVendorCharge(order, billing) {
       ok: true,
       payment_id:  payment.id,
       invoice_url: payment.invoiceUrl || payment.bankSlipUrl || null,
+      boleto_url:  payment.bankSlipUrl || null,
       qr_code: null, copy_paste: null,
     };
 
-    if (billing !== "card") {
+    if (billingType === "PIX") {
       for (let tent = 0; tent < 3 && !out.copy_paste; tent++) {
         if (tent > 0) await new Promise(r => setTimeout(r, 900));
         try {
@@ -299,4 +303,4 @@ function registerVendedorRoutes(app, { readData, writeData, requireAuth }) {
   console.log("✅ M11-F1 Vendedor registrado: /api/vendedor/orders + my-orders + comissoes");
 }
 
-module.exports = { registerVendedorRoutes, clampPct, generateOrderId };
+module.exports = { registerVendedorRoutes, clampPct, generateOrderId, createVendorCharge };

@@ -8,7 +8,7 @@
 // ============================================================
 const crypto = require("crypto");
 const { auditLog } = require("../db");
-const { generateOrderId } = require("./vendedor");
+const { generateOrderId, createVendorCharge } = require("./vendedor");
 
 function round2(n) { return Math.round((parseFloat(n) || 0) * 100) / 100; }
 function newId(prefix) { return prefix + "-" + crypto.randomBytes(4).toString("hex"); }
@@ -50,10 +50,27 @@ function sanitizeEmpresa(body, existing) {
     })).filter(l => l.nome);
   }
   if (body.produtos !== undefined) {
+    // Ficha técnica completa da embalagem personalizada do cliente
     e.produtos = (Array.isArray(body.produtos) ? body.produtos : []).map(p => ({
-      nome:    String(p.nome || "").trim(),          // ex: "Caixa burger personalizada (pacote 100 un)"
-      preco:   round2(p.preco),                       // preço combinado por pacote
-      estoque: parseInt(p.estoque, 10) || 0,          // pacotes prontos no estoque dedicado
+      nome:            String(p.nome || "").trim(),            // ex: "Caixa burger Sabor — logo vermelho"
+      tipo:            String(p.tipo || "").trim(),            // caixa de pizza / bolo / hambúrguer / batata...
+      unidades_pacote: parseInt(p.unidades_pacote, 10) || 0,   // un por pacote
+      preco:           round2(p.preco),                        // preço combinado por pacote
+      estoque:         parseInt(p.estoque, 10) || 0,           // pacotes prontos (estoque dedicado)
+      lote_minimo:     parseInt(p.lote_minimo, 10) || 0,       // lote mínimo de produção (pacotes)
+      // dimensões e material
+      largura:      String(p.largura ?? "").trim(),            // cm
+      altura:       String(p.altura ?? "").trim(),
+      profundidade: String(p.profundidade ?? "").trim(),
+      material:     String(p.material || "").trim(),           // kraft / duplex / triplex / microondulado...
+      gramatura:    String(p.gramatura || "").trim(),          // ex: 300g/m²
+      // impressão e acabamento
+      cores_impressao: String(p.cores_impressao || "").trim(), // ex: 4 cores (CMYK)
+      acabamento:      String(p.acabamento || "").trim(),      // verniz / laminação interna...
+      // arte / layout da caixa
+      arte_url:    String(p.arte_url || "").trim(),            // imagem do layout (upload)
+      arte_status: ["rascunho", "em_aprovacao", "aprovada"].includes(p.arte_status) ? p.arte_status : "rascunho",
+      obs:         String(p.obs || "").trim(),
     })).filter(p => p.nome);
   }
   if (!e.lojas)    e.lojas = [];
@@ -107,7 +124,8 @@ function registerEmpresasRoutes(app, { readData, writeData, requireAdminPlus }) 
   });
 
   // ── LANÇAR PEDIDO DA EMPRESA (por loja, baixa estoque dedicado) ──
-  app.post("/api/empresas/:id/pedido", requireAdminPlus, (req, res) => {
+  // Pagamento: faturado (sem cobrança) ou Asaas PIX/boleto/cartão com link
+  app.post("/api/empresas/:id/pedido", requireAdminPlus, async (req, res) => {
     try {
       const empresas = readData("empresas.json");
       const eIdx = empresas.findIndex(x => x.id === req.params.id);
@@ -166,6 +184,20 @@ function registerEmpresasRoutes(app, { readData, writeData, requireAdminPlus }) 
         notes: String(notes || "").trim(),
         utm: {},
       };
+      // Cobrança Asaas (PIX / boleto / cartão) — boleto com 7 dias p/ B2B.
+      // Falha na cobrança NÃO derruba o pedido (admin pode gerar depois).
+      let charge = { ok: false, error: null };
+      if (pay !== "faturado") {
+        charge = await createVendorCharge(newOrder, pay === "card" ? "card" : pay, pay === "boleto" ? 7 : 3);
+        if (charge.ok) {
+          newOrder.asaas_payment_id = charge.payment_id;
+          newOrder.payment_link     = charge.invoice_url;
+          if (charge.boleto_url) newOrder.boleto_url     = charge.boleto_url;
+          if (charge.qr_code)    newOrder.pix_qr_code    = charge.qr_code;
+          if (charge.copy_paste) newOrder.pix_copy_paste = charge.copy_paste;
+        }
+      }
+
       orders.unshift(newOrder);
       writeData("orders.json", orders.slice(0, 1000));
 
@@ -173,10 +205,15 @@ function registerEmpresasRoutes(app, { readData, writeData, requireAdminPlus }) 
       writeData("empresas.json", empresas);
 
       auditLog(req.user.id, req.user.username, "empresa_pedido", "orders", newOrder.id,
-        `${emp.nome} / ${loja.nome} — R$ ${total}`, "");
-      console.log(`🏢 Pedido empresa: ${newOrder.id} | ${emp.nome} → ${loja.nome} | R$ ${total}`);
+        `${emp.nome} / ${loja.nome} — R$ ${total} (${pay})`, "");
+      console.log(`🏢 Pedido empresa: ${newOrder.id} | ${emp.nome} → ${loja.nome} | R$ ${total} | ${pay}`);
 
-      res.status(201).json({ ok: true, order_id: newOrder.id, total, avisos, empresa: emp });
+      res.status(201).json({
+        ok: true, order_id: newOrder.id, total, avisos, empresa: emp,
+        payment_link: newOrder.payment_link || null,
+        pix_copy_paste: newOrder.pix_copy_paste || null,
+        charge_error: (pay !== "faturado" && !charge.ok) ? (charge.error || "Cobrança não gerada") : null,
+      });
     } catch (e) {
       console.error("[empresas] pedido erro:", e.message);
       res.status(500).json({ ok: false, error: e.message });

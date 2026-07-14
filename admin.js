@@ -3385,7 +3385,7 @@ async function renderComissoes() {
 /* ══════════════════════════════════════════════════════
    M11-F2 — EMPRESAS (B2B por contrato)
 ══════════════════════════════════════════════════════ */
-const EMPRESAS = { lista: [] };
+const EMPRESAS = { lista: [], editProds: [] };
 const CONTRATO_LABELS = { mensal:'Mensal', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual', avulso:'Avulso' };
 
 function empContratoBadge(e) {
@@ -3452,19 +3452,139 @@ function empLojaRow(l = {}) {
   </div>`;
 }
 
-function empProdRow(p = {}) {
-  return `<div class="emp-prod-row" style="display:grid;grid-template-columns:2fr .8fr .7fr auto;gap:8px;align-items:center;margin-bottom:8px">
-    <input type="text" class="ep-nome" placeholder="Embalagem (ex: Caixa burger personalizada — pacote 100 un) *" value="${escapeHtml(p.nome || '')}" />
-    <input type="number" class="ep-preco" placeholder="Preço R$" min="0" step="0.01" value="${p.preco ?? ''}" />
-    <input type="number" class="ep-estoque" placeholder="Estoque" step="1" value="${p.estoque ?? 0}" title="Pacotes prontos no estoque dedicado" />
-    <button type="button" class="btn btn-ghost btn-icon" style="color:var(--red)" onclick="this.closest('.emp-prod-row').remove()" title="Remover"><i class="fa fa-trash"></i></button>
-  </div>`;
+const EMP_TIPOS = ['Caixa de pizza','Caixa de bolo / torta','Caixa de hambúrguer','Embalagem de batata (cone/balde)','Caixa de pastel','Caixa de churros','Marmita / antivazamento','Caixa de esfiha / salgados','Saco / sacola','Copo / pote','Bandeja','Outro'];
+const EMP_MATERIAIS = ['Kraft','Duplex','Triplex','Microondulado','Papel branco','Laminado interno','Outro'];
+const EMP_CORES = ['Sem impressão','1 cor','2 cores','3 cores','4 cores (CMYK)','4 cores + verniz','6 cores'];
+const EMP_ACABAMENTOS = ['Sem acabamento','Verniz brilho','Verniz fosco','Laminação interna (anti-gordura)','Plastificado','Outro'];
+const EMP_ARTE_LABELS = { rascunho:'✏️ Arte em rascunho', em_aprovacao:'⏳ Arte em aprovação', aprovada:'✅ Arte aprovada' };
+
+// Lista de produtos contratados (cards com miniatura da arte)
+function empProdsList() {
+  const box = document.getElementById('emp-prods');
+  if (!box) return;
+  box.innerHTML = !EMPRESAS.editProds.length
+    ? '<p style="color:var(--muted);font-size:.82rem;padding:6px 0">Nenhuma embalagem cadastrada ainda.</p>'
+    : EMPRESAS.editProds.map((p, i) => `
+      <div style="display:flex;gap:12px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;flex-wrap:wrap">
+        <div style="width:58px;height:58px;border-radius:9px;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+          ${p.arte_url ? `<img src="${p.arte_url}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">` : '<i class="fa fa-image" style="color:var(--muted)"></i>'}
+        </div>
+        <div style="flex:1;min-width:180px">
+          <div style="font-weight:700;font-size:.86rem">${escapeHtml(p.nome)}</div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:2px">
+            ${p.tipo ? escapeHtml(p.tipo) + ' · ' : ''}${p.unidades_pacote ? p.unidades_pacote + ' un/pacote · ' : ''}R$ ${fmt(p.preco)}/pacote
+            · <span style="color:${(p.estoque||0) > 0 ? 'var(--green)' : ((p.estoque||0) < 0 ? 'var(--red)' : 'var(--muted)')}">estoque: ${p.estoque || 0}</span>
+          </div>
+          <div style="font-size:.7rem;margin-top:2px">${EMP_ARTE_LABELS[p.arte_status] || ''}</div>
+        </div>
+        <div style="display:flex;gap:4px">
+          <button type="button" class="btn btn-ghost btn-icon" onclick="empProdModal(${i})" title="Editar ficha"><i class="fa fa-pen"></i></button>
+          <button type="button" class="btn btn-ghost btn-icon" style="color:var(--red)" onclick="EMPRESAS.editProds.splice(${i},1);empProdsList()" title="Remover"><i class="fa fa-trash"></i></button>
+        </div>
+      </div>`).join('');
+}
+
+// Modal de ficha técnica da embalagem personalizada
+function empProdModal(idx) {
+  const p = idx != null && idx >= 0 ? EMPRESAS.editProds[idx] : {};
+  const sel = (opts, val) => opts.map(o => `<option ${o === val ? 'selected' : ''}>${o}</option>`).join('');
+  document.getElementById('modal-title').textContent = p.nome ? 'Ficha — ' + p.nome : 'Nova embalagem personalizada';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-row"><label>Nome / identificação *</label><input type="text" id="ep-nome" value="${escapeHtml(p.nome || '')}" placeholder="Ex: Caixa burger Sabor — logo vermelho" /></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-row"><label>Tipo de embalagem</label><select id="ep-tipo">${sel(EMP_TIPOS, p.tipo || EMP_TIPOS[0])}</select></div>
+      <div class="form-row"><label>Unidades por pacote</label><input type="number" id="ep-unid" min="1" value="${p.unidades_pacote || 100}" /></div>
+      <div class="form-row"><label>Preço por pacote (R$) *</label><input type="number" id="ep-preco" min="0" step="0.01" value="${p.preco ?? ''}" /></div>
+      <div class="form-row"><label>Estoque pronto (pacotes)</label><input type="number" id="ep-estoque" step="1" value="${p.estoque ?? 0}" /></div>
+      <div class="form-row"><label>Lote mínimo de produção</label><input type="number" id="ep-lote" min="0" value="${p.lote_minimo || 0}" placeholder="pacotes" /></div>
+    </div>
+    <p style="font-weight:700;font-size:.8rem;margin:10px 0 4px">📐 Medidas e material</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="form-row"><label>Largura (cm)</label><input type="text" id="ep-larg" value="${escapeHtml(p.largura || '')}" /></div>
+      <div class="form-row"><label>Altura (cm)</label><input type="text" id="ep-alt" value="${escapeHtml(p.altura || '')}" /></div>
+      <div class="form-row"><label>Profundidade (cm)</label><input type="text" id="ep-prof" value="${escapeHtml(p.profundidade || '')}" /></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-row"><label>Material</label><select id="ep-material">${sel(EMP_MATERIAIS, p.material || EMP_MATERIAIS[0])}</select></div>
+      <div class="form-row"><label>Gramatura</label><input type="text" id="ep-gram" value="${escapeHtml(p.gramatura || '')}" placeholder="Ex: 300g/m²" /></div>
+    </div>
+    <p style="font-weight:700;font-size:.8rem;margin:10px 0 4px">🖨️ Impressão e acabamento</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-row"><label>Cores de impressão</label><select id="ep-cores">${sel(EMP_CORES, p.cores_impressao || EMP_CORES[4])}</select></div>
+      <div class="form-row"><label>Acabamento</label><select id="ep-acab">${sel(EMP_ACABAMENTOS, p.acabamento || EMP_ACABAMENTOS[0])}</select></div>
+    </div>
+    <p style="font-weight:700;font-size:.8rem;margin:10px 0 4px">🎨 Layout / arte da caixa</p>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div id="ep-arte-prev" style="width:86px;height:86px;border:1px dashed var(--border);border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden">
+        ${p.arte_url ? `<img src="${p.arte_url}" style="width:100%;height:100%;object-fit:cover">` : '<i class="fa fa-image" style="color:var(--muted)"></i>'}
+      </div>
+      <div style="flex:1;min-width:180px">
+        <input type="file" id="ep-arte-file" accept="image/*" onchange="empProdUpload(this)" style="font-size:.78rem" />
+        <input type="hidden" id="ep-arte-url" value="${escapeHtml(p.arte_url || '')}" />
+        <div class="form-row" style="margin-top:8px"><label>Status da arte</label>
+          <select id="ep-arte-status">
+            <option value="rascunho" ${(p.arte_status || 'rascunho') === 'rascunho' ? 'selected' : ''}>✏️ Rascunho</option>
+            <option value="em_aprovacao" ${p.arte_status === 'em_aprovacao' ? 'selected' : ''}>⏳ Em aprovação com o cliente</option>
+            <option value="aprovada" ${p.arte_status === 'aprovada' ? 'selected' : ''}>✅ Aprovada pelo cliente</option>
+          </select></div>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:8px"><label>Observações (tudo mais que o cliente pediu)</label>
+      <textarea id="ep-obs" rows="2" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;font-family:inherit">${escapeHtml(p.obs || '')}</textarea></div>`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="empProdSalvar(${idx != null && idx >= 0 ? idx : -1})"><i class="fa fa-save"></i> Salvar embalagem</button>`;
+  showModal();
+}
+
+async function empProdUpload(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) return toast('Imagem muito grande (máx. 8 MB).', 'error');
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const r = await api('/api/admin/upload-image', { method: 'POST', body: JSON.stringify({ filename: file.name, data: reader.result }) });
+      document.getElementById('ep-arte-url').value = r.path;
+      document.getElementById('ep-arte-prev').innerHTML = `<img src="/${r.path}" style="width:100%;height:100%;object-fit:cover">`;
+      toast('Layout enviado!');
+    } catch(e) { toast('Erro no upload da arte: ' + e.message, 'error'); }
+  };
+  reader.readAsDataURL(file);
+}
+
+function empProdSalvar(idx) {
+  const prod = {
+    nome:            document.getElementById('ep-nome')?.value.trim(),
+    tipo:            document.getElementById('ep-tipo')?.value,
+    unidades_pacote: parseInt(document.getElementById('ep-unid')?.value, 10) || 0,
+    preco:           parseFloat(document.getElementById('ep-preco')?.value) || 0,
+    estoque:         parseInt(document.getElementById('ep-estoque')?.value, 10) || 0,
+    lote_minimo:     parseInt(document.getElementById('ep-lote')?.value, 10) || 0,
+    largura:         document.getElementById('ep-larg')?.value.trim(),
+    altura:          document.getElementById('ep-alt')?.value.trim(),
+    profundidade:    document.getElementById('ep-prof')?.value.trim(),
+    material:        document.getElementById('ep-material')?.value,
+    gramatura:       document.getElementById('ep-gram')?.value.trim(),
+    cores_impressao: document.getElementById('ep-cores')?.value,
+    acabamento:      document.getElementById('ep-acab')?.value,
+    arte_url:        document.getElementById('ep-arte-url')?.value.trim(),
+    arte_status:     document.getElementById('ep-arte-status')?.value,
+    obs:             document.getElementById('ep-obs')?.value.trim(),
+  };
+  if (!prod.nome)  return toast('Dê um nome para a embalagem.', 'error');
+  if (!prod.preco) return toast('Informe o preço combinado por pacote.', 'error');
+  if (idx >= 0) EMPRESAS.editProds[idx] = prod;
+  else EMPRESAS.editProds.push(prod);
+  closeModal();
+  empProdsList();
 }
 
 function empEditor(id) {
   const root = document.getElementById('empresas-root');
   const e = id ? EMPRESAS.lista.find(x => x.id === id) : null;
   const c = e?.contrato || {};
+  EMPRESAS.editProds = JSON.parse(JSON.stringify(e?.produtos || []));
   root.innerHTML = `
     <button class="btn btn-secondary" onclick="renderEmpresas()" style="margin-bottom:14px"><i class="fa fa-arrow-left"></i> Voltar</button>
     <div style="display:grid;gap:16px;max-width:760px">
@@ -3506,14 +3626,15 @@ function empEditor(id) {
       </div>
 
       <div class="card" style="padding:18px">
-        <h3 style="margin:0 0 4px"><i class="fa fa-box" style="color:var(--red)"></i> Produtos contratados & estoque dedicado</h3>
-        <p style="font-size:.76rem;color:var(--muted);margin:0 0 12px">Preço combinado com ESTA empresa (cada cliente tem sua tabela). "Estoque" = pacotes já produzidos e prontos pra entrega.</p>
-        <div id="emp-prods">${(e?.produtos || []).map(empProdRow).join('')}</div>
-        <button type="button" class="btn btn-secondary" onclick="document.getElementById('emp-prods').insertAdjacentHTML('beforeend', empProdRow())"><i class="fa fa-plus"></i> Adicionar produto</button>
+        <h3 style="margin:0 0 4px"><i class="fa fa-box" style="color:var(--red)"></i> Embalagens personalizadas & estoque dedicado</h3>
+        <p style="font-size:.76rem;color:var(--muted);margin:0 0 12px">Ficha técnica completa de cada embalagem: tipo, medidas, material, impressão, layout da arte e o preço combinado com ESTA empresa. "Estoque" = pacotes já produzidos e prontos.</p>
+        <div id="emp-prods"></div>
+        <button type="button" class="btn btn-secondary" onclick="empProdModal(-1)"><i class="fa fa-plus"></i> Adicionar embalagem</button>
       </div>
 
       <button class="btn btn-primary" style="padding:13px;font-size:1rem" onclick="empSalvar(${e ? `'${e.id}'` : 'null'})"><i class="fa fa-save"></i> Salvar empresa</button>
     </div>`;
+  empProdsList();
 }
 
 async function empSalvar(id) {
@@ -3544,11 +3665,7 @@ async function empSalvar(id) {
       cep:      r.querySelector('.el-cep')?.value.trim(),
       phone:    r.querySelector('.el-phone')?.value.trim(),
     })),
-    produtos: [...document.querySelectorAll('.emp-prod-row')].map(r => ({
-      nome:    r.querySelector('.ep-nome')?.value.trim(),
-      preco:   parseFloat(r.querySelector('.ep-preco')?.value) || 0,
-      estoque: parseInt(r.querySelector('.ep-estoque')?.value, 10) || 0,
-    })),
+    produtos: EMPRESAS.editProds,
   };
   if (!body.nome) return toast('Informe o nome da empresa.', 'error');
   try {
@@ -3584,9 +3701,12 @@ function empPedido(id) {
       <select id="empd-loja">${e.lojas.map(l => `<option value="${l.id}">${escapeHtml(l.nome)}${l.cidade ? ' — ' + escapeHtml(l.cidade) : ''}</option>`).join('')}</select></div>
     <p style="font-weight:700;font-size:.82rem;margin:12px 0 6px">Itens (pacotes):</p>
     ${e.produtos.map((p, i) => `
-      <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;border-bottom:1px dashed var(--border);padding:7px 0">
+      <div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border-bottom:1px dashed var(--border);padding:7px 0">
+        <div style="width:42px;height:42px;border-radius:8px;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center">
+          ${p.arte_url ? `<img src="${p.arte_url}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">` : '<i class="fa fa-box" style="color:var(--muted);font-size:.9rem"></i>'}
+        </div>
         <div><div style="font-size:.82rem;font-weight:600">${escapeHtml(p.nome)}</div>
-          <div style="font-size:.72rem;color:var(--muted)">R$ ${fmt(p.preco)}/pacote · <span style="color:${(p.estoque||0) > 0 ? 'var(--green)' : 'var(--red)'}">estoque pronto: ${p.estoque || 0}</span></div></div>
+          <div style="font-size:.72rem;color:var(--muted)">${p.tipo ? escapeHtml(p.tipo) + ' · ' : ''}R$ ${fmt(p.preco)}/pacote · <span style="color:${(p.estoque||0) > 0 ? 'var(--green)' : 'var(--red)'}">estoque pronto: ${p.estoque || 0}</span></div></div>
         <input type="number" class="empd-qty" data-idx="${i}" min="0" step="1" value="0" style="width:74px;text-align:center;padding:7px;border:1px solid var(--border);border-radius:8px" oninput="empPedidoTotal('${id}')" />
       </div>`).join('')}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
@@ -3627,6 +3747,7 @@ async function empPedidoLancar(id) {
     .map(inp => ({ idx: Number(inp.dataset.idx), qty: parseInt(inp.value, 10) || 0 }))
     .filter(i => i.qty > 0);
   if (!items.length) return toast('Informe a quantidade de ao menos um item.', 'error');
+  const e = EMPRESAS.lista.find(x => x.id === id);
   try {
     const r = await api('/api/empresas/' + id + '/pedido', { method: 'POST', body: JSON.stringify({
       loja_id: document.getElementById('empd-loja')?.value,
@@ -3635,12 +3756,50 @@ async function empPedidoLancar(id) {
       payment_method: document.getElementById('empd-pag')?.value,
       notes: document.getElementById('empd-obs')?.value.trim(),
     })});
+    empPedidoResultado(r, e);
+  } catch(err) {
+    toast('Erro ao lançar pedido: ' + err.message, 'error');
+  }
+}
+
+// Resultado do pedido: link de cobrança (PIX/boleto/cartão) + NF-e/etiqueta sem sair do fluxo
+function empPedidoResultado(r, e) {
+  const fone = String(e?.contato?.phone || '').replace(/\D/g, '');
+  const wa = fone ? (fone.startsWith('55') ? fone : '55' + fone) : '';
+  const msg = `Olá! Pedido ${r.order_id} da ${e?.nome || 'sua empresa'} na TopFood Embalagens: R$ ${fmt(r.total)}.`
+    + (r.payment_link ? ` Pagamento: ${r.payment_link}` : '');
+  document.getElementById('modal-title').textContent = 'Pedido ' + r.order_id + ' lançado!';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="text-align:center;padding:6px 0 2px"><span style="font-size:2rem">✅</span>
+      <div style="font-size:1.15rem;font-weight:800;margin-top:4px">R$ ${fmt(r.total)}</div></div>
+    ${(r.avisos || []).map(a => `<div style="background:var(--yellow-l,#fef9c3);color:#854d0e;border-radius:8px;padding:9px 12px;font-size:.78rem;margin-top:8px">⚠️ ${escapeHtml(a)}</div>`).join('')}
+    ${r.payment_link ? `
+      <p style="font-size:.8rem;margin:12px 0 6px;font-weight:700">💳 Cobrança gerada (Asaas):</p>
+      <p style="font-size:.76rem;word-break:break-all;margin:0 0 10px"><a href="${r.payment_link}" target="_blank" rel="noopener">${r.payment_link}</a></p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${wa ? `<a class="btn btn-wa" href="https://wa.me/${wa}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Mandar no WhatsApp</a>` : ''}
+        <button class="btn btn-secondary" onclick="vendaCopy('${r.payment_link}','Link copiado!')"><i class="fa fa-copy"></i> Copiar link</button>
+        ${r.pix_copy_paste ? `<button class="btn btn-secondary" onclick="vendaCopy(document.getElementById('empd-cp').value,'PIX copia-e-cola copiado!')"><i class="fa fa-qrcode"></i> Copiar PIX</button><input type="hidden" id="empd-cp" value="${escapeHtml(r.pix_copy_paste)}">` : ''}
+      </div>`
+    : (r.charge_error
+        ? `<div style="background:var(--orange-l,#fff7ed);color:#9a3412;border-radius:8px;padding:9px 12px;font-size:.78rem;margin-top:10px">⚠️ Cobrança não gerada: ${escapeHtml(r.charge_error)} — você pode gerar depois abrindo o pedido.</div>`
+        : `<p style="font-size:.8rem;color:var(--muted);margin-top:10px">📄 Pedido <b>faturado no contrato</b> — sem cobrança automática. Confirme o pagamento no pedido quando o cliente quitar a fatura.</p>`)}
+    <p style="font-size:.76rem;color:var(--muted);margin:12px 0 0">Próximo passo: abra o pedido para <b>emitir a NF-e</b> e <b>imprimir a etiqueta</b> de cada entrega.</p>`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal();renderEmpresas()">Fechar</button>
+    <button class="btn btn-primary" onclick="empAbrirPedido('${r.order_id}')"><i class="fa fa-file-invoice-dollar"></i> Abrir pedido (NF-e / etiqueta)</button>`;
+}
+
+// Abre o pedido no modal padrão do painel (com NF-e, etiqueta e confirmação de pagamento)
+async function empAbrirPedido(orderId) {
+  try {
+    const orders = await api('/api/admin/orders');
+    STATE.orders = orders || [];
     closeModal();
-    toast(`Pedido ${r.order_id} lançado — R$ ${fmt(r.total)}!`);
-    (r.avisos || []).forEach(a => toast('⚠️ ' + a, 'error'));
-    renderEmpresas();
+    viewOrder(orderId);
   } catch(e) {
-    toast('Erro ao lançar pedido: ' + e.message, 'error');
+    toast('Pedido lançado! Veja na página Pedidos.', 'info');
+    closeModal();
   }
 }
 
