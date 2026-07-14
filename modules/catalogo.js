@@ -278,26 +278,17 @@ function renderCustos(readData) {
     (p.variants || []).forEach((v, i) => {
       const detalhe = Array.isArray(v.options) && v.options.length ? v.options.join(" · ")
                     : (v.label || "");
-      // custo legado em R$ (antes do modelo formato×gramatura) segura o lucro até preencher
-      const legado = (parseFloat(v.cost_papel) || 0) + (parseFloat(v.cost_acabamento) || 0) + (parseFloat(v.cost_impressao) || 0)
-                   || (parseFloat(v.cost) || 0);
+      // Método do Wellington: UM custo por unidade com tudo embutido
+      // (papel + impressão + acabamento) — vem do campo "cost" do cadastro (por pacote)
+      const custoPacote = parseFloat(v.cost) || 0;
+      const custoUn = (custoPacote && v.units) ? Math.round((custoPacote / v.units) * 10000) / 10000 : "";
       linhas.push({
         pid: p.id, vidx: i,
         produto: i === 0 ? p.name : "",
         variacao: `${detalhe ? detalhe + " — " : ""}${v.units} un`,
         units: v.units || 0,
         preco: parseFloat(v.price) || 0,
-        legado,
-        // papel: formato (cm) × gramatura (g/m²) × preço do fornecedor (R$/kg)
-        fmtL:    v.papel_fmt_l ?? "",
-        fmtA:    v.papel_fmt_a ?? "",
-        gram:    v.papel_gram ?? "",
-        precoKg: v.papel_preco_kg ?? "",
-        pesoUnCadastro: parseFloat(p.weight_per_unit) || 0,  // fallback: peso unitário (g) do cadastro
-        acabH:   v.acab_horas ?? "",
-        acabRHr: v.acab_preco_hora ?? "",   // R$/h desta linha (vazio = padrão do topo)
-        imprH:   v.impr_horas ?? "",
-        imprRHr: v.impr_preco_hora ?? "",
+        custoUn,
       });
     });
   }
@@ -307,34 +298,13 @@ function renderCustos(readData) {
      <div class="mini c-r${campo}">—</div>`;
 
   const rows = linhas.map(l => `
-    <tr data-preco="${l.preco}" data-legado="${l.legado}" data-units="${l.units}" data-pesocad="${l.pesoUnCadastro}">
+    <tr data-preco="${l.preco}" data-units="${l.units}">
       <td class="prod">${esc(l.produto)}</td>
       <td>${esc(l.variacao)}</td>
       <td class="dir">R$ ${money(l.preco)}</td>
       <td class="dir">
-        <div style="display:flex;gap:3px;justify-content:flex-end;align-items:center">
-          <input type="number" class="in-custo in-fmtl" data-pid="${esc(l.pid)}" data-vidx="${l.vidx}" step="0.1" min="0" style="width:46px" value="${l.fmtL}" placeholder="L cm" title="Largura do formato (cm)">
-          <span style="font-size:10px;color:#92400e">×</span>
-          <input type="number" class="in-custo in-fmta" step="0.1" min="0" style="width:46px" value="${l.fmtA}" placeholder="A cm" title="Altura do formato (cm)">
-        </div>
-        <div style="display:flex;justify-content:flex-end;margin-top:3px">
-          <input type="number" class="in-custo in-gram" step="1" min="0" style="width:64px" value="${l.gram}" placeholder="g/m²" title="Gramatura do papel (g/m²): 200, 250, 300, 350... — o preço do kg é o do topo (Papel R$/kg)">
-        </div>
-        <div class="mini c-rpapel">—</div>
-      </td>
-      <td class="dir">
-        <div style="display:flex;gap:3px;justify-content:flex-end">
-          <input type="number" class="in-custo in-acab" step="0.01" min="0" style="width:50px" value="${l.acabH}" placeholder="horas" title="Horas de acabamento deste trabalho">
-          <input type="number" class="in-custo in-ahrrow" step="0.01" min="0" style="width:50px" value="${l.acabRHr}" placeholder="R$/h" title="Valor da hora de acabamento DESTE trabalho — vazio usa o padrão do topo">
-        </div>
-        <div class="mini c-racab">—</div>
-      </td>
-      <td class="dir">
-        <div style="display:flex;gap:3px;justify-content:flex-end">
-          <input type="number" class="in-custo in-impr" step="0.01" min="0" style="width:50px" value="${l.imprH}" placeholder="horas" title="Horas de impressão (máquina) deste trabalho">
-          <input type="number" class="in-custo in-ihrrow" step="0.01" min="0" style="width:50px" value="${l.imprRHr}" placeholder="R$/h" title="Valor da hora de impressão DESTE trabalho — vazio usa o padrão do topo">
-        </div>
-        <div class="mini c-rimpr">—</div>
+        <input type="number" class="in-custo in-custoun" data-pid="${esc(l.pid)}" data-vidx="${l.vidx}" step="0.01" min="0" style="width:72px" value="${l.custoUn}" placeholder="0,19" title="Custo POR UNIDADE com tudo embutido: papel + impressão + acabamento (ex.: pastel 0,19)">
+        <div class="mini c-run">—</div>
       </td>
       <td class="dir c-totmp" style="font-weight:800;color:#92400e">—</td>
       <td class="dir c-imposto">—</td>
@@ -460,20 +430,13 @@ function renderCustos(readData) {
     <div class="grupo" style="border-color:#1d4ed8"><b>Comissão vendedor</b>
       <div><label>% da venda</label><input type="number" id="tx-vpct" step="0.01" value="${vPct}"></div>
     </div>
-    <div class="grupo" style="border-color:#92400e"><b>Custos de produção (unitários)</b>
-      <div style="display:flex;gap:8px">
-        <div><label>Papel R$/kg</label><input type="number" id="tx-pkg" step="0.01" value="${pKg}"></div>
-        <div><label>Acabam. R$/h</label><input type="number" id="tx-ahr" step="0.01" value="${aHr}"></div>
-        <div><label>Impres. R$/h</label><input type="number" id="tx-ihr" step="0.01" value="${iHr}"></div>
-      </div>
-    </div>
-    <span style="font-size:10px;color:#6b7280;max-width:250px">Asaas: R$ 1,99/venda (PIX/boleto; cartão ≈ 2,99% + R$ 0,49). Imposto: 4,5% = Simples 1ª faixa indústria — <b>confirme com o contador</b>. ML/Shopee/Amazon: confira a % da sua categoria (Shopee 2026: 20% c/ frete grátis + fixo por faixa de preço; Amazon: 10–15% + R$2/item no plano individual). Campos amarelos = <b>custo de matéria-prima por pacote</b>, edite e salve.</span>
+    <span style="font-size:10px;color:#6b7280;max-width:250px">Asaas: R$ 1,99/venda (PIX/boleto; cartão ≈ 2,99% + R$ 0,49). Imposto: 4,5% = Simples 1ª faixa indústria — <b>confirme com o contador</b>. ML/Shopee/Amazon: confira a % da sua categoria (Shopee 2026: 20% c/ frete grátis + fixo por faixa de preço; Amazon: 10–15% + R$2/item no plano individual). Campo amarelo = <b>custo POR UNIDADE com tudo embutido</b> (papel + impressão + acabamento) — edite e salve.</span>
   </div>
 
   <div class="tb-wrap"><table id="tb">
     <thead><tr>
       <th>Produto</th><th>Variação / Pacote</th><th>Preço venda</th>
-      <th>Papel: formato (cm) · gramatura</th><th>Acabamento: horas · R$/h</th><th>Impressão: horas · R$/h</th><th>Total mat.-prima</th>
+      <th>Custo POR UNIDADE R$ (tudo embutido)</th><th>Custo do pacote</th>
       <th>Imposto</th><th>Taxa Asaas</th><th>Lucro SITE</th><th>Lucro c/ VENDEDOR</th>
       <th>Taxa ML</th><th>Lucro ML</th><th>Taxa Shopee</th><th>Lucro Shopee</th><th>Taxa Amazon</th><th>Lucro Amazon</th>
     </tr></thead>
@@ -512,39 +475,14 @@ function recalc(){
   var spct=parseFloat(document.getElementById('tx-spct').value)||0, sfix=parseFloat(document.getElementById('tx-sfix').value)||0;
   var zpct=parseFloat(document.getElementById('tx-zpct').value)||0, zfix=parseFloat(document.getElementById('tx-zfix').value)||0;
   var fpct=parseFloat(document.getElementById('tx-fpct').value)||0, vpct=parseFloat(document.getElementById('tx-vpct').value)||0;
-  var pkg=parseFloat(document.getElementById('tx-pkg').value)||0;
-  var ahr=parseFloat(document.getElementById('tx-ahr').value)||0;
-  var ihr=parseFloat(document.getElementById('tx-ihr').value)||0;
   document.querySelectorAll('#tb tbody tr[data-preco]').forEach(function(tr){
     var preco=parseFloat(tr.dataset.preco)||0;
     var units=parseFloat(tr.dataset.units)||0;
-    // PAPEL: peso da unidade = (L cm × A cm ÷ 10000) m² × gramatura g/m²
-    //        kg do pacote = peso un × unidades ÷ 1000
-    //        custo = kg × R$/kg (da linha; vazio usa o padrão do topo)
-    var L=parseFloat(tr.querySelector('.in-fmtl').value)||0;
-    var A=parseFloat(tr.querySelector('.in-fmta').value)||0;
-    var gram=parseFloat(tr.querySelector('.in-gram').value)||0;
-    var precoKg=pkg; // preço do kg vem só do topo (Papel R$/kg)
-    var pesoUnG=0;
-    if(L&&A&&gram) pesoUnG=(L*A/10000)*gram;
-    else if(parseFloat(tr.dataset.pesocad)) pesoUnG=parseFloat(tr.dataset.pesocad); // fallback: peso unitário do cadastro
-    var kgPacote=pesoUnG*units/1000;
-    var rPapel=kgPacote*precoKg;
-    tr.querySelector('.c-rpapel').textContent = pesoUnG
-      ? Math.round(pesoUnG*10)/10+'g/un · '+(Math.round(kgPacote*100)/100)+'kg = R$ '+fmt(rPapel)
-      : '—';
-    var ha=parseFloat(tr.querySelector('.in-acab').value)||0;
-    var hi=parseFloat(tr.querySelector('.in-impr').value)||0;
-    var ahrRow=parseFloat(tr.querySelector('.in-ahrrow').value)||ahr;  // R$/h da linha vence o padrão
-    var ihrRow=parseFloat(tr.querySelector('.in-ihrrow').value)||ihr;
-    var rAcab=ha*ahrRow, rImpr=hi*ihrRow;
-    tr.querySelector('.c-racab').textContent  = ha ? ha+'h × R$'+fmt(ahrRow)+' = R$ '+fmt(rAcab) : '—';
-    tr.querySelector('.c-rimpr').textContent  = hi ? hi+'h × R$'+fmt(ihrRow)+' = R$ '+fmt(rImpr) : '—';
-    var custo=rPapel+rAcab+rImpr;
-    var legado=parseFloat(tr.dataset.legado)||0;
-    var usandoLegado=false;
-    if(!custo && legado){ custo=legado; usandoLegado=true; } // valor antigo em R$ segura o cálculo até preencher formato/horas
-    tr.querySelector('.c-totmp').innerHTML = custo ? 'R$ '+fmt(custo)+(usandoLegado?' <span class="pct">(antigo)</span>':'') : '—';
+    // Custo POR UNIDADE com tudo embutido (papel + impressão + acabamento)
+    var custoUn=parseFloat(tr.querySelector('.in-custoun').value)||0;
+    var custo=Math.round(custoUn*units*100)/100;
+    tr.querySelector('.c-run').textContent = custoUn ? '× '+units+' un' : '—';
+    tr.querySelector('.c-totmp').textContent = custo ? 'R$ '+fmt(custo) : '—';
     var imposto=preco*fpct/100, ta=preco*apct/100+afix, comis=preco*vpct/100;
     var tm=preco*mpct/100+mfix, ts=preco*spct/100+sfix, tz=preco*zpct/100+zfix;
     tr.querySelector('.c-imposto').textContent='R$ '+fmt(imposto);
@@ -562,7 +500,7 @@ function recalc(){
     lucroCell(lz, preco-custo-imposto-tz, preco);
   });
 }
-['tx-apct','tx-afix','tx-mpct','tx-mfix','tx-spct','tx-sfix','tx-zpct','tx-zfix','tx-fpct','tx-vpct','tx-pkg','tx-ahr','tx-ihr'].forEach(function(id){ document.getElementById(id).addEventListener('input', recalc); });
+['tx-apct','tx-afix','tx-mpct','tx-mfix','tx-spct','tx-sfix','tx-zpct','tx-zfix','tx-fpct','tx-vpct'].forEach(function(id){ document.getElementById(id).addEventListener('input', recalc); });
 document.querySelectorAll('.in-custo').forEach(function(i){ i.addEventListener('input', recalc); });
 recalc();
 
@@ -577,27 +515,14 @@ async function salvarTudo(){
       custo_taxa_amz_pct:parseFloat(document.getElementById('tx-zpct').value)||0,
       custo_taxa_amz_fixo:parseFloat(document.getElementById('tx-zfix').value)||0,
       custo_taxa_fiscal_pct:parseFloat(document.getElementById('tx-fpct').value)||0,
-      custo_taxa_vendedor_pct:parseFloat(document.getElementById('tx-vpct').value)||0,
-      custo_papel_kg:parseFloat(document.getElementById('tx-pkg').value)||0,
-      custo_acab_hora:parseFloat(document.getElementById('tx-ahr').value)||0,
-      custo_impr_hora:parseFloat(document.getElementById('tx-ihr').value)||0 };
-    var pkg=taxas.custo_papel_kg, ahr=taxas.custo_acab_hora, ihr=taxas.custo_impr_hora;
+      custo_taxa_vendedor_pct:parseFloat(document.getElementById('tx-vpct').value)||0 };
+    // Método simples: custo POR UNIDADE × unidades do pacote = campo "cost" do cadastro
     var custos=[].map.call(document.querySelectorAll('#tb tbody tr[data-preco]'),function(tr){
-      var ref=tr.querySelector('.in-fmtl');
+      var ref=tr.querySelector('.in-custoun');
       var units=parseFloat(tr.dataset.units)||0;
-      var L=parseFloat(ref.value)||0, A=parseFloat(tr.querySelector('.in-fmta').value)||0;
-      var gram=parseFloat(tr.querySelector('.in-gram').value)||0;
-      var precoKg=0; // kg sempre pelo padrão do topo
-      var pesoUnG = (L&&A&&gram) ? (L*A/10000)*gram : (parseFloat(tr.dataset.pesocad)||0);
-      var kg=pesoUnG*units/1000;
-      var ha=parseFloat(tr.querySelector('.in-acab').value)||0, hi=parseFloat(tr.querySelector('.in-impr').value)||0;
-      var ahrRow=parseFloat(tr.querySelector('.in-ahrrow').value)||0, ihrRow=parseFloat(tr.querySelector('.in-ihrrow').value)||0;
+      var custoUn=parseFloat(ref.value)||0;
       return { product_id:ref.dataset.pid, variant_idx:parseInt(ref.dataset.vidx,10),
-        papel_fmt_l:L, papel_fmt_a:A, papel_gram:gram, papel_preco_kg:precoKg,
-        papel_kg:kg, acab_horas:ha, impr_horas:hi,
-        acab_preco_hora:ahrRow, impr_preco_hora:ihrRow,
-        cost_papel:kg*(precoKg||pkg), cost_acabamento:ha*(ahrRow||ahr), cost_impressao:hi*(ihrRow||ihr),
-        tem_qtd:(kg>0||ha>0||hi>0) };
+        cost: Math.round(custoUn*units*100)/100 };
     });
     var r=await fetch('/custos/salvar',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
       body:JSON.stringify({taxas:taxas,custos:custos})});
@@ -764,7 +689,11 @@ function registerCatalogoRoutes(app, readData, decodeUser, writeData) {
             v.cost_impressao  = r2(c.cost_impressao);
             v.cost = r2(v.cost_papel + v.cost_acabamento + v.cost_impressao);
           } else if (c.cost !== undefined) {
-            v.cost = r2(c.cost); // compatibilidade com o formato antigo
+            v.cost = r2(c.cost); // método simples: custo por unidade × unidades (tudo embutido)
+            // limpa os campos do modelo antigo (formato×gramatura + horas) — não são mais usados
+            ["papel_fmt_l","papel_fmt_a","papel_gram","papel_preco_kg","papel_kg",
+             "acab_horas","impr_horas","acab_preco_hora","impr_preco_hora",
+             "cost_papel","cost_acabamento","cost_impressao"].forEach(k => { delete v[k]; });
           }
         }
         writeData("products.json", products);
