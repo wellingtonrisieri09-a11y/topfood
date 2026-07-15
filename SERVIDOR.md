@@ -9,6 +9,7 @@
 | Site | Domínio (DNS) | Porta | Processo | Pasta na VPS | Como roda |
 |------|---------------|-------|----------|--------------|-----------|
 | **TopFood** (principal) | `topfoodembalagens.com.br` | **3000** | pm2 `topfood` | `/var/www/topfood` | Node (`server.js`) |
+| **Forpack** (clone do TopFood) | `forpackembalagens.com.br` | **3002** | pm2 `forpack` | `/var/www/forpack` | Node (clone — ver `forpack/FORPACK.md`) |
 | **SDL Brinquedos** | `sdlbrinquedos.com.br` | **3001** | pm2 `sdl-brinquedos` | `/var/www/sdl-brinquedos` | Next.js |
 | **Arte Cromo** | `artecromoestampas.com.br` | **8765** | systemd `artecromo` | `/var/www/artecromo` | Python (`servidor.py`) |
 | **Verbo Vivo** | `verbovivoapp.com.br` | **8787** | pm2 `verbovivo` | `/var/www/verbovivo` | HTML estático + API Node |
@@ -36,7 +37,7 @@ Ou seja: **não precisa de um servidor para cada site** — precisa de um
 3. **Cada site só na sua pasta.** Mexeu no TopFood? Só `/var/www/topfood`.
    Nada de editar arquivos de um site dentro da pasta do outro.
 4. **Cada site na sua porta, fixa, sem trocar:** 3000 TopFood · 3001 SDL ·
-   8765 Arte Cromo · 8787 Verbo Vivo. Se dois processos disputarem a mesma
+   3002 Forpack · 8765 Arte Cromo · 8787 Verbo Vivo. Se dois processos disputarem a mesma
    porta, um deles cai — por isso a tabela acima é lei.
 
 ## Montagem (fazer UMA vez na VPS)
@@ -104,7 +105,7 @@ isso sozinho em até poucos minutos** — cada script só toca no próprio site.
 ```bash
 pm2 status                       # topfood, sdl-brinquedos, verbovivo → "online"
 systemctl status artecromo       # → "active (running)"
-ss -ltnp | grep -E ':3000|:3001|:8765|:8787'   # as 4 portas ocupadas, cada uma pelo seu processo
+ss -ltnp | grep -E ':3000|:3001|:3002|:8765|:8787'   # cada porta ocupada pelo seu processo
 pm2 logs topfood --lines 50      # log de UM site só
 ```
 
