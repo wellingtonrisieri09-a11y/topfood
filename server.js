@@ -8,6 +8,7 @@ const { registerVendedorRoutes } = require('./modules/vendedor');
 const { registerEmpresasRoutes } = require('./modules/empresas');
 const { registerCatalogoRoutes } = require('./modules/catalogo');
 const { registerShopeeRoutes } = require('./modules/shopee');
+const { registerAmazonRoutes } = require('./modules/amazon');
 const { registerFeedRoutes }   = require('./modules/feeds');
 const { registerBudgetRoutes } = require('./modules/budget');
 const { registerBackupRoutes } = require('./modules/backup');
@@ -1688,6 +1689,7 @@ registerVendedorRoutes(app, { readData, writeData, requireAuth });
 registerEmpresasRoutes(app, { readData, writeData, requireAdminPlus, requireAuth });
 registerCatalogoRoutes(app, readData, decodeUser, writeData);
 registerShopeeRoutes(app, requireAuth);
+registerAmazonRoutes(app, requireAuth);
 
 // Limpar blacklist e reservas expiradas a cada 30min
 setInterval(() => { try { cleanBlacklist(); releaseExpiredReservations(); } catch(e){} }, 30 * 60 * 1000);

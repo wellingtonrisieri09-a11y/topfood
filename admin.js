@@ -227,7 +227,7 @@ const PAGE_TITLES = {
   users:'Usuários do Painel',
   vender:'Vender — Novo Pedido', comissoes:'Comissões dos Vendedores',
   empresas:'Empresas — Contratos B2B', portal:'Portal da Empresa',
-  shopee:'Shopee — Integração'
+  shopee:'Marketplaces — Shopee & Amazon'
 };
 function navigate(page) {
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
@@ -4147,6 +4147,7 @@ async function renderShopee() {
 
       <p style="font-size:.74rem;color:var(--muted);margin:0">Fase 2 (depois que a conexão estiver rodando): publicar produtos do site direto na Shopee, igual ao Mercado Livre.</p>
     </div>`;
+  renderAmazon();
 }
 
 async function shopeeSalvarConfig() {
@@ -4175,6 +4176,90 @@ async function shopeeSync() {
   if (out) out.textContent = 'Sincronizando…';
   try {
     const d = await api('/api/eco/shopee/sync?dias=7', { method: 'POST' });
+    if (out) out.textContent = `✅ ${d.vistos} pedido(s) verificados, ${d.importados} novo(s) importado(s).`;
+    toast('Sincronização concluída!');
+  } catch(e) {
+    if (out) out.textContent = '';
+    toast('Erro ao sincronizar: ' + e.message, 'error');
+  }
+}
+
+/* ── AMAZON (M10 fase 1) ─────────────────────────────── */
+async function renderAmazon() {
+  const root = document.getElementById('amazon-root');
+  if (!root) return;
+  let st = {};
+  try { st = await api('/api/eco/amazon/status'); } catch(e) { root.innerHTML = ''; return; }
+
+  root.innerHTML = `
+    <div style="display:grid;gap:16px;max-width:720px">
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 8px">📦 Amazon — Status</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:.82rem">
+          <span class="badge ${st.configurado ? 'green' : 'gray'}">${st.configurado ? '✅ Credenciais salvas' : '1️⃣ Falta salvar as credenciais'}</span>
+          ${st.testado_em ? `<span class="badge ${st.teste_ok ? 'green' : 'red'}">${st.teste_ok ? '✅ Conexão testada OK' : '❌ Último teste falhou'}</span>` : ''}
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-key" style="color:var(--red)"></i> 1. Credenciais SP-API (Seller Central)</h3>
+        <p style="font-size:.76rem;color:var(--muted);margin:0 0 6px">Onde pegar (precisa da conta de vendedor <b>Profissional</b>):</p>
+        <ol style="font-size:.76rem;color:var(--muted);margin:0 0 12px 18px;line-height:1.8">
+          <li>Seller Central → <b>Apps e Serviços → Desenvolver aplicativos</b> → registrar-se como desenvolvedor (formulário; análise de alguns dias na 1ª vez);</li>
+          <li>Criar o app "TopFood Integracao" (tipo SP-API) → copiar <b>Client ID</b> e <b>Client Secret</b> (credenciais LWA);</li>
+          <li>Na lista de apps, clicar em <b>Autorizar</b> no seu próprio app → ele mostra o <b>Refresh Token</b> — copia e cola aqui.</li>
+        </ol>
+        <div class="form-row"><label>Client ID (LWA) ${st.tem_client_id ? '<span style="color:var(--muted);font-weight:400">(salvo — em branco mantém)</span>' : ''}</label><input type="text" id="amz-cid" placeholder="amzn1.application-oa2-client..." /></div>
+        <div class="form-row"><label>Client Secret ${st.tem_secret ? '<span style="color:var(--muted);font-weight:400">(salvo — em branco mantém)</span>' : ''}</label><input type="password" id="amz-sec" placeholder="cole o secret" /></div>
+        <div class="form-row"><label>Refresh Token ${st.tem_refresh ? '<span style="color:var(--muted);font-weight:400">(salvo — em branco mantém)</span>' : ''}</label><input type="password" id="amz-rt" placeholder="Atzr|..." /></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="amazonSalvar()"><i class="fa fa-save"></i> Salvar credenciais</button>
+          <button class="btn btn-secondary" onclick="amazonTestar()" ${st.configurado ? '' : 'disabled style="opacity:.5"'}><i class="fa fa-plug"></i> Testar conexão</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-box" style="color:var(--red)"></i> 2. Pedidos</h3>
+        <p style="font-size:.76rem;color:var(--muted);margin:0 0 12px">Pedidos da Amazon caem na página <b>Pedidos</b> (tag 📦 amazon) — varredura a cada 10 min. Obs.: o endereço do comprador só vem se o app tiver a permissão de dados pessoais (PII) aprovada; sem ela, o pedido entra e a etiqueta sai pelo Seller Central.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary" onclick="amazonSync()" ${st.configurado ? '' : 'disabled style="opacity:.5"'}><i class="fa fa-rotate"></i> Sincronizar pedidos agora (7 dias)</button>
+          <span id="amz-sync-out" style="font-size:.8rem;color:var(--muted)"></span>
+        </div>
+      </div>
+
+      <p style="font-size:.74rem;color:var(--muted);margin:0">Fase 2 (depois que a conexão estiver rodando): publicar produtos do site direto na Amazon.</p>
+    </div>`;
+}
+
+async function amazonSalvar() {
+  const body = {
+    client_id: document.getElementById('amz-cid')?.value.trim(),
+    client_secret: document.getElementById('amz-sec')?.value.trim(),
+    refresh_token: document.getElementById('amz-rt')?.value.trim(),
+  };
+  if (!body.client_id && !body.client_secret && !body.refresh_token)
+    return toast('Preencha ao menos um campo para salvar.', 'error');
+  try {
+    await api('/api/eco/amazon/config', { method: 'POST', body: JSON.stringify(body) });
+    toast('Credenciais da Amazon salvas!');
+    renderAmazon();
+  } catch(e) { toast('Erro ao salvar: ' + e.message, 'error'); }
+}
+
+async function amazonTestar() {
+  try {
+    const d = await api('/api/eco/amazon/testar', { method: 'POST' });
+    toast(d.loja_brasil ? '✅ Conexão OK — loja Brasil autorizada!' : '✅ Conexão OK (token válido)!');
+    renderAmazon();
+  } catch(e) { toast('Falha na conexão: ' + e.message, 'error'); renderAmazon(); }
+}
+
+async function amazonSync() {
+  const out = document.getElementById('amz-sync-out');
+  if (out) out.textContent = 'Sincronizando…';
+  try {
+    const d = await api('/api/eco/amazon/sync?dias=7', { method: 'POST' });
     if (out) out.textContent = `✅ ${d.vistos} pedido(s) verificados, ${d.importados} novo(s) importado(s).`;
     toast('Sincronização concluída!');
   } catch(e) {
