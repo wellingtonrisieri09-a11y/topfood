@@ -9,7 +9,7 @@
 | Site | Domínio (DNS) | Porta | Processo | Pasta na VPS | Como roda |
 |------|---------------|-------|----------|--------------|-----------|
 | **TopFood** (principal) | `topfoodembalagens.com.br` | **3000** | pm2 `topfood` | `/var/www/topfood` | Node (`server.js`) |
-| **SDL Brinquedos** | seu domínio da SDL | **3001** | pm2 `sdl-brinquedos` | `/var/www/sdl-brinquedos` | Next.js |
+| **SDL Brinquedos** | `sdlbrinquedos.com.br` | **3001** | pm2 `sdl-brinquedos` | `/var/www/sdl-brinquedos` | Next.js |
 | **Arte Cromo** | `artecromoestampas.com.br` | **8765** | systemd `artecromo` | `/var/www/artecromo` | Python (`servidor.py`) |
 | **Verbo Vivo** | `verbovivoapp.com.br` | **8787** | pm2 `verbovivo` | `/var/www/verbovivo` | HTML estático + API Node |
 
