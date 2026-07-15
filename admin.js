@@ -4,13 +4,15 @@
 ══════════════════════════════════════════════════════ */
 // Permissões espelhadas do servidor (para UI)
 const ROLE_PERMISSIONS = {
-  owner:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','newsletter','contact','settings','nfe','users'], canDelete: true  },
-  admin:      { pages: ['overview','orders','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','contact','settings','nfe','users'], canDelete: true  },
-  socio:      { pages: ['overview','orders','reports','adcenter','campaigns'],                                                                 canDelete: true  },
+  owner:      { pages: ['overview','orders','vender','comissoes','empresas','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','newsletter','contact','settings','nfe','users','shopee'], canDelete: true  },
+  admin:      { pages: ['overview','orders','vender','comissoes','empresas','products','customers','abandoned','reports','adcenter','atendente','insights','campaigns','contact','settings','nfe','users','shopee'], canDelete: true  },
+  socio:      { pages: ['overview','orders','vender','comissoes','empresas','reports','adcenter','campaigns'],                                 canDelete: true  },
   secretaria: { pages: ['orders','customers','abandoned','contact'],                                                                canDelete: false },
   designer:   { pages: ['orders'],                                                                                                  canDelete: false },
+  vendedor:   { pages: ['vender'],                                                                                                  canDelete: false },
+  empresa:    { pages: ['portal'],                                                                                                  canDelete: false },
 };
-const ROLE_LABELS = { owner:'Proprietário', admin:'Administrador', socio:'Sócio', secretaria:'Secretária', designer:'Designer' };
+const ROLE_LABELS = { owner:'Proprietário', admin:'Administrador', socio:'Sócio', secretaria:'Secretária', designer:'Designer', vendedor:'Vendedor', empresa:'Empresa (Portal)' };
 
 let STATE = {
   orders: [],
@@ -110,7 +112,28 @@ function applyRoleUI() {
   document.querySelectorAll('.btn-delete-order').forEach(btn => {
     btn.style.display = STATE.canDelete ? '' : 'none';
   });
+
+  // Tema por perfil: vendedor=azul · empresa=verde · admin=vermelho (padrão)
+  document.body.classList.toggle('theme-vendedor', role === 'vendedor');
+  document.body.classList.toggle('theme-empresa',  role === 'empresa');
 }
+
+// Tela de login com a cor do perfil (via /vendedor → ?perfil=vendedor)
+(function themeLoginByUrl() {
+  const perfil = new URLSearchParams(location.search).get('perfil');
+  if (!perfil) return;
+  const titulo = document.querySelector('.login-title');
+  const logoSmall = document.querySelector('.login-logo small');
+  if (perfil === 'vendedor') {
+    document.body.classList.add('theme-vendedor');
+    if (titulo) titulo.textContent = '🧑‍💼 Área do Vendedor';
+    if (logoSmall) logoSmall.textContent = 'Painel do Vendedor';
+  } else if (perfil === 'empresa') {
+    document.body.classList.add('theme-empresa');
+    if (titulo) titulo.textContent = '🏢 Portal da Empresa';
+    if (logoSmall) logoSmall.textContent = 'Portal da Empresa';
+  }
+})();
 
 /* ══════════════════════════════════════════════════════
    API
@@ -201,7 +224,10 @@ const PAGE_TITLES = {
   customers:'Clientes', abandoned:'Carrinhos Abandonados',
   reports:'Relatórios', campaigns:'Campanhas & SEO',
   newsletter:'Newsletter — Leads', contact:'Mensagens de Contato', settings:'Configurações',
-  users:'Usuários do Painel'
+  users:'Usuários do Painel',
+  vender:'Vender — Novo Pedido', comissoes:'Comissões dos Vendedores',
+  empresas:'Empresas — Contratos B2B', portal:'Portal da Empresa',
+  shopee:'Shopee — Integração'
 };
 function navigate(page) {
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
@@ -230,6 +256,11 @@ function navigate(page) {
   if(page==='settings')   loadSettingsForm();
   if(page==='nfe')        loadNfeConfig();
   if(page==='users')     loadUsers();
+  if(page==='vender')    renderVender();
+  if(page==='comissoes') renderComissoes();
+  if(page==='empresas')  renderEmpresas();
+  if(page==='portal')    renderPortal();
+  if(page==='shopee')    renderShopee();
 }
 function refreshPage() { navigate(STATE.currentPage); toast('Dados atualizados!'); }
 
@@ -612,7 +643,7 @@ function renderUsers() {
     <tr>
       <td><b>${esc(u.name)}</b></td>
       <td><code style="background:var(--bg);padding:2px 8px;border-radius:5px;font-size:.78rem">${esc(u.username)}</code></td>
-      <td><span class="badge ${u.role==='owner'?'red':u.role==='admin'?'red':u.role==='socio'?'purple':u.role==='secretaria'?'blue':'green'}">${ROLE_LABELS[u.role]||u.role}</span></td>
+      <td><span class="badge ${u.role==='owner'?'red':u.role==='admin'?'red':u.role==='socio'?'purple':u.role==='secretaria'?'blue':u.role==='vendedor'?'yellow':'green'}">${ROLE_LABELS[u.role]||u.role}${u.role==='vendedor'?` — ${u.comissao_pct??10}%`:''}</span></td>
       <td><span class="badge ${u.active?'green':'gray'}">${u.active?'Ativo':'Inativo'}</span></td>
       <td style="color:var(--muted);font-size:.78rem">${u.last_login?fmtDate(u.last_login):'Nunca'}</td>
       <td style="color:var(--muted);font-size:.78rem">${fmtDate(u.created_at)}</td>
@@ -642,7 +673,12 @@ function openUserModal(id) {
         <option value="socio"      ${u?.role==='socio'?'selected':''}>Sócio — visão geral, métricas</option>
         <option value="secretaria" ${u?.role==='secretaria'?'selected':''}>Secretária — pedidos e clientes</option>
         <option value="designer"   ${u?.role==='designer'?'selected':''}>Designer — somente pedidos</option>
+        <option value="vendedor"   ${u?.role==='vendedor'?'selected':''}>Vendedor — vende e ganha comissão</option>
       </select>
+    </div>
+    <div class="form-row" id="um-comissao-row" style="display:${u?.role==='vendedor'?'block':'none'}">
+      <label>Comissão do vendedor (%)</label>
+      <input type="number" id="um-comissao" min="0" max="50" step="0.5" value="${u?.comissao_pct??10}" placeholder="Ex: 10, 15, 20" />
     </div>
     <div style="padding:10px 14px;background:var(--blue-l);border-radius:8px;font-size:.78rem;color:var(--blue);line-height:1.6" id="um-role-hint"></div>`;
   // Atualiza hint de permissão ao mudar role
@@ -651,11 +687,14 @@ function openUserModal(id) {
     socio:'Visão geral, pedidos, relatórios e campanhas. Pode excluir pedidos. Sem acesso a configurações.',
     secretaria:'Pedidos, clientes, carrinhos abandonados e mensagens. Não pode excluir pedidos.',
     designer:'Acesso apenas à página de pedidos (consulta). Sem exclusão.',
+    vendedor:'Acesso apenas à página Vender: lança pedidos com preço do site, manda link de pagamento e acompanha as próprias comissões. Não vê os demais pedidos nem configurações.',
   };
   const updateHint = () => {
     const r = document.getElementById('um-role')?.value||'admin';
     const h = document.getElementById('um-role-hint');
     if(h) h.textContent = '🔐 ' + (roleHints[r]||'');
+    const cr = document.getElementById('um-comissao-row');
+    if(cr) cr.style.display = r==='vendedor' ? 'block' : 'none';
   };
   setTimeout(()=>{ document.getElementById('um-role')?.addEventListener('change',updateHint); updateHint(); }, 50);
 
@@ -675,14 +714,19 @@ async function saveUser(id) {
   if(!id && password.length < 6) return toast('Senha deve ter ao menos 6 caracteres.','error');
   if(id && password && password.length < 6) return toast('Senha deve ter ao menos 6 caracteres.','error');
 
+  const comissao_pct = parseFloat(document.getElementById('um-comissao')?.value);
+
   try {
     if(id) {
       const body = { name, role };
       if(password) body.password = password;
+      if(role==='vendedor' && !isNaN(comissao_pct)) body.comissao_pct = comissao_pct;
       await api('/api/admin/users/'+id, { method:'PUT', body:JSON.stringify(body) });
       toast('Usuário atualizado!');
     } else {
-      await api('/api/admin/users', { method:'POST', body:JSON.stringify({ name, username, password, role }) });
+      const body = { name, username, password, role };
+      if(role==='vendedor' && !isNaN(comissao_pct)) body.comissao_pct = comissao_pct;
+      await api('/api/admin/users', { method:'POST', body:JSON.stringify(body) });
       toast('Usuário criado com sucesso!');
     }
     closeModal();
@@ -2895,6 +2939,1250 @@ const DEMO_PRODUCTS = [
   {id:'fritas',name:'Embalagem de Fritas — Cone e Balde',category:'fritas',description:'Cone e balde para fritas.',image:'images/05 - fritas abertas.png',badge:'',badgeColor:'',stars:4,active:true,sold:124,variants:[{units:50,price:38},{units:100,price:72},{units:250,price:168}]},
 ];
 const DEMO_SETTINGS = {store_name:'TopFood Embalagens',store_email:'contato@topfoodembalagens.com.br',whatsapp:'5511988856367',instagram:'',admin_password:'topfood2026',mp_access_token:'',mp_public_key:'',seo_title:'TopFood Embalagens — Embalagens que valorizam seu alimento',seo_description:'Embalagens food service para restaurantes.',seo_keywords:'embalagens food service',featured_banner:'Novidades 2026 chegando!',min_order_units:50,free_shipping_above:0};
+/* ══════════════════════════════════════════════════════
+   M11-F1 — VENDER (área do vendedor) + COMISSÕES
+══════════════════════════════════════════════════════ */
+const VENDA = { itens: [], produtos: [] };
+const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+
+function vendaCopy(text, msg) {
+  const done = () => toast(msg || 'Copiado!');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => vendaCopyFallback(text, done));
+  } else vendaCopyFallback(text, done);
+}
+function vendaCopyFallback(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); } catch(e) { toast('Não consegui copiar — copie manualmente.', 'error'); }
+  ta.remove();
+}
+
+async function renderVender() {
+  const root = document.getElementById('vender-root');
+  if (!root) return;
+  if (!VENDA.produtos.length) {
+    try {
+      VENDA.produtos = (STATE.products && STATE.products.length)
+        ? STATE.products.filter(p => p.active !== false)
+        : (await (await fetch('/api/products')).json()).filter(p => p.active !== false);
+    } catch(e) { VENDA.produtos = []; }
+  }
+
+  root.innerHTML = `
+    <div style="display:grid;gap:16px;max-width:720px;padding-bottom:86px">
+
+      <div class="card" style="padding:18px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <h3 style="margin:0 0 4px"><i class="fa fa-box" style="color:var(--red)"></i> 1. Produtos <span style="font-size:.72rem;color:var(--muted);font-weight:400">(preço do site — não é editável)</span></h3>
+          <a class="btn btn-secondary" href="/catalogo" target="_blank" rel="noopener" style="font-size:.78rem"><i class="fa fa-book"></i> Catálogo PDF</a>
+        </div>
+        <p style="font-size:.78rem;color:var(--muted);margin:0 0 12px">Toque no produto para escolher cor, tamanho, pacote e quantidade.</p>
+        <div id="venda-vitrine" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px"></div>
+        <h4 style="margin:16px 0 4px">🛒 Itens da venda</h4>
+        <div id="venda-itens"></div>
+        <div class="form-row" style="margin-top:10px"><label>Frete combinado (R$) <span style="color:var(--muted);font-size:.72rem">(0 = a combinar / retirada)</span></label>
+          <input type="number" id="v-frete" value="0" min="0" step="0.01" oninput="vendaTotais()" /></div>
+        <div id="venda-total" style="font-size:1.05rem;font-weight:800;text-align:right;margin-top:6px"></div>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-user" style="color:var(--red)"></i> 2. Cliente</h3>
+        <p style="font-size:.78rem;color:var(--muted);margin:0 0 12px">Nome e WhatsApp bastam para lançar. CPF/CNPJ e endereço são necessários para NF-e e etiqueta.</p>
+        <div class="form-row"><label>Nome / Estabelecimento *</label><input type="text" id="v-nome" placeholder="Ex: Padaria Estrela" /></div>
+        <div class="form-row"><label>WhatsApp *</label><input type="tel" id="v-fone" placeholder="Ex: 11 98888-7777" /></div>
+        <div class="form-row"><label>CPF ou CNPJ <span style="color:var(--muted);font-size:.72rem">(p/ nota fiscal)</span></label><input type="text" id="v-doc" placeholder="Somente números" /></div>
+        <div class="form-row"><label>E-mail</label><input type="email" id="v-email" placeholder="opcional" /></div>
+        <div class="form-row"><label>Endereço</label><input type="text" id="v-end" placeholder="Rua, número, bairro" /></div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px">
+          <div class="form-row"><label>Cidade</label><input type="text" id="v-cidade" /></div>
+          <div class="form-row"><label>UF</label><select id="v-uf"><option value="">—</option>${UFS.map(u=>`<option ${u==='SP'?'selected':''}>${u}</option>`).join('')}</select></div>
+          <div class="form-row"><label>CEP</label><input type="text" id="v-cep" placeholder="00000-000" /></div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 12px"><i class="fa fa-credit-card" style="color:var(--red)"></i> 3. Pagamento</h3>
+        <div style="display:flex;gap:18px;font-size:.9rem">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="v-pag" value="pix" checked /> PIX</label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="v-pag" value="card" /> Cartão de crédito</label>
+        </div>
+        <p style="font-size:.75rem;color:var(--muted);margin:8px 0 0">O cliente paga direto para a TopFood pelo link — o dinheiro não passa pelo vendedor. Sem boleto na venda por vendedor.</p>
+        <div class="form-row" style="margin-top:10px"><label>Observações</label><input type="text" id="v-obs" placeholder="opcional" /></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:14px;padding:13px;font-size:1rem" onclick="vendaLancar()" id="v-lancar">
+          <i class="fa fa-paper-plane"></i> Lançar pedido e gerar cobrança</button>
+      </div>
+
+      <div id="venda-result"></div>
+
+      <div class="card" style="padding:18px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between">
+          <h3 style="margin:0"><i class="fa fa-chart-line" style="color:var(--red)"></i> Meu desempenho</h3>
+          <input type="month" id="venda-mes" value="${new Date().toISOString().slice(0,7)}" onchange="vendaLoadMinhas()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:.82rem" />
+        </div>
+        <div id="venda-resumo" style="margin:12px 0"></div>
+        <h4 style="margin:14px 0 8px">🧾 Vendas do mês</h4>
+        <div id="minhas-vendas" style="overflow-x:auto"></div>
+      </div>
+
+      <!-- barra fixa: total + lançar sempre à vista no celular -->
+      <div id="venda-sticky" style="position:fixed;left:12px;right:12px;bottom:12px;z-index:900;display:none">
+        <div style="max-width:696px;margin:0 auto;background:#1C1C1C;color:#fff;border-radius:14px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.35)">
+          <div style="min-width:0"><div id="venda-sticky-total" style="font-weight:800;font-size:1rem;white-space:nowrap"></div>
+            <div id="venda-sticky-itens" style="font-size:.7rem;color:#9CA3AF"></div></div>
+          <button class="btn btn-primary" onclick="vendaLancar()" style="white-space:nowrap;padding:11px 18px;font-weight:700"><i class="fa fa-paper-plane"></i> Lançar pedido</button>
+        </div>
+      </div>
+    </div>`;
+
+  vendaVitrine();
+  vendaRenderItens();
+  vendaLoadMinhas();
+}
+
+// Vitrine com foto — toca no produto pra abrir a grade completa
+function vendaVitrine() {
+  const grid = document.getElementById('venda-vitrine');
+  if (!grid) return;
+  if (!VENDA.produtos.length) {
+    grid.innerHTML = '<p style="grid-column:1/-1;color:var(--muted);font-size:.85rem;text-align:center;padding:12px">Nenhum produto ativo no catálogo.</p>';
+    return;
+  }
+  grid.innerHTML = VENDA.produtos.map(p => {
+    const img = p.image || (p.images && p.images[0]) || '';
+    const menor = Math.min(...(p.variants || []).map(v => parseFloat(v.price) || Infinity));
+    return `
+    <div onclick="vendaOpenProduto('${p.id}')" style="cursor:pointer;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 14px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow='none'">
+      <div style="aspect-ratio:1;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden">
+        ${img ? `<img src="${img}" alt="${escapeHtml(p.name)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">` : '<i class="fa fa-box" style="font-size:2rem;color:var(--muted)"></i>'}
+      </div>
+      <div style="padding:8px 10px">
+        <div style="font-size:.78rem;font-weight:700;line-height:1.25;min-height:2.4em">${escapeHtml(p.name)}</div>
+        <div style="font-size:.74rem;color:var(--red);font-weight:800;margin-top:3px">${isFinite(menor) ? 'a partir de R$ ' + fmt(menor) : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Modal do produto: grade (Tamanho × Cor) ou pacotes + quantidade
+function vendaOpenProduto(pid) {
+  const p = VENDA.produtos.find(x => x.id === pid);
+  if (!p || !(p.variants || []).length) return;
+
+  const hasDims = Array.isArray(p.option_names) && p.option_names.length
+    && p.variants.some(v => Array.isArray(v.options) && v.options.length);
+
+  VENDA.sel = { pid, hasDims, vidx: 0, dims: hasDims ? (p.variants[0].options || []).slice() : null };
+
+  const img = p.image || (p.images && p.images[0]) || '';
+  let optsHtml = '';
+  if (hasDims) {
+    optsHtml = p.option_names.map((nome, d) => {
+      const valores = [...new Set(p.variants.map(v => (v.options || [])[d]).filter(Boolean))];
+      return `<p style="font-weight:700;font-size:.82rem;margin:10px 0 4px">${escapeHtml(nome)}:</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" data-dim-group="${d}">
+          ${valores.map(val => `<button type="button" class="btn btn-secondary venda-dim" data-dim="${d}" data-val="${escapeHtml(val)}" onclick="vendaSelDim(${d}, this.dataset.val)" style="${VENDA.sel.dims[d]===val?'border-color:var(--red);color:var(--red);background:var(--orange-l,#fff0f0);':''}padding:8px 14px">${escapeHtml(val)}</button>`).join('')}
+        </div>`;
+    }).join('');
+  } else {
+    optsHtml = `<p style="font-weight:700;font-size:.82rem;margin:10px 0 4px">Escolha o pacote:</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${p.variants.map((v, i) => `<button type="button" class="btn btn-secondary venda-var" data-idx="${i}" onclick="vendaSelVar(${i})" style="${i===0?'border-color:var(--red);color:var(--red);background:var(--orange-l,#fff0f0);':''}padding:8px 14px;text-align:left">
+          <div style="font-weight:700">${escapeHtml(v.label || (v.units + ' un'))}</div>
+          <div style="font-size:.74rem">${v.label ? v.units + ' un — ' : ''}R$ ${fmt(v.price)}</div>
+        </button>`).join('')}
+      </div>`;
+  }
+
+  document.getElementById('modal-title').textContent = p.name;
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+      ${img ? `<img src="${img}" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--border)" onerror="this.style.display='none'">` : ''}
+      <div style="flex:1;min-width:200px">
+        ${p.description ? `<p style="font-size:.8rem;color:var(--muted);margin:0 0 6px">${escapeHtml(p.description)}</p>` : ''}
+        ${optsHtml}
+        <div style="margin-top:12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px">
+            <button type="button" class="btn btn-secondary" onclick="vendaQtd(-1)" style="padding:6px 13px;font-weight:800">−</button>
+            <input type="number" id="venda-m-qty" value="1" min="1" style="width:64px;text-align:center;padding:7px;border:1px solid var(--border);border-radius:8px" />
+            <button type="button" class="btn btn-secondary" onclick="vendaQtd(1)" style="padding:6px 13px;font-weight:800">+</button>
+          </div>
+          <div id="venda-m-preco" style="font-size:1.05rem;font-weight:800;color:var(--red)"></div>
+        </div>
+        <div id="venda-m-aviso" style="font-size:.76rem;color:var(--orange);margin-top:6px"></div>
+      </div>
+    </div>`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" id="venda-m-add" onclick="vendaModalAdd()"><i class="fa fa-cart-plus"></i> Adicionar à venda</button>`;
+  showModal();
+  vendaModalPreco();
+}
+
+function vendaSelDim(d, val) {
+  VENDA.sel.dims[d] = val;
+  document.querySelectorAll(`.venda-dim[data-dim="${d}"]`).forEach(b => {
+    const on = b.dataset.val === val;
+    b.style.borderColor = on ? 'var(--red)' : '';
+    b.style.color       = on ? 'var(--red)' : '';
+    b.style.background  = on ? 'var(--orange-l, #fff0f0)' : '';
+  });
+  vendaModalPreco();
+}
+
+function vendaSelVar(i) {
+  VENDA.sel.vidx = i;
+  document.querySelectorAll('.venda-var').forEach(b => {
+    const on = Number(b.dataset.idx) === i;
+    b.style.borderColor = on ? 'var(--red)' : '';
+    b.style.color       = on ? 'var(--red)' : '';
+    b.style.background  = on ? 'var(--orange-l, #fff0f0)' : '';
+  });
+  vendaModalPreco();
+}
+
+function vendaQtd(delta) {
+  const el = document.getElementById('venda-m-qty');
+  if (el) el.value = Math.max(1, (parseInt(el.value, 10) || 1) + delta);
+}
+
+// Resolve a variação selecionada (índice em p.variants) — null se combinação não existe
+function vendaVariantSel() {
+  const p = VENDA.produtos.find(x => x.id === VENDA.sel?.pid);
+  if (!p) return { p: null, idx: -1 };
+  if (!VENDA.sel.hasDims) return { p, idx: VENDA.sel.vidx };
+  const idx = p.variants.findIndex(v =>
+    Array.isArray(v.options) && VENDA.sel.dims.every((val, d) => v.options[d] === val));
+  return { p, idx };
+}
+
+function vendaModalPreco() {
+  const { p, idx } = vendaVariantSel();
+  const preco = document.getElementById('venda-m-preco');
+  const aviso = document.getElementById('venda-m-aviso');
+  const addBtn = document.getElementById('venda-m-add');
+  if (!preco) return;
+  if (!p || idx < 0) {
+    preco.textContent = '—';
+    if (aviso) aviso.textContent = 'Essa combinação não está disponível — escolha outra opção.';
+    if (addBtn) addBtn.disabled = true;
+    return;
+  }
+  const v = p.variants[idx];
+  preco.textContent = `R$ ${fmt(v.price)} · pacote ${v.units} un`;
+  if (aviso) aviso.textContent = '';
+  if (addBtn) addBtn.disabled = false;
+}
+
+function vendaModalAdd() {
+  const { p, idx } = vendaVariantSel();
+  if (!p || idx < 0) return toast('Escolha uma combinação disponível.', 'error');
+  const v = p.variants[idx];
+  const qty = Math.max(1, parseInt(document.getElementById('venda-m-qty')?.value, 10) || 1);
+  const detail = Array.isArray(v.options) && v.options.length ? v.options.join(' · ') : (v.label || '');
+  const existing = VENDA.itens.find(i => i.product_id === p.id && i.variant_idx === idx);
+  if (existing) existing.qty += qty;
+  else VENDA.itens.push({ product_id: p.id, variant_idx: idx, name: p.name, detail, units: v.units, qty, price: v.price });
+  closeModal();
+  vendaRenderItens();
+  toast('Adicionado: ' + p.name + (detail ? ' (' + detail + ')' : ''));
+}
+
+function vendaRemItem(idx) { VENDA.itens.splice(idx, 1); vendaRenderItens(); }
+
+function vendaRenderItens() {
+  const box = document.getElementById('venda-itens');
+  if (!box) return;
+  box.innerHTML = !VENDA.itens.length
+    ? '<p style="color:var(--muted);font-size:.82rem;text-align:center;padding:8px">Nenhum item ainda — adicione acima.</p>'
+    : `<table style="width:100%;font-size:.82rem;border-collapse:collapse">
+        ${VENDA.itens.map((i, idx) => `
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:7px 4px">${escapeHtml(i.name)}${i.detail ? ` <span style="color:var(--red);font-weight:700">${escapeHtml(i.detail)}</span>` : ''} <b>(${i.units} un)</b></td>
+          <td style="padding:7px 4px;text-align:center;white-space:nowrap">${i.qty} × R$ ${fmt(i.price)}</td>
+          <td style="padding:7px 4px;text-align:right;font-weight:700;white-space:nowrap">R$ ${fmt(i.qty * i.price)}</td>
+          <td style="padding:7px 4px;text-align:right"><button class="btn btn-ghost btn-icon" onclick="vendaRemItem(${idx})" style="color:var(--red)"><i class="fa fa-times"></i></button></td>
+        </tr>`).join('')}
+      </table>`;
+  vendaTotais();
+}
+
+function vendaTotais() {
+  const el = document.getElementById('venda-total');
+  if (!el) return;
+  const sub   = VENDA.itens.reduce((s, i) => s + i.qty * i.price, 0);
+  const frete = parseFloat(document.getElementById('v-frete')?.value) || 0;
+  el.innerHTML = `Subtotal: R$ ${fmt(sub)} &nbsp;·&nbsp; Frete: R$ ${fmt(frete)} &nbsp;·&nbsp; <span style="color:var(--red)">Total: R$ ${fmt(sub + frete)}</span>`;
+  // barra fixa (aparece quando tem item na venda)
+  const bar = document.getElementById('venda-sticky');
+  if (bar) {
+    bar.style.display = VENDA.itens.length ? 'block' : 'none';
+    const t = document.getElementById('venda-sticky-total');
+    const n = document.getElementById('venda-sticky-itens');
+    if (t) t.textContent = 'Total: R$ ' + fmt(sub + frete);
+    if (n) n.textContent = VENDA.itens.reduce((s, i) => s + i.qty, 0) + ' pacote(s) no pedido';
+  }
+}
+
+async function vendaLancar() {
+  const nome = document.getElementById('v-nome')?.value.trim();
+  const fone = document.getElementById('v-fone')?.value.trim();
+  if (!nome) return toast('Informe o nome do cliente.', 'error');
+  if (!fone) return toast('Informe o WhatsApp do cliente.', 'error');
+  if (!VENDA.itens.length) return toast('Adicione ao menos um produto.', 'error');
+
+  const btn = document.getElementById('v-lancar');
+  btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Lançando...';
+  try {
+    const body = {
+      customer: {
+        name: nome, phone: fone,
+        doc:   document.getElementById('v-doc')?.value.trim() || '',
+        email: document.getElementById('v-email')?.value.trim() || '',
+        address: document.getElementById('v-end')?.value.trim() || '',
+        city:  document.getElementById('v-cidade')?.value.trim() || '',
+        state: document.getElementById('v-uf')?.value || '',
+        cep:   document.getElementById('v-cep')?.value.trim() || '',
+      },
+      items: VENDA.itens.map(i => ({ product_id: i.product_id, variant_idx: i.variant_idx, units: i.units, qty: i.qty })),
+      shipping_price: parseFloat(document.getElementById('v-frete')?.value) || 0,
+      payment_method: document.querySelector('input[name="v-pag"]:checked')?.value || 'pix',
+      notes: document.getElementById('v-obs')?.value.trim() || '',
+    };
+    const r = await api('/api/vendedor/orders', { method: 'POST', body: JSON.stringify(body) });
+    VENDA.itens = [];
+    vendaRenderItens();
+    vendaShowResult(r);
+    vendaLoadMinhas();
+    toast('Pedido ' + r.order.id + ' lançado!');
+  } catch(e) {
+    toast('Erro ao lançar pedido: ' + e.message, 'error');
+  }
+  btn.disabled = false; btn.innerHTML = '<i class="fa fa-paper-plane"></i> Lançar pedido e gerar cobrança';
+}
+
+function vendaShowResult(r) {
+  const box = document.getElementById('venda-result');
+  if (!box) return;
+  const o = r.order;
+  const foneDigits = String(o.customer.phone || '').replace(/\D/g, '');
+  const wa = foneDigits ? (foneDigits.startsWith('55') ? foneDigits : '55' + foneDigits) : '';
+  const msg = `Olá ${o.customer.name}! Seu pedido ${o.id} na TopFood Embalagens ficou em R$ ${fmt(o.total)}.`
+    + (o.payment_link ? ` Pague por aqui: ${o.payment_link}` : '');
+  box.innerHTML = `
+    <div class="card" style="padding:18px;border:2px solid var(--green);background:var(--green-l,#f0fdf4)">
+      <h3 style="margin:0 0 8px;color:var(--green)"><i class="fa fa-check-circle"></i> Pedido ${o.id} lançado — R$ ${fmt(o.total)}</h3>
+      ${o.payment_link ? `
+        <p style="font-size:.82rem;margin:0 0 10px;word-break:break-all">Link de pagamento: <a href="${o.payment_link}" target="_blank" rel="noopener">${o.payment_link}</a></p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${wa ? `<a class="btn btn-wa" href="https://wa.me/${wa}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Mandar no WhatsApp</a>` : ''}
+          <button class="btn btn-secondary" onclick="vendaCopy('${o.payment_link}','Link copiado!')"><i class="fa fa-copy"></i> Copiar link</button>
+          ${o.pix_copy_paste ? `<button class="btn btn-secondary" onclick="vendaCopy(document.getElementById('venda-cp').value,'PIX copia-e-cola copiado!')"><i class="fa fa-qrcode"></i> Copiar PIX copia-e-cola</button><input type="hidden" id="venda-cp" value="${escapeHtml(o.pix_copy_paste)}">` : ''}
+        </div>`
+      : `<p style="font-size:.82rem;margin:0;color:var(--orange)">⚠️ ${escapeHtml(r.charge_error || 'Cobrança automática não gerada')} — combine o pagamento com o cliente; o admin confirma manualmente no painel.</p>`}
+      <p style="font-size:.78rem;color:var(--muted);margin:10px 0 0">Sua comissão prevista neste pedido: <b>R$ ${fmt(o.comissao_prevista)}</b> (${o.comissao_pct}% sobre os produtos) — vale após o pagamento.</p>
+    </div>`;
+  box.scrollIntoView({ behavior: 'smooth' });
+}
+
+function vendaMesAnterior(mes) {
+  let [y, m] = mes.split('-').map(Number);
+  m--; if (m === 0) { m = 12; y--; }
+  return y + '-' + String(m).padStart(2, '0');
+}
+
+function vendaKpi(icone, titulo, valor, cor, sub) {
+  return `<div style="flex:1;min-width:140px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px 14px">
+    <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.5px">${icone} ${titulo}</div>
+    <div style="font-size:1.25rem;font-weight:800;margin-top:4px;color:${cor || 'var(--text,#111)'}">${valor}</div>
+    ${sub ? `<div style="font-size:.72rem;color:var(--muted);margin-top:2px">${sub}</div>` : ''}
+  </div>`;
+}
+
+async function vendaLoadMinhas() {
+  const box = document.getElementById('minhas-vendas');
+  const resumo = document.getElementById('venda-resumo');
+  if (!box) return;
+  const mes = document.getElementById('venda-mes')?.value || new Date().toISOString().slice(0, 7);
+  try {
+    const [com, comAnt] = await Promise.all([
+      api('/api/vendedor/comissoes?mes=' + mes),
+      api('/api/vendedor/comissoes?mes=' + vendaMesAnterior(mes)),
+    ]);
+
+    if (resumo) {
+      // soma (para vendedor é só ele mesmo; admin/owner vê o time somado)
+      const soma = arr => (arr || []).reduce((a, v) => ({
+        pagos: a.pagos + v.pedidos_pagos, vendido: a.vendido + v.total_vendido, comissao: a.comissao + v.comissao,
+        pend: a.pend + (v.pedidos_pendentes || 0), valPend: a.valPend + (v.valor_pendente || 0), comPend: a.comPend + (v.comissao_pendente || 0),
+      }), { pagos: 0, vendido: 0, comissao: 0, pend: 0, valPend: 0, comPend: 0 });
+      const at = soma(com.vendedores), ant = soma(comAnt.vendedores);
+      const ticket = at.pagos ? at.vendido / at.pagos : 0;
+
+      // desempenho vs mês anterior (sobre o total vendido pago)
+      let perf;
+      if (!ant.vendido && !at.vendido) perf = '<span style="color:var(--muted)">Sem vendas pagas ainda neste mês — bora! 💪</span>';
+      else if (!ant.vendido) perf = '<span style="color:var(--green)">🚀 Primeiro mês com vendas pagas!</span>';
+      else {
+        const pct = Math.round(((at.vendido - ant.vendido) / ant.vendido) * 100);
+        perf = pct >= 0
+          ? `<span style="color:var(--green)">📈 ${pct === 0 ? 'igual ao' : '+' + pct + '% vs'} mês anterior${pct > 0 ? ' — mandou bem!' : ''}</span>`
+          : `<span style="color:var(--red)">📉 ${pct}% vs mês anterior (R$ ${fmt(ant.vendido)})</span>`;
+      }
+
+      resumo.innerHTML = `
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          ${vendaKpi('💰', 'Comissão a receber', 'R$ ' + fmt(at.comissao), 'var(--green)', 'sobre ' + at.pagos + ' pedido(s) pago(s)')}
+          ${vendaKpi('🛒', 'Total vendido (pago)', 'R$ ' + fmt(at.vendido), null, 'ticket médio R$ ' + fmt(ticket))}
+          ${vendaKpi('⏳', 'Aguardando pagamento', 'R$ ' + fmt(at.valPend), 'var(--orange)', at.pend + ' pedido(s) · comissão prevista R$ ' + fmt(at.comPend))}
+        </div>
+        <div style="margin-top:10px;font-size:.85rem;font-weight:600">${perf}</div>`;
+    }
+
+    const pedidos = com.pedidos || [];
+    box.innerHTML = !pedidos.length
+      ? '<p style="color:var(--muted);font-size:.82rem">Nenhuma venda neste mês.</p>'
+      : `<table style="width:100%;font-size:.8rem;border-collapse:collapse;min-width:560px">
+          <thead><tr style="text-align:left;color:var(--muted)">
+            <th style="padding:6px 4px">Pedido</th><th>Cliente</th><th>Total</th><th>Status</th><th>Comissão</th><th></th>
+          </tr></thead>
+          <tbody>${pedidos.map(o => `
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:7px 4px;font-weight:700">${o.id}</td>
+              <td>${escapeHtml(o.customer.name)}</td>
+              <td style="white-space:nowrap">R$ ${fmt(o.total)}</td>
+              <td><span class="badge ${o.status}">${statusLabel(o.status)}</span></td>
+              <td style="white-space:nowrap;${o.comissao_valor ? 'color:var(--green);font-weight:700' : 'color:var(--muted)'}">R$ ${fmt(o.comissao_valor || o.comissao_prevista)}${o.comissao_valor ? '' : ' <span style="font-size:.68rem">(prev.)</span>'}</td>
+              <td>${o.payment_link ? `<button class="btn btn-ghost btn-icon" title="Copiar link de pagamento" onclick="vendaCopy('${o.payment_link}','Link copiado!')"><i class="fa fa-link"></i></button>` : ''}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+  } catch(e) {
+    box.innerHTML = '<p style="color:var(--red);font-size:.82rem">Erro ao carregar vendas.</p>';
+  }
+}
+
+async function renderComissoes() {
+  const root = document.getElementById('comissoes-root');
+  if (!root) return;
+  const mes = document.getElementById('com-mes')?.value || new Date().toISOString().slice(0, 7);
+  root.innerHTML = `
+    <div class="card" style="padding:18px;max-width:860px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+        <h3 style="margin:0"><i class="fa fa-hand-holding-dollar" style="color:var(--red)"></i> Comissões por vendedor</h3>
+        <input type="month" id="com-mes" value="${mes}" onchange="renderComissoes()" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px" />
+      </div>
+      <div id="com-body">Carregando…</div>
+    </div>`;
+  try {
+    const d = await api('/api/vendedor/comissoes?mes=' + mes);
+    const body = document.getElementById('com-body');
+    if (!(d.vendedores || []).length) {
+      body.innerHTML = '<p style="color:var(--muted);font-size:.85rem">Nenhuma venda de vendedor neste mês.</p>';
+      return;
+    }
+    body.innerHTML = `
+      <div style="overflow-x:auto"><table style="width:100%;font-size:.82rem;border-collapse:collapse;min-width:620px">
+        <thead><tr style="text-align:left;color:var(--muted)">
+          <th style="padding:6px 4px">Vendedor</th><th>Pedidos (pagos)</th><th>Total vendido</th><th>Base (sem frete)</th><th>Comissão a pagar</th><th>Aguard. pagamento</th>
+        </tr></thead>
+        <tbody>${d.vendedores.map(v => `
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:8px 4px;font-weight:700">${escapeHtml(v.nome)}</td>
+            <td>${v.pedidos_pagos} de ${v.pedidos}</td>
+            <td style="white-space:nowrap">R$ ${fmt(v.total_vendido)}</td>
+            <td style="white-space:nowrap">R$ ${fmt(v.base_comissao)}</td>
+            <td style="white-space:nowrap;color:var(--green);font-weight:800">R$ ${fmt(v.comissao)}</td>
+            <td style="white-space:nowrap;color:var(--orange)">R$ ${fmt(v.valor_pendente || 0)}${v.pedidos_pendentes ? ` <span style="font-size:.68rem">(${v.pedidos_pendentes} ped.)</span>` : ''}</td>
+          </tr>`).join('')}</tbody>
+      </table></div>
+      <p style="font-size:.72rem;color:var(--muted);margin:10px 0 0">Comissão = % do vendedor sobre o valor dos produtos (sem frete) dos pedidos <b>pagos</b> no mês. O % usado é o que estava combinado no momento de cada venda.</p>
+      <h4 style="margin:18px 0 8px">Vendas do mês</h4>
+      <div style="overflow-x:auto"><table style="width:100%;font-size:.78rem;border-collapse:collapse;min-width:620px">
+        <thead><tr style="text-align:left;color:var(--muted)"><th style="padding:5px 4px">Pedido</th><th>Cliente</th><th>Total</th><th>Status</th><th>%</th><th>Comissão</th></tr></thead>
+        <tbody>${d.pedidos.map(o => `
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:6px 4px;font-weight:700">${o.id}</td>
+            <td>${escapeHtml(o.customer.name)}</td>
+            <td style="white-space:nowrap">R$ ${fmt(o.total)}</td>
+            <td><span class="badge ${o.status}">${statusLabel(o.status)}</span></td>
+            <td>${o.comissao_pct}%</td>
+            <td style="white-space:nowrap">R$ ${fmt(o.comissao_valor || 0)}</td>
+          </tr>`).join('')}</tbody>
+      </table></div>`;
+  } catch(e) {
+    const body = document.getElementById('com-body');
+    if (body) body.innerHTML = '<p style="color:var(--red);font-size:.85rem">Erro ao carregar comissões.</p>';
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   M11-F2 — EMPRESAS (B2B por contrato)
+══════════════════════════════════════════════════════ */
+const EMPRESAS = { lista: [], editProds: [] };
+const CONTRATO_LABELS = { mensal:'Mensal', trimestral:'Trimestral', semestral:'Semestral', anual:'Anual', avulso:'Avulso' };
+
+function empContratoBadge(e) {
+  const c = e.contrato || {};
+  const tipo = CONTRATO_LABELS[c.tipo] || 'Contrato';
+  if (!c.fim) return `<span class="badge gray">${tipo}</span>`;
+  const dias = Math.ceil((new Date(c.fim + 'T23:59:59') - new Date()) / 86400000);
+  if (dias < 0)   return `<span class="badge red">${tipo} — vencido</span>`;
+  if (dias <= 30) return `<span class="badge yellow">${tipo} — vence em ${dias}d</span>`;
+  return `<span class="badge green">${tipo} — vigente</span>`;
+}
+
+async function renderEmpresas() {
+  const root = document.getElementById('empresas-root');
+  if (!root) return;
+  root.innerHTML = '<p style="color:var(--muted)">Carregando…</p>';
+  try {
+    const d = await api('/api/empresas');
+    EMPRESAS.lista = d.empresas || [];
+  } catch(e) {
+    root.innerHTML = '<p style="color:var(--red)">Erro ao carregar empresas.</p>';
+    return;
+  }
+
+  root.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <p style="font-size:.82rem;color:var(--muted);margin:0;max-width:520px">Clientes com contrato de fornecimento: você produz e deixa o estoque pronto; as lojas vão pedindo e o pedido baixa do estoque dedicado da empresa.</p>
+      <button class="btn btn-primary" onclick="empEditor(null)"><i class="fa fa-plus"></i> Nova Empresa</button>
+    </div>
+    ${!EMPRESAS.lista.length
+      ? '<div class="card" style="padding:28px;text-align:center;color:var(--muted)">Nenhuma empresa cadastrada ainda.<br><span style="font-size:.8rem">Cadastre a primeira rede/cliente de contrato no botão acima.</span></div>'
+      : `<div style="display:grid;gap:12px">${EMPRESAS.lista.map(e => {
+          const totEstoque = (e.produtos || []).reduce((s, p) => s + (parseInt(p.estoque, 10) || 0), 0);
+          const negativos  = (e.produtos || []).filter(p => (parseInt(p.estoque, 10) || 0) < 0);
+          return `
+          <div class="card" style="padding:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;${e.ativa === false ? 'opacity:.55' : ''}">
+            <div style="min-width:0">
+              <div style="font-weight:800;font-size:1rem">${escapeHtml(e.nome)} ${e.ativa === false ? '<span class="badge gray">inativa</span>' : ''}</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:.76rem;align-items:center">
+                ${empContratoBadge(e)}
+                <span style="color:var(--muted)">🏪 ${(e.lojas || []).length} loja(s)</span>
+                <span style="color:var(--muted)">📦 ${(e.produtos || []).length} produto(s)</span>
+                <span style="color:${negativos.length ? 'var(--red)' : 'var(--muted)'}">🏭 estoque pronto: ${totEstoque} pacote(s)${negativos.length ? ' ⚠️ produzir!' : ''}</span>
+                ${e.contrato?.valor ? `<span style="color:var(--muted)">💰 R$ ${fmt(e.contrato.valor)}/${(e.contrato.tipo || 'mês').replace('mensal','mês').replace('trimestral','tri').replace('semestral','sem').replace('anual','ano')}</span>` : ''}
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn btn-primary" onclick="empPedido('${e.id}')"><i class="fa fa-cart-plus"></i> Pedido</button>
+              <button class="btn btn-secondary" onclick="empEditor('${e.id}')"><i class="fa fa-pen"></i> Editar</button>
+              ${['owner','admin'].includes(STATE.role) ? `<button class="btn btn-secondary" style="color:var(--red)" onclick="empExcluir('${e.id}')"><i class="fa fa-trash"></i></button>` : ''}
+            </div>
+          </div>`;
+        }).join('')}</div>`}`;
+}
+
+function empLojaRow(l = {}) {
+  return `<div class="emp-loja-row" style="display:grid;grid-template-columns:1.4fr 1fr;gap:8px;border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px" data-loja-id="${l.id || ''}">
+    <input type="text" class="el-nome" placeholder="Nome da loja (ex: Loja Centro) *" value="${escapeHtml(l.nome || '')}" />
+    <input type="text" class="el-cnpj" placeholder="CNPJ da loja" value="${escapeHtml(l.cnpj || '')}" />
+    <input type="text" class="el-end" placeholder="Endereço" value="${escapeHtml(l.endereco || '')}" style="grid-column:1/-1" />
+    <div style="display:grid;grid-template-columns:2fr .7fr 1fr;gap:8px"><input type="text" class="el-cidade" placeholder="Cidade" value="${escapeHtml(l.cidade || '')}" /><input type="text" class="el-uf" placeholder="UF" maxlength="2" value="${escapeHtml(l.uf || '')}" /><input type="text" class="el-cep" placeholder="CEP" value="${escapeHtml(l.cep || '')}" /></div>
+    <div style="display:flex;gap:8px"><input type="tel" class="el-phone" placeholder="Telefone/WhatsApp" value="${escapeHtml(l.phone || '')}" style="flex:1" />
+    <button type="button" class="btn btn-ghost btn-icon" style="color:var(--red)" onclick="this.closest('.emp-loja-row').remove()" title="Remover loja"><i class="fa fa-trash"></i></button></div>
+  </div>`;
+}
+
+const EMP_TIPOS = ['Caixa de pizza','Caixa de bolo / torta','Caixa de hambúrguer','Embalagem de batata (cone/balde)','Caixa de pastel','Caixa de churros','Marmita / antivazamento','Caixa de esfiha / salgados','Saco / sacola','Copo / pote','Bandeja','Outro'];
+const EMP_MATERIAIS = ['Kraft','Duplex','Triplex','Microondulado','Papel branco','Laminado interno','Outro'];
+const EMP_CORES = ['Sem impressão','1 cor','2 cores','3 cores','4 cores (CMYK)','4 cores + verniz','6 cores'];
+const EMP_ACABAMENTOS = ['Sem acabamento','Verniz brilho','Verniz fosco','Laminação interna (anti-gordura)','Plastificado','Outro'];
+const EMP_ARTE_LABELS = { rascunho:'✏️ Arte em rascunho', em_aprovacao:'⏳ Arte em aprovação', aprovada:'✅ Arte aprovada' };
+
+// Lista de produtos contratados (cards com miniatura da arte)
+function empProdsList() {
+  const box = document.getElementById('emp-prods');
+  if (!box) return;
+  box.innerHTML = !EMPRESAS.editProds.length
+    ? '<p style="color:var(--muted);font-size:.82rem;padding:6px 0">Nenhuma embalagem cadastrada ainda.</p>'
+    : EMPRESAS.editProds.map((p, i) => `
+      <div style="display:flex;gap:12px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;flex-wrap:wrap">
+        <div style="width:58px;height:58px;border-radius:9px;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+          ${p.arte_url ? `<img src="${p.arte_url}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">` : '<i class="fa fa-image" style="color:var(--muted)"></i>'}
+        </div>
+        <div style="flex:1;min-width:180px">
+          <div style="font-weight:700;font-size:.86rem">${escapeHtml(p.nome)}</div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:2px">
+            ${p.tipo ? escapeHtml(p.tipo) + ' · ' : ''}${p.unidades_pacote ? p.unidades_pacote + ' un/pacote · ' : ''}R$ ${fmt(p.preco)}/pacote
+            · <span style="color:${(p.estoque||0) > 0 ? 'var(--green)' : ((p.estoque||0) < 0 ? 'var(--red)' : 'var(--muted)')}">estoque: ${p.estoque || 0}</span>
+          </div>
+          <div style="font-size:.7rem;margin-top:2px">${EMP_ARTE_LABELS[p.arte_status] || ''}</div>
+        </div>
+        <div style="display:flex;gap:4px">
+          <button type="button" class="btn btn-ghost btn-icon" onclick="empProdModal(${i})" title="Editar ficha"><i class="fa fa-pen"></i></button>
+          <button type="button" class="btn btn-ghost btn-icon" style="color:var(--red)" onclick="EMPRESAS.editProds.splice(${i},1);empProdsList()" title="Remover"><i class="fa fa-trash"></i></button>
+        </div>
+      </div>`).join('');
+}
+
+// Carrega o catálogo do site (uma vez) — modelos base para a ficha personalizada
+async function empCatalogo() {
+  if (EMPRESAS.catalogo && EMPRESAS.catalogo.length) return EMPRESAS.catalogo;
+  try {
+    EMPRESAS.catalogo = (await (await fetch('/api/products')).json()).filter(p => p.active !== false);
+  } catch(e) { EMPRESAS.catalogo = []; }
+  return EMPRESAS.catalogo;
+}
+
+// Adivinha o tipo de embalagem a partir do produto do site
+function empTipoGuess(p) {
+  const s = ((p.category || '') + ' ' + (p.name || '')).toLowerCase();
+  if (s.includes('pizza'))                        return 'Caixa de pizza';
+  if (s.includes('bolo') || s.includes('torta'))  return 'Caixa de bolo / torta';
+  if (s.includes('hamb') || s.includes('burger') || s.includes('lanche')) return 'Caixa de hambúrguer';
+  if (s.includes('batata') || s.includes('frita')) return 'Embalagem de batata (cone/balde)';
+  if (s.includes('pastel'))                       return 'Caixa de pastel';
+  if (s.includes('churro'))                       return 'Caixa de churros';
+  if (s.includes('marmita') || s.includes('antivaz')) return 'Marmita / antivazamento';
+  if (s.includes('esfiha') || s.includes('salgado'))  return 'Caixa de esfiha / salgados';
+  if (s.includes('saco') || s.includes('sacola')) return 'Saco / sacola';
+  if (s.includes('copo') || s.includes('pote'))   return 'Copo / pote';
+  if (s.includes('bandeja'))                      return 'Bandeja';
+  return 'Outro';
+}
+
+function empSpecFind(p, keys) {
+  for (const s of (p.specs || [])) {
+    const l = String(s.label || '').toLowerCase();
+    if (keys.some(k => l.includes(k))) return String(s.value || '');
+  }
+  return '';
+}
+
+// Preenche a ficha a partir do modelo do site escolhido (ponto de partida — ajuste com o cliente)
+function empProdAplicarBase() {
+  const i = document.getElementById('ep-base')?.value;
+  if (i === '' || i == null) return;
+  const p = (EMPRESAS.catalogo || [])[Number(i)];
+  if (!p) return;
+  const v0 = (p.variants || [])[0] || {};
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val !== '' && val != null) el.value = val; };
+  set('ep-nome',   p.name);
+  set('ep-tipo',   empTipoGuess(p));
+  set('ep-unid',   v0.units || 100);
+  set('ep-preco',  v0.price || '');
+  // medidas/material das especificações do produto (quando existem)
+  const medidas = empSpecFind(p, ['medida', 'dimens', 'tamanho']);
+  if (medidas) {
+    const parts = medidas.replace(/cm/gi, '').split(/[x×]/).map(s => s.trim()).filter(Boolean);
+    if (parts.length >= 3) { set('ep-larg', parts[0]); set('ep-alt', parts[1]); set('ep-prof', parts[2]); }
+    else if (parts.length === 2) { set('ep-larg', parts[0]); set('ep-alt', parts[1]); }
+  } else {
+    set('ep-larg', empSpecFind(p, ['largura']));
+    set('ep-alt',  empSpecFind(p, ['altura']));
+    set('ep-prof', empSpecFind(p, ['profundidade', 'comprimento']));
+  }
+  const material = empSpecFind(p, ['material', 'papel']);
+  if (material) {
+    const conhecido = EMP_MATERIAIS.find(m => material.toLowerCase().includes(m.toLowerCase()));
+    set('ep-material', conhecido || 'Outro');
+  }
+  set('ep-gram', empSpecFind(p, ['gramatura']));
+  // foto do modelo como referência visual (a arte do cliente substitui depois)
+  const img = p.image || (p.images && p.images[0]) || '';
+  if (img) {
+    document.getElementById('ep-arte-url').value = img;
+    document.getElementById('ep-arte-prev').innerHTML = `<img src="${img}" style="width:100%;height:100%;object-fit:cover">`;
+  }
+  toast('Modelo aplicado — agora ajuste com o que o cliente pedir.');
+}
+
+// Modal de ficha técnica da embalagem personalizada
+async function empProdModal(idx) {
+  const p = idx != null && idx >= 0 ? EMPRESAS.editProds[idx] : {};
+  const catalogo = await empCatalogo();
+  const sel = (opts, val) => opts.map(o => `<option ${o === val ? 'selected' : ''}>${o}</option>`).join('');
+  document.getElementById('modal-title').textContent = p.nome ? 'Ficha — ' + p.nome : 'Nova embalagem personalizada';
+  document.getElementById('modal-body').innerHTML = `
+    ${!p.nome && catalogo.length ? `
+    <div style="background:var(--blue-l,#eff6ff);border-radius:10px;padding:10px 12px;margin-bottom:12px">
+      <label style="font-weight:700;font-size:.78rem;display:block;margin-bottom:4px">🚀 Partir de um modelo pronto do site (opcional)</label>
+      <select id="ep-base" onchange="empProdAplicarBase()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:.85rem">
+        <option value="">— escolher modelo do catálogo —</option>
+        ${catalogo.map((cp, ci) => `<option value="${ci}">${escapeHtml(cp.name)}</option>`).join('')}
+      </select>
+      <p style="font-size:.7rem;color:var(--muted);margin:5px 0 0">Puxa nome, tipo, pacote, preço de referência, medidas e foto do modelo — aí você ajusta com o que o cliente pedir.</p>
+    </div>` : ''}
+    <div class="form-row"><label>Nome / identificação *</label><input type="text" id="ep-nome" value="${escapeHtml(p.nome || '')}" placeholder="Ex: Caixa burger Sabor — logo vermelho" /></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-row"><label>Tipo de embalagem</label><select id="ep-tipo">${sel(EMP_TIPOS, p.tipo || EMP_TIPOS[0])}</select></div>
+      <div class="form-row"><label>Unidades por pacote</label><input type="number" id="ep-unid" min="1" value="${p.unidades_pacote || 100}" /></div>
+      <div class="form-row"><label>Preço por pacote (R$) *</label><input type="number" id="ep-preco" min="0" step="0.01" value="${p.preco ?? ''}" /></div>
+      <div class="form-row"><label>Estoque pronto (pacotes)</label><input type="number" id="ep-estoque" step="1" value="${p.estoque ?? 0}" /></div>
+      <div class="form-row"><label>Lote mínimo de produção</label><input type="number" id="ep-lote" min="0" value="${p.lote_minimo || 0}" placeholder="pacotes" /></div>
+    </div>
+    <p style="font-weight:700;font-size:.8rem;margin:10px 0 4px">📐 Medidas e material</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="form-row"><label>Largura (cm)</label><input type="text" id="ep-larg" value="${escapeHtml(p.largura || '')}" /></div>
+      <div class="form-row"><label>Altura (cm)</label><input type="text" id="ep-alt" value="${escapeHtml(p.altura || '')}" /></div>
+      <div class="form-row"><label>Profundidade (cm)</label><input type="text" id="ep-prof" value="${escapeHtml(p.profundidade || '')}" /></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-row"><label>Material</label><select id="ep-material">${sel(EMP_MATERIAIS, p.material || EMP_MATERIAIS[0])}</select></div>
+      <div class="form-row"><label>Gramatura</label><input type="text" id="ep-gram" value="${escapeHtml(p.gramatura || '')}" placeholder="Ex: 300g/m²" /></div>
+    </div>
+    <p style="font-weight:700;font-size:.8rem;margin:10px 0 4px">🖨️ Impressão e acabamento</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="form-row"><label>Cores de impressão</label><select id="ep-cores">${sel(EMP_CORES, p.cores_impressao || EMP_CORES[4])}</select></div>
+      <div class="form-row"><label>Acabamento</label><select id="ep-acab">${sel(EMP_ACABAMENTOS, p.acabamento || EMP_ACABAMENTOS[0])}</select></div>
+    </div>
+    <p style="font-weight:700;font-size:.8rem;margin:10px 0 4px">🎨 Layout / arte da caixa</p>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div id="ep-arte-prev" style="width:86px;height:86px;border:1px dashed var(--border);border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden">
+        ${p.arte_url ? `<img src="${p.arte_url}" style="width:100%;height:100%;object-fit:cover">` : '<i class="fa fa-image" style="color:var(--muted)"></i>'}
+      </div>
+      <div style="flex:1;min-width:180px">
+        <input type="file" id="ep-arte-file" accept="image/*" onchange="empProdUpload(this)" style="font-size:.78rem" />
+        <input type="hidden" id="ep-arte-url" value="${escapeHtml(p.arte_url || '')}" />
+        <div class="form-row" style="margin-top:8px"><label>Status da arte</label>
+          <select id="ep-arte-status">
+            <option value="rascunho" ${(p.arte_status || 'rascunho') === 'rascunho' ? 'selected' : ''}>✏️ Rascunho</option>
+            <option value="em_aprovacao" ${p.arte_status === 'em_aprovacao' ? 'selected' : ''}>⏳ Em aprovação com o cliente</option>
+            <option value="aprovada" ${p.arte_status === 'aprovada' ? 'selected' : ''}>✅ Aprovada pelo cliente</option>
+          </select></div>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:8px"><label>Observações (tudo mais que o cliente pediu)</label>
+      <textarea id="ep-obs" rows="2" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;font-family:inherit">${escapeHtml(p.obs || '')}</textarea></div>`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="empProdSalvar(${idx != null && idx >= 0 ? idx : -1})"><i class="fa fa-save"></i> Salvar embalagem</button>`;
+  showModal();
+}
+
+async function empProdUpload(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) return toast('Imagem muito grande (máx. 8 MB).', 'error');
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const r = await api('/api/admin/upload-image', { method: 'POST', body: JSON.stringify({ filename: file.name, data: reader.result }) });
+      document.getElementById('ep-arte-url').value = r.path;
+      document.getElementById('ep-arte-prev').innerHTML = `<img src="/${r.path}" style="width:100%;height:100%;object-fit:cover">`;
+      toast('Layout enviado!');
+    } catch(e) { toast('Erro no upload da arte: ' + e.message, 'error'); }
+  };
+  reader.readAsDataURL(file);
+}
+
+function empProdSalvar(idx) {
+  const prod = {
+    nome:            document.getElementById('ep-nome')?.value.trim(),
+    tipo:            document.getElementById('ep-tipo')?.value,
+    unidades_pacote: parseInt(document.getElementById('ep-unid')?.value, 10) || 0,
+    preco:           parseFloat(document.getElementById('ep-preco')?.value) || 0,
+    estoque:         parseInt(document.getElementById('ep-estoque')?.value, 10) || 0,
+    lote_minimo:     parseInt(document.getElementById('ep-lote')?.value, 10) || 0,
+    largura:         document.getElementById('ep-larg')?.value.trim(),
+    altura:          document.getElementById('ep-alt')?.value.trim(),
+    profundidade:    document.getElementById('ep-prof')?.value.trim(),
+    material:        document.getElementById('ep-material')?.value,
+    gramatura:       document.getElementById('ep-gram')?.value.trim(),
+    cores_impressao: document.getElementById('ep-cores')?.value,
+    acabamento:      document.getElementById('ep-acab')?.value,
+    arte_url:        document.getElementById('ep-arte-url')?.value.trim(),
+    arte_status:     document.getElementById('ep-arte-status')?.value,
+    obs:             document.getElementById('ep-obs')?.value.trim(),
+  };
+  if (!prod.nome)  return toast('Dê um nome para a embalagem.', 'error');
+  if (!prod.preco) return toast('Informe o preço combinado por pacote.', 'error');
+  if (idx >= 0) EMPRESAS.editProds[idx] = prod;
+  else EMPRESAS.editProds.push(prod);
+  closeModal();
+  empProdsList();
+}
+
+function empEditor(id) {
+  const root = document.getElementById('empresas-root');
+  const e = id ? EMPRESAS.lista.find(x => x.id === id) : null;
+  const c = e?.contrato || {};
+  EMPRESAS.editProds = JSON.parse(JSON.stringify(e?.produtos || []));
+  root.innerHTML = `
+    <button class="btn btn-secondary" onclick="renderEmpresas()" style="margin-bottom:14px"><i class="fa fa-arrow-left"></i> Voltar</button>
+    <div style="display:grid;gap:16px;max-width:760px">
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 12px"><i class="fa fa-building" style="color:var(--red)"></i> Dados da empresa</h3>
+        <div class="form-row"><label>Nome (como você chama) *</label><input type="text" id="emp-nome" value="${escapeHtml(e?.nome || '')}" placeholder="Ex: Rede Sodiê" /></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="form-row"><label>Razão social</label><input type="text" id="emp-razao" value="${escapeHtml(e?.razao_social || '')}" /></div>
+          <div class="form-row"><label>CNPJ (matriz)</label><input type="text" id="emp-cnpj" value="${escapeHtml(e?.cnpj || '')}" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div class="form-row"><label>Contato</label><input type="text" id="emp-ct-nome" value="${escapeHtml(e?.contato?.nome || '')}" placeholder="Nome" /></div>
+          <div class="form-row"><label>WhatsApp</label><input type="tel" id="emp-ct-phone" value="${escapeHtml(e?.contato?.phone || '')}" /></div>
+          <div class="form-row"><label>E-mail</label><input type="email" id="emp-ct-email" value="${escapeHtml(e?.contato?.email || '')}" /></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;cursor:pointer"><input type="checkbox" id="emp-ativa" ${e?.ativa === false ? '' : 'checked'} /> Empresa ativa</label>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-file-signature" style="color:var(--red)"></i> Contrato</h3>
+        <p style="font-size:.76rem;color:var(--muted);margin:0 0 12px">O contrato garante o fornecimento pro cliente e protege seu estoque: você só produz com contrato fechado.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="form-row"><label>Período</label>
+            <select id="emp-c-tipo">${Object.entries(CONTRATO_LABELS).map(([k, v]) => `<option value="${k}" ${c.tipo === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+          <div class="form-row"><label>Valor do contrato (R$ por período)</label><input type="number" id="emp-c-valor" min="0" step="0.01" value="${c.valor ?? ''}" /></div>
+          <div class="form-row"><label>Início</label><input type="date" id="emp-c-inicio" value="${c.inicio || ''}" /></div>
+          <div class="form-row"><label>Fim (vigência)</label><input type="date" id="emp-c-fim" value="${c.fim || ''}" /></div>
+        </div>
+        <div class="form-row"><label>Condições combinadas (prazos, reajuste, mínimos…)</label>
+          <textarea id="emp-c-cond" rows="3" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;font-family:inherit">${escapeHtml(c.condicoes || '')}</textarea></div>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-shop" style="color:var(--red)"></i> Lojas</h3>
+        <p style="font-size:.76rem;color:var(--muted);margin:0 0 12px">Cada loja pode ter CNPJ próprio — a NF-e e a etiqueta do pedido saem com os dados da loja que pediu.</p>
+        <div id="emp-lojas">${(e?.lojas || []).map(empLojaRow).join('')}</div>
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('emp-lojas').insertAdjacentHTML('beforeend', empLojaRow())"><i class="fa fa-plus"></i> Adicionar loja</button>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-box" style="color:var(--red)"></i> Embalagens personalizadas & estoque dedicado</h3>
+        <p style="font-size:.76rem;color:var(--muted);margin:0 0 12px">Ficha técnica completa de cada embalagem: tipo, medidas, material, impressão, layout da arte e o preço combinado com ESTA empresa. "Estoque" = pacotes já produzidos e prontos.</p>
+        <div id="emp-prods"></div>
+        <button type="button" class="btn btn-secondary" onclick="empProdModal(-1)"><i class="fa fa-plus"></i> Adicionar embalagem</button>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-key" style="color:var(--red)"></i> Acesso ao Portal da Empresa</h3>
+        <p style="font-size:.76rem;color:var(--muted);margin:0 0 12px">Crie o login e passe pro cliente: ele entra em <b>topfoodembalagens.com.br/empresa</b> (tela verde), vê os produtos e preços dele, o estoque pronto, e faz pedido por loja sozinho.</p>
+        ${e?.portal_username ? `<p style="font-size:.8rem;margin:0 0 10px">Acesso atual: <code style="background:var(--bg);padding:2px 8px;border-radius:5px">${escapeHtml(e.portal_username)}</code></p>` : ''}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="form-row"><label>Usuário do portal</label><input type="text" id="emp-pt-user" value="${escapeHtml(e?.portal_username || '')}" placeholder="Ex: saborburger" /></div>
+          <div class="form-row"><label>Senha ${e?.portal_username ? '(em branco = manter)' : '(mínimo 6 caracteres)'}</label><input type="password" id="emp-pt-pass" placeholder="${e?.portal_username ? 'Nova senha (opcional)' : 'Senha de acesso'}" /></div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" style="padding:13px;font-size:1rem" onclick="empSalvar(${e ? `'${e.id}'` : 'null'})"><i class="fa fa-save"></i> Salvar empresa</button>
+    </div>`;
+  empProdsList();
+}
+
+async function empSalvar(id) {
+  const body = {
+    nome:         document.getElementById('emp-nome')?.value.trim(),
+    razao_social: document.getElementById('emp-razao')?.value.trim(),
+    cnpj:         document.getElementById('emp-cnpj')?.value.trim(),
+    ativa:        document.getElementById('emp-ativa')?.checked,
+    contato: {
+      nome:  document.getElementById('emp-ct-nome')?.value.trim(),
+      phone: document.getElementById('emp-ct-phone')?.value.trim(),
+      email: document.getElementById('emp-ct-email')?.value.trim(),
+    },
+    contrato: {
+      tipo:      document.getElementById('emp-c-tipo')?.value,
+      valor:     parseFloat(document.getElementById('emp-c-valor')?.value) || 0,
+      inicio:    document.getElementById('emp-c-inicio')?.value || '',
+      fim:       document.getElementById('emp-c-fim')?.value || '',
+      condicoes: document.getElementById('emp-c-cond')?.value.trim(),
+    },
+    lojas: [...document.querySelectorAll('.emp-loja-row')].map(r => ({
+      id:       r.dataset.lojaId || undefined,
+      nome:     r.querySelector('.el-nome')?.value.trim(),
+      cnpj:     r.querySelector('.el-cnpj')?.value.trim(),
+      endereco: r.querySelector('.el-end')?.value.trim(),
+      cidade:   r.querySelector('.el-cidade')?.value.trim(),
+      uf:       r.querySelector('.el-uf')?.value.trim(),
+      cep:      r.querySelector('.el-cep')?.value.trim(),
+      phone:    r.querySelector('.el-phone')?.value.trim(),
+    })),
+    produtos: EMPRESAS.editProds,
+    portal_username: document.getElementById('emp-pt-user')?.value.trim() || '',
+    portal_password: document.getElementById('emp-pt-pass')?.value || '',
+  };
+  if (!body.nome) return toast('Informe o nome da empresa.', 'error');
+  try {
+    const r = id ? await api('/api/empresas/' + id, { method: 'PUT', body: JSON.stringify(body) })
+                 : await api('/api/empresas',       { method: 'POST', body: JSON.stringify(body) });
+    if (r.portal_error) toast('Empresa salva, mas o acesso ao portal falhou: ' + r.portal_error, 'error');
+    else toast('Empresa salva!' + (r.portal_username ? ' Acesso do portal: ' + r.portal_username : ''));
+    renderEmpresas();
+  } catch(e) {
+    toast('Erro ao salvar empresa: ' + e.message, 'error');
+  }
+}
+
+async function empExcluir(id) {
+  const e = EMPRESAS.lista.find(x => x.id === id);
+  if (!e) return;
+  if (!confirm(`Excluir a empresa "${e.nome}"? Os pedidos já lançados continuam no painel.`)) return;
+  try {
+    await api('/api/empresas/' + id, { method: 'DELETE' });
+    toast('Empresa excluída.');
+    renderEmpresas();
+  } catch(err) { toast('Erro ao excluir.', 'error'); }
+}
+
+function empPedido(id) {
+  const e = EMPRESAS.lista.find(x => x.id === id);
+  if (!e) return;
+  if (!(e.lojas || []).length)    return toast('Cadastre ao menos uma loja nessa empresa primeiro.', 'error');
+  if (!(e.produtos || []).length) return toast('Cadastre os produtos contratados dessa empresa primeiro.', 'error');
+
+  document.getElementById('modal-title').textContent = 'Pedido — ' + e.nome;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-row"><label>Loja que está pedindo *</label>
+      <select id="empd-loja">${e.lojas.map(l => `<option value="${l.id}">${escapeHtml(l.nome)}${l.cidade ? ' — ' + escapeHtml(l.cidade) : ''}</option>`).join('')}</select></div>
+    <p style="font-weight:700;font-size:.82rem;margin:12px 0 6px">Itens (pacotes):</p>
+    ${e.produtos.map((p, i) => `
+      <div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border-bottom:1px dashed var(--border);padding:7px 0">
+        <div style="width:42px;height:42px;border-radius:8px;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center">
+          ${p.arte_url ? `<img src="${p.arte_url}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">` : '<i class="fa fa-box" style="color:var(--muted);font-size:.9rem"></i>'}
+        </div>
+        <div><div style="font-size:.82rem;font-weight:600">${escapeHtml(p.nome)}</div>
+          <div style="font-size:.72rem;color:var(--muted)">${p.tipo ? escapeHtml(p.tipo) + ' · ' : ''}R$ ${fmt(p.preco)}/pacote · <span style="color:${(p.estoque||0) > 0 ? 'var(--green)' : 'var(--red)'}">estoque pronto: ${p.estoque || 0}</span></div></div>
+        <input type="number" class="empd-qty" data-idx="${i}" min="0" step="1" value="0" style="width:74px;text-align:center;padding:7px;border:1px solid var(--border);border-radius:8px" oninput="empPedidoTotal('${id}')" />
+      </div>`).join('')}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+      <div class="form-row"><label>Frete (R$)</label><input type="number" id="empd-frete" min="0" step="0.01" value="0" oninput="empPedidoTotal('${id}')" /></div>
+      <div class="form-row"><label>Pagamento</label>
+        <select id="empd-pag">
+          <option value="faturado">Faturado (contrato)</option>
+          <option value="pix">PIX</option>
+          <option value="boleto">Boleto</option>
+          <option value="card">Cartão</option>
+        </select></div>
+    </div>
+    <div class="form-row"><label>Observações</label><input type="text" id="empd-obs" placeholder="opcional" /></div>
+    <div id="empd-total" style="font-size:1.05rem;font-weight:800;text-align:right"></div>`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="empPedidoLancar('${id}')"><i class="fa fa-paper-plane"></i> Lançar pedido</button>`;
+  showModal();
+  empPedidoTotal(id);
+}
+
+function empPedidoTotal(id) {
+  const e = EMPRESAS.lista.find(x => x.id === id);
+  const el = document.getElementById('empd-total');
+  if (!e || !el) return;
+  let sub = 0;
+  document.querySelectorAll('.empd-qty').forEach(inp => {
+    const qty = parseInt(inp.value, 10) || 0;
+    const p = e.produtos[Number(inp.dataset.idx)];
+    if (p && qty > 0) sub += qty * (parseFloat(p.preco) || 0);
+  });
+  const frete = parseFloat(document.getElementById('empd-frete')?.value) || 0;
+  el.innerHTML = `Total: <span style="color:var(--red)">R$ ${fmt(sub + frete)}</span>`;
+}
+
+async function empPedidoLancar(id) {
+  const items = [...document.querySelectorAll('.empd-qty')]
+    .map(inp => ({ idx: Number(inp.dataset.idx), qty: parseInt(inp.value, 10) || 0 }))
+    .filter(i => i.qty > 0);
+  if (!items.length) return toast('Informe a quantidade de ao menos um item.', 'error');
+  const e = EMPRESAS.lista.find(x => x.id === id);
+  try {
+    const r = await api('/api/empresas/' + id + '/pedido', { method: 'POST', body: JSON.stringify({
+      loja_id: document.getElementById('empd-loja')?.value,
+      items,
+      shipping_price: parseFloat(document.getElementById('empd-frete')?.value) || 0,
+      payment_method: document.getElementById('empd-pag')?.value,
+      notes: document.getElementById('empd-obs')?.value.trim(),
+    })});
+    empPedidoResultado(r, e);
+  } catch(err) {
+    toast('Erro ao lançar pedido: ' + err.message, 'error');
+  }
+}
+
+// Resultado do pedido: link de cobrança (PIX/boleto/cartão) + NF-e/etiqueta sem sair do fluxo
+function empPedidoResultado(r, e) {
+  const fone = String(e?.contato?.phone || '').replace(/\D/g, '');
+  const wa = fone ? (fone.startsWith('55') ? fone : '55' + fone) : '';
+  const msg = `Olá! Pedido ${r.order_id} da ${e?.nome || 'sua empresa'} na TopFood Embalagens: R$ ${fmt(r.total)}.`
+    + (r.payment_link ? ` Pagamento: ${r.payment_link}` : '');
+  document.getElementById('modal-title').textContent = 'Pedido ' + r.order_id + ' lançado!';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="text-align:center;padding:6px 0 2px"><span style="font-size:2rem">✅</span>
+      <div style="font-size:1.15rem;font-weight:800;margin-top:4px">R$ ${fmt(r.total)}</div></div>
+    ${(r.avisos || []).map(a => `<div style="background:var(--yellow-l,#fef9c3);color:#854d0e;border-radius:8px;padding:9px 12px;font-size:.78rem;margin-top:8px">⚠️ ${escapeHtml(a)}</div>`).join('')}
+    ${r.payment_link ? `
+      <p style="font-size:.8rem;margin:12px 0 6px;font-weight:700">💳 Cobrança gerada (Asaas):</p>
+      <p style="font-size:.76rem;word-break:break-all;margin:0 0 10px"><a href="${r.payment_link}" target="_blank" rel="noopener">${r.payment_link}</a></p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${wa ? `<a class="btn btn-wa" href="https://wa.me/${wa}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Mandar no WhatsApp</a>` : ''}
+        <button class="btn btn-secondary" onclick="vendaCopy('${r.payment_link}','Link copiado!')"><i class="fa fa-copy"></i> Copiar link</button>
+        ${r.pix_copy_paste ? `<button class="btn btn-secondary" onclick="vendaCopy(document.getElementById('empd-cp').value,'PIX copia-e-cola copiado!')"><i class="fa fa-qrcode"></i> Copiar PIX</button><input type="hidden" id="empd-cp" value="${escapeHtml(r.pix_copy_paste)}">` : ''}
+      </div>`
+    : (r.charge_error
+        ? `<div style="background:var(--orange-l,#fff7ed);color:#9a3412;border-radius:8px;padding:9px 12px;font-size:.78rem;margin-top:10px">⚠️ Cobrança não gerada: ${escapeHtml(r.charge_error)} — você pode gerar depois abrindo o pedido.</div>`
+        : `<p style="font-size:.8rem;color:var(--muted);margin-top:10px">📄 Pedido <b>faturado no contrato</b> — sem cobrança automática. Confirme o pagamento no pedido quando o cliente quitar a fatura.</p>`)}
+    <p style="font-size:.76rem;color:var(--muted);margin:12px 0 0">Próximo passo: abra o pedido para <b>emitir a NF-e</b> e <b>imprimir a etiqueta</b> de cada entrega.</p>`;
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal();renderEmpresas()">Fechar</button>
+    <button class="btn btn-primary" onclick="empAbrirPedido('${r.order_id}')"><i class="fa fa-file-invoice-dollar"></i> Abrir pedido (NF-e / etiqueta)</button>`;
+}
+
+// Abre o pedido no modal padrão do painel (com NF-e, etiqueta e confirmação de pagamento)
+async function empAbrirPedido(orderId) {
+  try {
+    const orders = await api('/api/admin/orders');
+    STATE.orders = orders || [];
+    closeModal();
+    viewOrder(orderId);
+  } catch(e) {
+    toast('Pedido lançado! Veja na página Pedidos.', 'info');
+    closeModal();
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   PORTAL DA EMPRESA — autoatendimento (role 'empresa')
+══════════════════════════════════════════════════════ */
+const PORTAL = { empresa: null, qtys: {} };
+
+async function renderPortal() {
+  const root = document.getElementById('portal-root');
+  if (!root) return;
+  root.innerHTML = '<p style="color:var(--muted)">Carregando…</p>';
+  try {
+    const d = await api('/api/portal/me');
+    PORTAL.empresa = d.empresa;
+  } catch(e) {
+    root.innerHTML = '<div class="card" style="padding:24px;color:var(--red)">Não foi possível carregar seus dados. Fale com a TopFood: (11) 98885-6367.</div>';
+    return;
+  }
+  const e = PORTAL.empresa;
+  PORTAL.qtys = {};
+
+  root.innerHTML = `
+    <div style="display:grid;gap:16px;max-width:760px;padding-bottom:86px">
+
+      <div class="card" style="padding:18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-weight:800;font-size:1.05rem">🏢 ${escapeHtml(e.nome)}</div>
+          <div style="font-size:.78rem;color:var(--muted);margin-top:3px">Contrato ${escapeHtml(e.contrato?.tipo || '')}${e.contrato?.fim ? ' · vigência até ' + e.contrato.fim.split('-').reverse().join('/') : ''}</div>
+        </div>
+        <a class="btn btn-wa" href="https://wa.me/5511988856367?text=${encodeURIComponent('Olá! Sou da ' + e.nome + ' e preciso de ajuda no portal.')}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Falar com a TopFood</a>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-cart-plus" style="color:var(--red)"></i> Fazer pedido</h3>
+        <p style="font-size:.78rem;color:var(--muted);margin:0 0 12px">Escolha a loja, informe as quantidades (em pacotes) e o pagamento. Suas embalagens já estão prontas no nosso estoque.</p>
+        <div class="form-row"><label>Loja que vai receber *</label>
+          <select id="pt-loja">${(e.lojas || []).map(l => `<option value="${l.id}">${escapeHtml(l.nome)}${l.cidade ? ' — ' + escapeHtml(l.cidade) : ''}${l.uf ? '/' + escapeHtml(l.uf) : ''}</option>`).join('')}</select></div>
+        <div id="pt-prods">
+          ${(e.produtos || []).map(p => `
+            <div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border-bottom:1px dashed var(--border);padding:9px 0">
+              <div style="width:52px;height:52px;border-radius:9px;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center">
+                ${p.arte_url ? `<img src="${p.arte_url}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">` : '<i class="fa fa-box" style="color:var(--muted)"></i>'}
+              </div>
+              <div>
+                <div style="font-size:.86rem;font-weight:700">${escapeHtml(p.nome)}</div>
+                <div style="font-size:.72rem;color:var(--muted)">${p.unidades_pacote ? p.unidades_pacote + ' un/pacote · ' : ''}R$ ${fmt(p.preco)}/pacote
+                  · <span style="color:${(p.estoque||0) > 0 ? 'var(--green)' : 'var(--orange)'}">${(p.estoque||0) > 0 ? p.estoque + ' pacote(s) pronto(s)' : 'sob produção'}</span></div>
+              </div>
+              <input type="number" class="pt-qty" data-idx="${p.idx}" min="0" step="1" value="0" style="width:78px;text-align:center;padding:8px;border:1px solid var(--border);border-radius:8px" oninput="portalTotal()" />
+            </div>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px">
+          <div class="form-row"><label>Forma de pagamento</label>
+            <select id="pt-pag">
+              <option value="boleto">Boleto (7 dias)</option>
+              <option value="pix">PIX</option>
+              <option value="card">Cartão de crédito</option>
+            </select></div>
+          <div class="form-row"><label>Observações</label><input type="text" id="pt-obs" placeholder="opcional — ex: entregar de manhã" /></div>
+        </div>
+        <div id="pt-total" style="font-size:1.05rem;font-weight:800;text-align:right;margin-top:6px"></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:12px;padding:13px;font-size:1rem" id="pt-lancar" onclick="portalPedido()">
+          <i class="fa fa-paper-plane"></i> Enviar pedido</button>
+        <p style="font-size:.72rem;color:var(--muted);margin:8px 0 0;text-align:center">Frete conforme contrato — confirmado pela TopFood junto com a entrega.</p>
+      </div>
+
+      <div id="pt-result"></div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 10px"><i class="fa fa-list-check" style="color:var(--red)"></i> Meus pedidos</h3>
+        <div id="pt-pedidos" style="overflow-x:auto">Carregando…</div>
+      </div>
+    </div>`;
+  portalTotal();
+  portalPedidos();
+}
+
+function portalTotal() {
+  const el = document.getElementById('pt-total');
+  if (!el || !PORTAL.empresa) return;
+  let sub = 0, pacotes = 0;
+  document.querySelectorAll('.pt-qty').forEach(inp => {
+    const qty = parseInt(inp.value, 10) || 0;
+    const p = (PORTAL.empresa.produtos || []).find(pp => pp.idx === Number(inp.dataset.idx));
+    if (p && qty > 0) { sub += qty * (parseFloat(p.preco) || 0); pacotes += qty; }
+  });
+  el.innerHTML = pacotes ? `${pacotes} pacote(s) &nbsp;·&nbsp; Total: <span style="color:var(--red)">R$ ${fmt(sub)}</span>` : '';
+}
+
+async function portalPedido() {
+  const items = [...document.querySelectorAll('.pt-qty')]
+    .map(inp => ({ idx: Number(inp.dataset.idx), qty: parseInt(inp.value, 10) || 0 }))
+    .filter(i => i.qty > 0);
+  if (!items.length) return toast('Informe a quantidade de ao menos um item.', 'error');
+  const btn = document.getElementById('pt-lancar');
+  btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Enviando...';
+  try {
+    const r = await api('/api/portal/pedido', { method: 'POST', body: JSON.stringify({
+      loja_id: document.getElementById('pt-loja')?.value,
+      items,
+      payment_method: document.getElementById('pt-pag')?.value,
+      notes: document.getElementById('pt-obs')?.value.trim(),
+    })});
+    document.querySelectorAll('.pt-qty').forEach(i => i.value = 0);
+    portalTotal();
+    const box = document.getElementById('pt-result');
+    box.innerHTML = `
+      <div class="card" style="padding:18px;border:2px solid var(--green)">
+        <h3 style="margin:0 0 8px;color:var(--green)"><i class="fa fa-check-circle"></i> Pedido ${r.order_id} enviado — R$ ${fmt(r.total)}</h3>
+        ${r.payment_link
+          ? `<p style="font-size:.8rem;margin:0 0 10px">Pague por aqui: <a href="${r.payment_link}" target="_blank" rel="noopener" style="word-break:break-all">${r.payment_link}</a></p>
+             <div style="display:flex;gap:8px;flex-wrap:wrap">
+               <a class="btn btn-primary" href="${r.payment_link}" target="_blank" rel="noopener"><i class="fa fa-credit-card"></i> Abrir pagamento</a>
+               <button class="btn btn-secondary" onclick="vendaCopy('${r.payment_link}','Link copiado!')"><i class="fa fa-copy"></i> Copiar link</button>
+               ${r.pix_copy_paste ? `<button class="btn btn-secondary" onclick="vendaCopy(document.getElementById('pt-cp').value,'PIX copiado!')"><i class="fa fa-qrcode"></i> Copiar PIX</button><input type="hidden" id="pt-cp" value="${escapeHtml(r.pix_copy_paste)}">` : ''}
+             </div>`
+          : `<p style="font-size:.8rem;color:var(--orange);margin:0">${escapeHtml(r.charge_error || 'A TopFood vai te mandar a cobrança.')}</p>`}
+        <p style="font-size:.76rem;color:var(--muted);margin:10px 0 0">A TopFood já recebeu seu pedido e vai preparar a entrega. 👍</p>
+      </div>`;
+    box.scrollIntoView({ behavior: 'smooth' });
+    portalPedidos();
+    toast('Pedido ' + r.order_id + ' enviado!');
+  } catch(e) {
+    toast('Erro ao enviar pedido: ' + e.message, 'error');
+  }
+  btn.disabled = false; btn.innerHTML = '<i class="fa fa-paper-plane"></i> Enviar pedido';
+}
+
+async function portalPedidos() {
+  const box = document.getElementById('pt-pedidos');
+  if (!box) return;
+  try {
+    const d = await api('/api/portal/pedidos');
+    box.innerHTML = !(d.pedidos || []).length
+      ? '<p style="color:var(--muted);font-size:.82rem">Nenhum pedido ainda — faça o primeiro acima. 👆</p>'
+      : `<table style="width:100%;font-size:.8rem;border-collapse:collapse;min-width:560px">
+          <thead><tr style="text-align:left;color:var(--muted)">
+            <th style="padding:6px 4px">Pedido</th><th>Data</th><th>Loja</th><th>Total</th><th>Status</th><th>Rastreio</th><th></th>
+          </tr></thead>
+          <tbody>${d.pedidos.map(o => `
+            <tr style="border-top:1px solid var(--border)">
+              <td style="padding:7px 4px;font-weight:700">${o.id}</td>
+              <td style="white-space:nowrap">${fmtDate(o.date)}</td>
+              <td>${escapeHtml(o.loja_nome || '—')}</td>
+              <td style="white-space:nowrap">R$ ${fmt(o.total)}</td>
+              <td><span class="badge ${o.status}">${statusLabel(o.status)}</span></td>
+              <td style="font-size:.72rem">${o.tracking_code ? `<code>${escapeHtml(o.tracking_code)}</code>` : '—'}</td>
+              <td>${o.payment_link && o.status === 'pending' ? `<a class="btn btn-ghost btn-icon" href="${o.payment_link}" target="_blank" rel="noopener" title="Pagar"><i class="fa fa-credit-card"></i></a>` : ''}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+  } catch(e) {
+    box.innerHTML = '<p style="color:var(--red);font-size:.82rem">Erro ao carregar pedidos.</p>';
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   M10 — SHOPEE (fase 1: conectar loja + pedidos)
+══════════════════════════════════════════════════════ */
+async function renderShopee() {
+  const root = document.getElementById('shopee-root');
+  if (!root) return;
+  root.innerHTML = '<p style="color:var(--muted)">Carregando…</p>';
+  let st = {};
+  try { st = await api('/api/eco/shopee/status'); } catch(e) {
+    root.innerHTML = '<div class="card" style="padding:24px;color:var(--red)">Erro ao carregar status da Shopee.</div>';
+    return;
+  }
+
+  root.innerHTML = `
+    <div style="display:grid;gap:16px;max-width:720px">
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 8px">🛍️ Status da integração</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:.82rem">
+          <span class="badge ${st.configurado ? 'green' : 'gray'}">${st.configurado ? '✅ Chaves salvas' : '1️⃣ Falta salvar as chaves'}</span>
+          <span class="badge ${st.conectado ? 'green' : 'gray'}">${st.conectado ? '✅ Loja conectada (' + escapeHtml(String(st.shop_id)) + ')' : '2️⃣ Falta conectar a loja'}</span>
+          ${st.conectado ? `<span class="badge ${st.token_valido ? 'green' : 'yellow'}">${st.token_valido ? 'Token OK' : 'Token renova sozinho no próximo uso'}</span>` : ''}
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-key" style="color:var(--red)"></i> 1. Chaves da Shopee Open Platform</h3>
+        <p style="font-size:.76rem;color:var(--muted);margin:0 0 12px">Pegue em <b>open.shopee.com</b> → seu App → Partner ID e Partner Key.</p>
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px">
+          <div class="form-row"><label>Partner ID</label><input type="text" id="shp-pid" placeholder="Ex: 2010xxx" /></div>
+          <div class="form-row"><label>Partner Key ${st.configurado ? '<span style="color:var(--muted);font-weight:400">(já salva — em branco mantém)</span>' : ''}</label><input type="password" id="shp-pkey" placeholder="cole a chave" /></div>
+        </div>
+        <button class="btn btn-primary" onclick="shopeeSalvarConfig()"><i class="fa fa-save"></i> Salvar chaves</button>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-link" style="color:var(--red)"></i> 2. Conectar a loja</h3>
+        <p style="font-size:.76rem;color:var(--muted);margin:0 0 12px">Abre a página da Shopee para você autorizar (esteja logado na conta da loja). Igual fizemos no Mercado Livre.</p>
+        <button class="btn btn-primary" onclick="shopeeConectar()" ${st.configurado ? '' : 'disabled style="opacity:.5"'}><i class="fa fa-plug"></i> ${st.conectado ? 'Reconectar loja' : 'Conectar loja Shopee'}</button>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <h3 style="margin:0 0 4px"><i class="fa fa-box" style="color:var(--red)"></i> 3. Pedidos</h3>
+        <p style="font-size:.76rem;color:var(--muted);margin:0 0 12px">Pedidos da Shopee caem na página <b>Pedidos</b> (tag 🛍️ shopee) automaticamente: varredura a cada 10 min + aviso instantâneo se você configurar o webhook abaixo no console da Shopee.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary" onclick="shopeeSync()" ${st.conectado ? '' : 'disabled style="opacity:.5"'}><i class="fa fa-rotate"></i> Sincronizar pedidos agora (7 dias)</button>
+          <span id="shp-sync-out" style="font-size:.8rem;color:var(--muted)"></span>
+        </div>
+        <div style="margin-top:12px;font-size:.76rem;color:var(--muted)">
+          Webhook (colar no console da Shopee → App → Push Mechanism):<br>
+          <code style="background:var(--bg);padding:3px 8px;border-radius:6px;font-size:.72rem">${escapeHtml(st.webhook_url || '')}</code>
+          <button class="btn btn-ghost btn-icon" onclick="vendaCopy('${escapeHtml(st.webhook_url || '')}','Webhook copiado!')" title="Copiar"><i class="fa fa-copy"></i></button>
+        </div>
+        <div style="margin-top:6px;font-size:.76rem;color:var(--muted)">
+          Callback/redirect (colar no cadastro do App, campo Redirect URL):<br>
+          <code style="background:var(--bg);padding:3px 8px;border-radius:6px;font-size:.72rem">${escapeHtml(st.callback_url || '')}</code>
+          <button class="btn btn-ghost btn-icon" onclick="vendaCopy('${escapeHtml(st.callback_url || '')}','Callback copiado!')" title="Copiar"><i class="fa fa-copy"></i></button>
+        </div>
+      </div>
+
+      <p style="font-size:.74rem;color:var(--muted);margin:0">Fase 2 (depois que a conexão estiver rodando): publicar produtos do site direto na Shopee, igual ao Mercado Livre.</p>
+    </div>`;
+}
+
+async function shopeeSalvarConfig() {
+  const pid = document.getElementById('shp-pid')?.value.trim();
+  const pkey = document.getElementById('shp-pkey')?.value.trim();
+  if (!pid) return toast('Informe o Partner ID.', 'error');
+  try {
+    await api('/api/eco/shopee/config', { method: 'POST', body: JSON.stringify({ partner_id: pid, partner_key: pkey }) });
+    toast('Chaves da Shopee salvas!');
+    renderShopee();
+  } catch(e) { toast('Erro ao salvar: ' + e.message, 'error'); }
+}
+
+async function shopeeConectar() {
+  try {
+    const d = await api('/api/eco/shopee/auth-url');
+    if (d.url) {
+      window.open(d.url, '_blank');
+      toast('Autorize a loja na aba que abriu (logado na conta Shopee da loja). Depois volte e recarregue esta página.');
+    }
+  } catch(e) { toast('Erro ao gerar link: ' + e.message, 'error'); }
+}
+
+async function shopeeSync() {
+  const out = document.getElementById('shp-sync-out');
+  if (out) out.textContent = 'Sincronizando…';
+  try {
+    const d = await api('/api/eco/shopee/sync?dias=7', { method: 'POST' });
+    if (out) out.textContent = `✅ ${d.vistos} pedido(s) verificados, ${d.importados} novo(s) importado(s).`;
+    toast('Sincronização concluída!');
+  } catch(e) {
+    if (out) out.textContent = '';
+    toast('Erro ao sincronizar: ' + e.message, 'error');
+  }
+}
+
 const DEMO_ABANDONED = [
   {id:'AB-001',date:'2026-05-25T08:45:00Z',cep:'01310-100',items:[{name:'Embalagem de Pastel (pacote 100 un)',qty:2,price:85},{name:'Embalagem de Fritas (pacote 50 un)',qty:1,price:38}],total:208,recovered:false},
   {id:'AB-002',date:'2026-05-24T17:20:00Z',cep:'20040-020',items:[{name:'Embalagem de Hamburguer (pacote 250 un)',qty:1,price:185}],total:185,recovered:false},
