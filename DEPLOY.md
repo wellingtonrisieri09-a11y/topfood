@@ -1,5 +1,9 @@
 # Deploy — TopFood Embalagens (VPS Hostinger)
 
+> A VPS hospeda outros sites (Verbo Vivo, Arte Cromo, SDL), cada um separado
+> em seu próprio processo/porta/domínio. O mapa completo e as regras para um
+> site nunca derrubar o outro estão em **`SERVIDOR.md`**.
+
 O site roda numa VPS Hostinger (`/var/www/topfood`), gerenciado pelo **pm2**
 (processo `topfood`), atrás do nginx. Código no GitHub, branch `main`.
 
