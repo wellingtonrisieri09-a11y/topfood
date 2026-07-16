@@ -23,6 +23,7 @@ const { registerMarketingRoutes } = require('./modules/marketing');
 const { registerAnunciosRoutes } = require('./modules/anuncios');
 const { registerWaCloudRoutes } = require('./modules/wa_cloud');
 const express = require('express');
+const compression = require('compression');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 const cors       = require('cors');
 const path       = require('path');
@@ -259,12 +260,19 @@ async function sendPixConfirmedEmail(order) {
 // SEGURANÇA — Headers, CORS, bloqueio de arquivos sensíveis
 // ============================================================
 
+// 0. Compressão gzip — páginas/JSON até ~70% menores (campanhas = mais tráfego)
+app.use(compression());
+
 // 1. Headers de segurança HTTP
 app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // HSTS só quando a requisição chegou por HTTPS (produção atrás do nginx)
+  if (req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
   next();
 });
 
@@ -303,9 +311,13 @@ app.get('/empresa',  (req, res) => res.redirect(302, '/admin.html?perfil=empresa
 app.get('/product.html', function(req, res, next) { var id = req.query.id; if (id) { return res.redirect(301, '/produto/' + encodeURIComponent(id)); } next(); });
 registerSeoRoutes(app, readData);
 app.use(express.static(path.join(__dirname), {
-  // js/css/html sempre revalidam (ETag) — celular nunca fica preso num admin.js/app.js velho
   setHeaders(res, filePath) {
+    // js/css/html sempre revalidam (ETag) — celular nunca fica preso num admin.js/app.js velho
     if (/\.(js|css|html)$/i.test(filePath)) res.setHeader('Cache-Control', 'no-cache');
+    // mídia estática cacheia 7 dias (uploads têm timestamp no nome → trocar arquivo = URL nova)
+    else if (/\.(png|jpe?g|webp|gif|avif|svg|ico|mp4|webm|mov|m4v|woff2?)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=604800');
+    }
   }
 }));
 
@@ -334,8 +346,36 @@ app.use('/api/eco', (req, res, next) => {
 });
 
 // ============================================================
-// RATE LIMITING — Protege login contra força bruta
+// RATE LIMITING — Protege login contra força bruta (em memória)
 // ============================================================
+const rlBuckets = new Map();
+function rateLimit(nome, max, janelaMs) {
+  return (req, res, next) => {
+    const ip = req.headers['x-real-ip'] || String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || '?';
+    const key = nome + '|' + ip;
+    const now = Date.now();
+    let b = rlBuckets.get(key);
+    if (!b || now > b.reset) { b = { n: 0, reset: now + janelaMs }; rlBuckets.set(key, b); }
+    b.n++;
+    if (b.n > max) {
+      if (b.n === max + 1) console.warn(`🚫 Rate limit [${nome}] IP ${ip}`);
+      return res.status(429).json({ ok: false, error: 'Muitas tentativas — aguarde um minuto e tente novamente.' });
+    }
+    next();
+  };
+}
+setInterval(() => { const now = Date.now(); for (const [k, b] of rlBuckets) if (now > b.reset) rlBuckets.delete(k); }, 60 * 1000);
+
+// Logins: 10 tentativas/min por IP · cadastro/recuperação: 5/min ·
+// formulários públicos: 15/min · criação de pedido: 30/min
+app.use('/api/admin/login',              rateLimit('admin-login', 10, 60 * 1000));
+app.use('/custos/login',                 rateLimit('custos-login', 10, 60 * 1000));
+app.use('/api/customer/login',           rateLimit('cliente-login', 10, 60 * 1000));
+app.use('/api/customer/register',        rateLimit('cliente-cad', 5, 60 * 1000));
+app.use('/api/customer/forgot-password', rateLimit('cliente-senha', 5, 60 * 1000));
+app.use('/api/contact',                  rateLimit('contato', 15, 60 * 1000));
+app.use('/api/newsletter',               rateLimit('news', 15, 60 * 1000));
+app.post('/api/orders',                  rateLimit('pedido', 30, 60 * 1000), (req, res, next) => next());
 
 // ============================================================
 // HELPERS PERMISSÃO
@@ -354,7 +394,8 @@ function requireRole(resource) {
 // ADMIN — USERS (somente administrador)
 // ============================================================
 app.get('/api/admin/users', requireAuth, requireRole('users'), (req, res) => {
-  const users = readData('users.json').map(({ password_hash, ...u }) => u);
+  // NUNCA expor hash de senha nem segredos de 2FA (permitiriam clonar o código TOTP)
+  const users = readData('users.json').map(({ password_hash, totp_secret, totp_secret_pending, ...u }) => u);
   res.json(users);
 });
 
@@ -550,13 +591,40 @@ app.delete('/api/admin/products/:id', requireAuth, requireRole('products'), (req
 // ADMIN — SETTINGS
 // ============================================================
 app.get('/api/admin/settings', requireAuth, (req, res) => {
-  res.json(readSettings());
+  const s = readSettings();
+  // Segredos NUNCA saem por aqui, nem pro owner (as telas usam flags/rotas próprias):
+  // hash do cofre de custos, chaves Shopee/Amazon e tokens fiscais ficam no servidor.
+  const { custos_pass_hash, shopee, amazon, fiscal, ...resto } = s;
+  const seguro = {
+    ...resto,
+    shopee: shopee ? { partner_id: shopee.partner_id || '', shop_id: shopee.shop_id || '' } : undefined,
+    amazon: amazon ? { tem_credenciais: !!(amazon.client_id && amazon.refresh_token) } : undefined,
+    fiscal: fiscal ? { ...fiscal, token_homologacao: undefined, token_producao: undefined,
+                       tem_token_homologacao: !!fiscal.token_homologacao, tem_token_producao: !!fiscal.token_producao } : undefined,
+  };
+  if (!hasPermission(req.user?.role, 'canSettings')) {
+    // papéis operacionais (secretária/designer/sócio) recebem só o necessário
+    // pro dia a dia (etiqueta, WhatsApp) — nada de tokens ou config de marketing
+    return res.json({
+      store_name: s.store_name || '', store_email: s.store_email || '',
+      whatsapp: s.whatsapp || '', store_address: s.store_address || '', store_cep: s.store_cep || '',
+      pix_key: s.pix_key || '', pix_name: s.pix_name || '', pix_city: s.pix_city || '',
+    });
+  }
+  res.json(seguro);
 });
-app.put('/api/admin/settings', requireAuth, (req, res) => {
+app.put('/api/admin/settings', requireAuth, requireRole('canSettings'), (req, res) => {
   const current = readSettings();
-  const updated = { ...current, ...req.body };
+  // Chaves gerenciadas por rotas próprias — o PUT genérico não pode tocá-las
+  // (o formulário manda o objeto inteiro de volta; sem isto, a versão mascarada
+  // do GET sobrescreveria as chaves reais de Shopee/Amazon/fiscal/cofre)
+  const body = { ...req.body };
+  delete body.shopee; delete body.amazon; delete body.fiscal;
+  delete body.custos_pass_hash; delete body.custos_user;
+  const updated = { ...current, ...body };
   writeData('settings.json', updated);
-  res.json(updated);
+  const { custos_pass_hash, shopee, amazon, fiscal, ...ecoSeguro } = updated;
+  res.json(ecoSeguro);
 });
 
 // ============================================================
@@ -776,7 +844,12 @@ app.post('/api/admin/upload-image', requireAuth, (req, res) => {
     if (!filename || !data) return res.status(400).json({ error: 'filename e data são obrigatórios' });
 
     // Sanitiza o nome do arquivo (permite letras, números, espaços, traço, ponto)
-    const ext  = path.extname(filename).toLowerCase().replace(/[^.a-z]/g, '') || '.jpg';
+    let ext  = path.extname(filename).toLowerCase().replace(/[^.a-z0-9]/g, '') || '.jpg';
+    // Só formatos de IMAGEM — bloqueia .html/.svg/.js etc. (evita hospedar página maliciosa no domínio)
+    const EXT_IMG = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif'];
+    if (!EXT_IMG.includes(ext)) {
+      return res.status(400).json({ error: 'Formato não permitido. Use: ' + EXT_IMG.join(', ') });
+    }
     const base = path.basename(filename, path.extname(filename))
                    .replace(/[^a-zA-Z0-9\s\-_]/g, '')
                    .trim()
@@ -1071,7 +1144,7 @@ app.get('/api/coupons/:code', (req, res) => {
 app.get('/api/admin/coupons', requireAuth, (req, res) => {
   res.json(readData('coupons.json'));
 });
-app.post('/api/admin/coupons', requireAuth, (req, res) => {
+app.post('/api/admin/coupons', requireAdminPlus, (req, res) => {
   const coupons = readData('coupons.json');
   const { code, discount_type, discount_value, description, max_uses, expires_at } = req.body;
   if (!code || !discount_type || !discount_value) return res.status(400).json({ error: 'Dados obrigatórios ausentes' });
@@ -1091,7 +1164,7 @@ app.post('/api/admin/coupons', requireAuth, (req, res) => {
   console.log(`🏷️  Cupom criado: ${upperCode}`);
   res.json(newCoupon);
 });
-app.put('/api/admin/coupons/:id', requireAuth, (req, res) => {
+app.put('/api/admin/coupons/:id', requireAdminPlus, (req, res) => {
   const coupons = readData('coupons.json');
   const idx = coupons.findIndex(c => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Cupom não encontrado' });
@@ -1099,7 +1172,7 @@ app.put('/api/admin/coupons/:id', requireAuth, (req, res) => {
   writeData('coupons.json', coupons);
   res.json(coupons[idx]);
 });
-app.delete('/api/admin/coupons/:id', requireAuth, (req, res) => {
+app.delete('/api/admin/coupons/:id', requireAdminPlus, (req, res) => {
   const coupons = readData('coupons.json');
   const idx = coupons.findIndex(c => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Cupom não encontrado' });
@@ -1698,6 +1771,9 @@ app.listen(PORT, () => {
   console.log('\n══════════════════════════════════════════════');
   console.log('  🍔 TopFood Embalagens — Servidor');
   console.log('══════════════════════════════════════════════');
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'troque_por_um_segredo_forte') {
+    console.warn('  🚨 ATENÇÃO: JWT_SECRET ausente ou padrão no .env — defina um segredo forte JÁ (logins podem ser forjados sem ele)!');
+  }
   console.log(`  🌐 Loja:       http://localhost:${PORT}`);
   console.log(`  📊 Dashboard:  http://localhost:${PORT}/admin.html`);
   console.log(`  🔑 MP Token:   ${process.env.MP_ACCESS_TOKEN ? '✅ Configurado' : '❌ NÃO CONFIGURADO'}`);
