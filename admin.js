@@ -1470,6 +1470,13 @@ function mlRenderAccountsBox() {
     <a href="#" onclick="mlConectarConta(event)" style="font-size:.82rem"><i class="fa fa-plus"></i> Conectar outra conta</a>
     <a href="#" onclick="mlInitAccounts(ML_PID);return false" style="font-size:.82rem;color:var(--muted)"><i class="fa fa-rotate"></i> Atualizar</a>
   </div>`;
+  if (ML_ACCOUNTS.length) {
+    html += `<div style="margin-top:10px;border-top:1px dashed var(--border);padding-top:10px">
+      <button type="button" class="btn btn-primary" style="width:100%" onclick="mlPublicarTodos()" id="ml-publicar-todos-btn"><i class="fa fa-rocket"></i> Publicar TODOS os produtos nas contas marcadas</button>
+      <span class="hint" style="display:block;margin-top:4px">Sobe todos de uma vez: categoria sugerida sozinha quando faltar, fotos e ficha técnica vindas do site. Você só troca as fotos no produto se quiser.</span>
+      <div id="ml-todos-status" style="margin-top:8px;display:flex;flex-direction:column;gap:3px"></div>
+    </div>`;
+  }
   box.innerHTML = html;
 }
 
@@ -1486,6 +1493,39 @@ function mlRenderStatusList() {
       : `<div style="font-size:.76rem;margin-left:10px;color:var(--muted)">↳ não publicado</div>`;
     return `<div><div style="font-size:.8rem;font-weight:600">${v.units} un${v.label ? ' · ' + esc(v.label) : ''}</div>${linhas}</div>`;
   }).join('');
+}
+
+async function mlPublicarTodos() {
+  const selecionadas = Array.from(document.querySelectorAll('.ml-acc-check:checked')).map(c => c.value);
+  if (!selecionadas.length) return toast('Marque ao menos uma conta.', 'error');
+  if (!confirm('Publicar/atualizar TODOS os produtos do site nas contas marcadas?\n\n• A categoria do ML é sugerida automaticamente quando faltar\n• Título, descrição, fotos e ficha técnica vêm do site\n• A quantidade de cada pacote é calculada sozinha\n\nO que já estiver publicado é só atualizado (preço/estoque/fotos).')) return;
+  const btn = document.getElementById('ml-publicar-todos-btn');
+  const box = document.getElementById('ml-todos-status');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Publicando tudo... (pode levar 1–2 min)'; }
+  if (box) box.innerHTML = '<span style="font-size:.78rem;color:var(--muted)">Subindo fotos e montando a ficha técnica por IA...</span>';
+  try {
+    const out = await api('/api/eco/ml/publicar-todos', { method: 'POST', body: JSON.stringify({ accounts: selecionadas }) });
+    if (box && out.produtos) {
+      box.innerHTML = out.produtos.map(pr => {
+        const rs = (pr.contas || []).flatMap(c => (c.resultados || []));
+        const okv = rs.filter(r => r.ok).length;
+        const cor = pr.ok ? '' : 'color:var(--red)';
+        const msg = pr.error ? ' — ' + esc(pr.error) : ' — ' + okv + '/' + rs.length + ' anúncios';
+        return `<div style="font-size:.78rem;${cor}">${pr.ok ? '✅' : '⚠️'} ${esc(pr.name)}${msg}</div>`;
+      }).join('');
+    } else if (box && out.error) {
+      box.innerHTML = `<div style="font-size:.78rem;color:var(--red)">${esc(out.error)}</div>`;
+    }
+    if (out.ok) toast('✅ Publicação em massa concluída! Veja o resumo por produto.');
+    else toast('⚠️ Terminou com pendências — veja o resumo abaixo do botão.', 'error');
+    await loadProducts();
+    mlRenderStatusList();
+  } catch (e) {
+    toast('❌ Erro: ' + e.message, 'error');
+    if (box) box.innerHTML = `<div style="font-size:.78rem;color:var(--red)">Erro: ${esc(e.message)}</div>`;
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-rocket"></i> Publicar TODOS os produtos nas contas marcadas'; }
+  }
 }
 
 async function mlConectarConta(ev) {

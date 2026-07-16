@@ -381,6 +381,38 @@ async function publicarProduto(productId, targetAccounts) {
   return { ok: contas.some(c => c.ok), contas };
 }
 
+// Publica TODOS os produtos de uma vez nas contas escolhidas (1 clique).
+// Quando o produto não tem categoria do ML, sugere e salva automaticamente
+// antes de publicar — assim não é preciso configurar nada manualmente.
+async function publicarTodos(targetAccounts) {
+  const targets = (Array.isArray(targetAccounts) ? targetAccounts : [])
+    .map(String).filter(id => accounts[id]);
+  if (!targets.length) return { ok: false, error: 'Selecione ao menos uma conta conectada para publicar' };
+
+  const produtos = [];
+  for (const p of findProducts()) {
+    let categoria = p.ml_category_id;
+    // Sem categoria → tenta descobrir sozinho pelo nome e salva no produto
+    if (!categoria) {
+      try {
+        const s = await suggestCategory(p.name);
+        if (s && s.category_id) {
+          categoria = s.category_id;
+          const all = findProducts();
+          const alvo = all.find(x => x.id === p.id);
+          if (alvo) { alvo.ml_category_id = categoria; saveProducts(all); }
+        }
+      } catch (e) { /* sem sugestão — publicarProduto vai reportar a falta de categoria */ }
+    }
+    const out = await publicarProduto(p.id, targets);
+    produtos.push({
+      id: p.id, name: p.name, categoria: categoria || null,
+      ok: !!out.ok, error: out.error || null, contas: out.contas || [],
+    });
+  }
+  return { ok: produtos.some(x => x.ok), produtos };
+}
+
 // Sincroniza o estoque disponível (site → ML) de todas as variantes publicadas, em todas as contas
 async function syncStockToML(product) {
   const stock = parseInt(product.stock, 10) || 0;
@@ -659,6 +691,18 @@ function registerMlRoutes(app, requireAuth) {
       if (!Array.isArray(targets) || !targets.length) targets = accountIds(); // sem seleção → todas
       const out = await publicarProduto(req.params.id, targets);
       auditLog(req.user?.id, req.user?.username, 'ml-publicar', 'products', req.params.id, JSON.stringify(out.contas || out.error), req.ip);
+      res.json(out);
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+  });
+
+  // Publica TODOS os produtos de uma vez nas contas escolhidas (categoria automática quando faltar)
+  app.post('/api/eco/ml/publicar-todos', requireAuth, async (req, res) => {
+    try {
+      let targets = req.body && req.body.accounts;
+      if (!Array.isArray(targets) || !targets.length) targets = accountIds(); // sem seleção → todas
+      const out = await publicarTodos(targets);
+      const resumo = (out.produtos || []).map(p => `${p.name}:${p.ok ? 'ok' : 'falha'}`).join(', ');
+      auditLog(req.user?.id, req.user?.username, 'ml-publicar-todos', 'products', 'all', resumo.slice(0, 500), req.ip);
       res.json(out);
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
   });
