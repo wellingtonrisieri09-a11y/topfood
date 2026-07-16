@@ -184,6 +184,77 @@ async function resolveAttributes(categoryId, accountId) {
 function findProducts() { return readData('products.json') || []; }
 function saveProducts(list) { writeData('products.json', list); }
 
+// ------------------------------------------------------------
+// Ficha técnica automática via IA (Claude) — lê o produto e preenche
+// as características que a categoria do ML pede, sem trabalho manual.
+// ------------------------------------------------------------
+const fichaCache = new Map(); // productId+categoryId -> attributes (evita repetir chamadas de IA)
+
+async function iaFichaTecnica(product, categoryId, accId, jaPreenchidos) {
+  if (!process.env.ANTHROPIC_API_KEY) return [];
+  const cacheKey = product.id + '|' + categoryId;
+  if (fichaCache.has(cacheKey)) return fichaCache.get(cacheKey);
+
+  const attrs = await mlGet(`/categories/${categoryId}/attributes`, accId);
+  const ja = new Set((jaPreenchidos || []).map(a => a.id));
+  const candidatos = (attrs || [])
+    .filter(a => !ja.has(a.id) && a.tags && !a.tags.hidden && !a.tags.read_only && !a.tags.fixed && !a.tags.variation_attribute)
+    .slice(0, 35)
+    .map(a => ({
+      id: a.id, nome: a.name, tipo: a.value_type,
+      unidades: (a.allowed_units || []).slice(0, 8).map(u => u.id),
+      opcoes: (a.values || []).slice(0, 15).map(v => v.name),
+    }));
+  if (!candidatos.length) return [];
+
+  const info = {
+    nome: product.name,
+    descricao: (product.long_description || product.description || '').slice(0, 1200),
+    especificacoes: product.specs || [],
+    caracteristicas: product.features || [],
+    peso_unitario_g: product.weight_per_unit ? product.weight_per_unit * 1000 : undefined,
+  };
+
+  const prompt = `Você preenche ficha técnica de anúncios do Mercado Livre para a TopFood Embalagens (embalagens food service de papel/kraft para delivery).
+
+PRODUTO:
+${JSON.stringify(info, null, 1)}
+
+CARACTERÍSTICAS QUE A CATEGORIA ACEITA (id, nome, tipo, unidades permitidas, opções de lista quando houver):
+${JSON.stringify(candidatos, null, 1)}
+
+Responda SÓ com um array JSON de objetos {"id":"...","value_name":"..."} para as características que você consegue afirmar com confiança a partir do produto (material, cor, formato, uso, quantidade por pacote, medidas SE estiverem no texto etc.).
+Regras: se a característica tem "opcoes", value_name DEVE ser uma delas (a mais adequada); para tipo number_unit use "número unidade" (ex.: "50 un", "13 cm"); NÃO invente medidas que não estão no texto; na dúvida, omita a característica. Máximo 20 itens. SEM texto fora do JSON.`;
+
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1500,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+    signal: AbortSignal.timeout(45000),
+  });
+  if (!r.ok) { console.error('[ML] IA ficha HTTP', r.status); return []; }
+  const j = await r.json();
+  const texto = (j.content && j.content[0] && j.content[0].text) || '[]';
+  let lista = [];
+  try { lista = JSON.parse((texto.match(/\[[\s\S]*\]/) || ['[]'])[0]); } catch (_) {}
+  const idsValidos = new Set(candidatos.map(c => c.id));
+  const out = (Array.isArray(lista) ? lista : [])
+    .filter(x => x && idsValidos.has(x.id) && x.value_name && String(x.value_name).trim())
+    .slice(0, 20)
+    .map(x => ({ id: x.id, value_name: String(x.value_name).slice(0, 120) }));
+  fichaCache.set(cacheKey, out);
+  console.log(`[ML] IA ficha ${product.id}: ${out.length} características preenchidas`);
+  return out;
+}
+
 // Compat: devolve o mapa { accountId: itemId } de uma variante, aceitando o formato antigo
 function variantItems(variant) {
   if (variant.ml_items && typeof variant.ml_items === 'object') return variant.ml_items;
@@ -199,13 +270,24 @@ async function suggestCategory(title) {
   return top ? { category_id: top.category_id, category_name: top.category_name } : null;
 }
 
+// Todas as fotos do produto como URLs absolutas (ML aceita até 12)
+function productPictures(product) {
+  const baseUrl = process.env.BASE_URL || 'https://topfoodembalagens.com.br';
+  const lista = (product.images && product.images.length ? product.images : (product.image ? [product.image] : []))
+    .slice(0, 12)
+    .map(img => ({ source: img.startsWith('http') ? img : baseUrl + '/' + encodeURI(String(img).replace(/^\//, '')) }));
+  return lista.length ? lista : undefined;
+}
+
+function productDescription(product) {
+  const txt = (product.long_description || product.description || product.name || '').slice(0, 5000);
+  return { plain_text: txt };
+}
+
 function buildItemPayload(product, variant, categoryId, attributes, opts) {
   opts = opts || {};
   const stock = parseInt(product.stock, 10) || 0;
   const available = variant.units ? Math.max(0, Math.floor(stock / variant.units)) : 0;
-  const img = (product.images && product.images[0]) || product.image || '';
-  const baseUrl = process.env.BASE_URL || 'https://topfoodembalagens.com.br';
-  const pictureUrl = img ? (img.startsWith('http') ? img : `${baseUrl}/${img}`) : null;
   const payload = {
     category_id: categoryId,
     price: variant.price || 0,
@@ -214,8 +296,8 @@ function buildItemPayload(product, variant, categoryId, attributes, opts) {
     buying_mode: 'buy_it_now',
     condition: 'new',
     listing_type_id: 'gold_special',
-    description: { plain_text: (product.description || product.name || '').slice(0, 5000) },
-    pictures: pictureUrl ? [{ source: pictureUrl }] : undefined,
+    description: productDescription(product),
+    pictures: productPictures(product),
     attributes,
   };
   // Algumas categorias exigem family_name (agrupador do produto) e, quando presente,
@@ -251,6 +333,11 @@ async function publicarProduto(productId, targetAccounts) {
       contas.push({ account: accId, nickname: accountLabel(accId), ok: false, error: 'Categoria inválida ou erro ao buscar atributos: ' + e.message, resultados: [] });
       continue;
     }
+    // Ficha técnica automática via IA (não bloqueia a publicação se falhar)
+    try {
+      const extras = await iaFichaTecnica(product, product.ml_category_id, accId, attributes);
+      attributes = attributes.concat(extras);
+    } catch (e) { console.error('[ML] IA ficha falhou:', e.message); }
 
     const resultados = [];
     for (const variant of product.variants || []) {
@@ -530,6 +617,39 @@ function registerMlRoutes(app, requireAuth) {
     p.ml_category_id = String(req.body?.ml_category_id || '').trim();
     saveProducts(products);
     res.json({ ok: true });
+  });
+
+  // Enriquece anúncios JÁ PUBLICADOS de um produto: ficha técnica via IA + todas as fotos + descrição completa
+  app.post('/api/eco/ml/enriquecer/:id', requireAuth, async (req, res) => {
+    try {
+      const products = findProducts();
+      const product = products.find(p => p.id === req.params.id);
+      if (!product) return res.status(404).json({ ok: false, error: 'Produto não encontrado' });
+      if (!product.ml_category_id) return res.status(400).json({ ok: false, error: 'Produto sem categoria ML' });
+
+      const resultados = [];
+      for (const variant of product.variants || []) {
+        const items = variant.ml_items || (variant.ml_item_id ? { [anyAccountId()]: variant.ml_item_id } : {});
+        for (const [accId, itemId] of Object.entries(items)) {
+          if (!accounts[accId]) continue;
+          try {
+            const base = await resolveAttributes(product.ml_category_id, accId);
+            const extras = await iaFichaTecnica(product, product.ml_category_id, accId, base);
+            const attributes = base.concat(extras);
+            await mlPut(`/items/${itemId}`, { attributes, pictures: productPictures(product) }, accId);
+            try { await mlPut(`/items/${itemId}/description`, productDescription(product), accId); } catch (eDesc) {
+              // descrição pode estar travada em itens sob revisão — não derruba o resto
+              console.error('[ML] descrição', itemId, ':', eDesc.message.slice(0, 120));
+            }
+            resultados.push({ units: variant.units, item: itemId, ok: true, ficha: attributes.length, fotos: (productPictures(product) || []).length });
+          } catch (e) {
+            resultados.push({ units: variant.units, item: itemId, ok: false, error: e.message.slice(0, 200) });
+          }
+        }
+      }
+      auditLog(req.user?.id, req.user?.username, 'ml-enriquecer', 'products', req.params.id, JSON.stringify(resultados).slice(0, 500), req.ip);
+      res.json({ ok: resultados.some(r => r.ok), resultados });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
   });
 
   // Publica (cria/atualiza) os anúncios do produto NAS CONTAS ESCOLHIDAS — body: { accounts: [ids] }
