@@ -173,7 +173,10 @@ async function askClaude(jid, userText) {
   const ficha = getFichaCliente(jid);
   const produtos = getProdutosLista();
   const listaProdutos = produtos.map(p => {
-    const pacs = (p.variants || []).map(v => v.units + ' un = R$ ' + v.price).join(' · ');
+    const pacs = (p.variants || []).map(v => {
+      const unit = v.units ? (v.price / v.units).toFixed(2).replace('.', ',') : null;
+      return v.units + ' un = R$ ' + v.price + (unit ? ` (R$ ${unit}/un)` : '');
+    }).join(' · ');
     return `- id "${p.id}" (${p.name}): ${pacs}`;
   }).join('\n');
 
@@ -189,10 +192,11 @@ async function askClaude(jid, userText) {
     '1. NUNCA confirme pagamentos, NUNCA dê desconto, NUNCA negocie preço. Preço é o do catálogo.',
     '2. QUANTIDADES PERSONALIZADAS (350, 500, 750, 800 un etc.): NUNCA chame humano por causa de quantidade. Qualquer quantidade é atendida combinando pacotes (50, 100 e 250 un). Use a combinação mais econômica. Exemplos: 350 = 1×250 + 1×100 | 500 = 2×250 | 750 = 3×250 | 800 = 3×250 + 1×50 | 600 = 2×250 + 1×100 | 150 = 1×100 + 1×50. Some os preços de cada pacote e apresente o total claramente.',
     '3. ORÇAMENTO COMPLETO (com frete): quando o cliente disser O QUE quer comprar E informar o CEP, use a ferramenta "montar_orcamento". Para quantidades personalizadas, decomponha nos pacotes necessários ao chamar a ferramenta (ex: 350 pastéis = pacote 250 qtd 1 + pacote 100 qtd 1). Se faltar CEP ou itens, peça antes de usar a ferramenta.',
-    '4. Ao receber o resultado da ferramenta: apresente o resumo (itens, frete PAC e SEDEX, total) de forma curta e clara, e mande o link de checkout para o cliente finalizar e pagar (PIX no site).',
-    '4. Se não souber a resposta, se o cliente reclamar, pedir arte/quantidade fora do catálogo, ou pedir para falar com uma pessoa: responda EXATAMENTE começando com [HUMANO] seguido de uma frase educada avisando que vai chamar um atendente.',
-    '5. Não invente fretes nem prazos — use SEMPRE a ferramenta para calcular. Não fale sobre assuntos fora da TopFood.',
-    '6. Se o cliente disser o nome dele, passe a usá-lo naturalmente.',
+    '4. VALOR UNITÁRIO SEMPRE: toda vez que informar preço ou mandar orçamento, mostre também o valor POR UNIDADE de cada item, entre parênteses ao lado do valor do pacote. Ex.: "Pastel 100 un = R$ 85,00 (R$ 0,85/un)". Isso vale para respostas de preço, comparações de pacotes e para o resumo do orçamento da ferramenta — cada item do orçamento sai com seu unitário.',
+    '5. Ao receber o resultado da ferramenta: apresente o resumo (itens COM VALOR UNITÁRIO de cada um, frete PAC e SEDEX, total) de forma curta e clara, e mande o link de checkout para o cliente finalizar e pagar (PIX no site).',
+    '6. Se não souber a resposta, se o cliente reclamar, pedir arte/quantidade fora do catálogo, ou pedir para falar com uma pessoa: responda EXATAMENTE começando com [HUMANO] seguido de uma frase educada avisando que vai chamar um atendente.',
+    '7. Não invente fretes nem prazos — use SEMPRE a ferramenta para calcular. Não fale sobre assuntos fora da TopFood.',
+    '8. Se o cliente disser o nome dele, passe a usá-lo naturalmente.',
     ficha ? '\n' + ficha : '',
     cfg.promptExtra ? `\nINSTRUÇÕES EXTRAS DO DONO:\n${cfg.promptExtra}` : ''
   ].join('\n');

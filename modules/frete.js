@@ -81,7 +81,13 @@ async function montarOrcamento(cep, itens, produtos) {
     const wUnit = p.weight_per_unit || 15;
     subtotal += v.price * qtd;
     pesoG += v.units * qtd * wUnit;
-    linhas.push({ produto_id: p.id, nome: p.name, pacote: v.units, quantidade: qtd, preco_unit: v.price, subtotal: v.price * qtd });
+    linhas.push({
+      produto_id: p.id, nome: p.name, pacote: v.units, quantidade: qtd,
+      preco_pacote: v.price,
+      preco_unit: v.price,                                        // compatibilidade (nome antigo = preço do pacote)
+      valor_unitario: v.units ? Math.round((v.price / v.units) * 100) / 100 : v.price,  // R$ por unidade — a IA mostra no orçamento
+      subtotal: v.price * qtd,
+    });
   }
 
   const frete = opcoesFrete(loc.uf, pesoG);
