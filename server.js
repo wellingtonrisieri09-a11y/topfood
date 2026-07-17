@@ -666,6 +666,22 @@ app.put('/api/admin/abandoned/:id', requireAuth, (req, res) => {
   writeData('abandoned.json', list);
   res.json(list[idx]);
 });
+app.delete('/api/admin/abandoned/:id', requireAuth, requireRole('canDelete'), (req, res) => {
+  const list = readData('abandoned.json');
+  const idx  = list.findIndex(a => a.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Não encontrado' });
+  const removed = list.splice(idx, 1)[0];
+  writeData('abandoned.json', list);
+  console.log(`🗑️  Carrinho abandonado excluído: ${removed.id} (por: ${req.user?.name})`);
+  res.json({ ok: true });
+});
+// Limpa TODOS os carrinhos abandonados de uma vez (ex: apagar dados de teste)
+app.delete('/api/admin/abandoned', requireAuth, requireRole('canDelete'), (req, res) => {
+  const total = readData('abandoned.json').length;
+  writeData('abandoned.json', []);
+  console.log(`🗑️  ${total} carrinho(s) abandonado(s) apagado(s) em massa (por: ${req.user?.name})`);
+  res.json({ ok: true, apagados: total });
+});
 
 // ============================================================
 // CUSTOMER HELPERS

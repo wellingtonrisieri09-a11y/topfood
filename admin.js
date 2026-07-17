@@ -2100,10 +2100,30 @@ function renderAbandoned() {
       <td><b>R$ ${fmt(a.total)}</b></td>
       <td>${timeAgo(a.date)}</td>
       <td><span class="badge ${a.recovered?'delivered':'orange'}">${a.recovered?'Recuperado':'Abandonado'}</span></td>
-      <td>
-        ${!a.recovered?`<button class="btn btn-wa" style="font-size:.75rem" onclick="recoverCart('${a.id}')"><i class="fa-brands fa-whatsapp"></i> Recuperar</button>`:'<span style="color:var(--muted);font-size:.78rem">—</span>'}
+      <td style="display:flex;gap:6px">
+        ${!a.recovered?`<button class="btn btn-wa" style="font-size:.75rem" onclick="recoverCart('${a.id}')"><i class="fa-brands fa-whatsapp"></i> Recuperar</button>`:''}
+        <button class="btn btn-secondary btn-icon" style="color:var(--red);border-color:var(--red);${STATE.canDelete?'':'display:none'}" title="Excluir" onclick="deleteAbandoned('${a.id}')"><i class="fa fa-trash"></i></button>
       </td>
     </tr>`).join('');
+}
+async function deleteAbandoned(id) {
+  if(!confirm('Excluir este carrinho abandonado? Não dá pra desfazer.')) return;
+  try {
+    await api('/api/admin/abandoned/'+id, { method:'DELETE' });
+    STATE.abandoned = STATE.abandoned.filter(a=>a.id!==id);
+    renderAbandoned();
+    toast('Carrinho excluído.');
+  } catch(e) { toast('❌ Erro ao excluir: '+e.message, 'error'); }
+}
+async function clearAllAbandoned() {
+  if(!STATE.abandoned.length) return toast('Não há carrinhos pra limpar.');
+  if(!confirm('Excluir TODOS os '+STATE.abandoned.length+' carrinhos abandonados? Não dá pra desfazer.')) return;
+  try {
+    const out = await api('/api/admin/abandoned', { method:'DELETE' });
+    STATE.abandoned = [];
+    renderAbandoned();
+    toast('✅ '+(out.apagados||0)+' carrinho(s) apagado(s).');
+  } catch(e) { toast('❌ Erro ao limpar: '+e.message, 'error'); }
 }
 function recoverCart(id) {
   const a = STATE.abandoned.find(x=>x.id===id);
