@@ -630,7 +630,7 @@ function registerCatalogoRoutes(app, readData, decodeUser, writeData) {
   app.post("/custos/login", async (req, res) => {
     const { user, pass } = req.body || {};
     const s = readData("settings.json") || {};
-    const userOk = String(user || "").toLowerCase().trim() ===
+    let userOk = String(user || "").toLowerCase().trim() ===
       String(s.custos_user || CUSTOS_DEFAULT_USER).toLowerCase().trim();
     let passOk = false;
     if (s.custos_pass_hash) passOk = await bcryptC.compare(String(pass || ""), s.custos_pass_hash);
@@ -641,6 +641,16 @@ function registerCatalogoRoutes(app, readData, decodeUser, writeData) {
         writeData("settings.json", { ...s,
           custos_user: s.custos_user || CUSTOS_DEFAULT_USER,
           custos_pass_hash: bcryptC.hashSync(CUSTOS_DEFAULT_PASS, 10) });
+      }
+    }
+    // sócios extras — cada um com usuário + hash próprios (settings.custos_extra_users)
+    if (!(userOk && passOk) && Array.isArray(s.custos_extra_users)) {
+      const uIn = String(user || "").toLowerCase().trim();
+      for (const eu of s.custos_extra_users) {
+        if (eu && String(eu.user || "").toLowerCase().trim() === uIn && eu.pass_hash
+            && await bcryptC.compare(String(pass || ""), eu.pass_hash)) {
+          userOk = true; passOk = true; break;
+        }
       }
     }
     if (!userOk || !passOk) {
