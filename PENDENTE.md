@@ -6,9 +6,11 @@ _Responsáveis: **[W]** Wellington · **[Caio]** · **[Contador]** · **[Claude]
 
 ## 🟡 FALTA POUCO (rápido, alta alavanca)
 
-### M4b — Rastreamento server-side (CAPI)
-> Motor já pronto (`modules/capi.js`). Falta só ligar.
-- [ ] **[W]** Gerar o `META_CAPI_TOKEN` no **Gerenciador de Eventos da Meta → Conversions API → Gerar token** e colar no `.env` do servidor.
+### M4b — Rastreamento server-side (CAPI) — ✅ CONCLUÍDO (18/07)
+- [x] **[W+Claude]** Pixel antigo estava preso a uma conta pessoal fora do portfólio (nunca liberava o token) → criado Pixel novo `1362777799250881` dentro do portfólio "100pilas". Atualizado em `index.html`, `product.html` e `modules/capi.js`.
+- [x] **[Claude]** Campo pra colar o token no painel (Ad Center → "Meta Conversions API — Token") em vez de precisar editar `.env` na mão.
+- [x] **[W]** Token gerado e salvo no painel.
+- [x] **[Claude]** Bug de infra descoberto no caminho: `deploy.sh` tinha perdido a permissão de execução no servidor (o cron rodava a cada 2 min e falhava com "Permission denied" silenciosamente — nada de novo entrava no ar havia um tempo). Corrigido no servidor e no Git (modo `755`).
 
 ### M6 — Retenção / E-mail
 > Conta do domínio (contato@topfoodembalagens.com.br) + e-mail de confirmação JÁ ligados e funcionando. Resta só automação (opcional).
