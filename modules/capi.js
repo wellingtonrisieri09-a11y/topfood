@@ -16,7 +16,7 @@ const { readSettings, writeData, auditLog } = require('../db');
 
 function pixelId() {
   const s = readSettings();
-  return process.env.META_PIXEL_ID || s.meta_pixel_id || '1202105157078230';
+  return process.env.META_PIXEL_ID || s.meta_pixel_id || '1362777799250881';
 }
 function token() {
   const s = readSettings();
