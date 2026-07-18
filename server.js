@@ -16,6 +16,7 @@ const { registerAsaasRoutes, createPixCharge } = require('./modules/asaas');
 const { registerAtendenteRoutes } = require('./modules/atendente');
 const { registerOnlineRoutes } = require('./modules/online');
 const { registerMlRoutes } = require('./modules/ml');
+const { registerCapiRoutes } = require('./modules/capi');
 const { registerInsightsRoutes } = require('./modules/insights');
 const { registerNfeRoutes } = require('./modules/nfe');
 const { registerGuiaRoutes, guiaSlugs } = require('./modules/guias');
@@ -593,8 +594,8 @@ app.delete('/api/admin/products/:id', requireAuth, requireRole('products'), (req
 app.get('/api/admin/settings', requireAuth, (req, res) => {
   const s = readSettings();
   // Segredos NUNCA saem por aqui, nem pro owner (as telas usam flags/rotas próprias):
-  // hash do cofre de custos, chaves Shopee/Amazon e tokens fiscais ficam no servidor.
-  const { custos_pass_hash, shopee, amazon, fiscal, ...resto } = s;
+  // hash do cofre de custos, chaves Shopee/Amazon, tokens fiscais e CAPI ficam no servidor.
+  const { custos_pass_hash, shopee, amazon, fiscal, meta_capi_token, ...resto } = s;
   const seguro = {
     ...resto,
     shopee: shopee ? { partner_id: shopee.partner_id || '', shop_id: shopee.shop_id || '' } : undefined,
@@ -620,7 +621,7 @@ app.put('/api/admin/settings', requireAuth, requireRole('canSettings'), (req, re
   // do GET sobrescreveria as chaves reais de Shopee/Amazon/fiscal/cofre)
   const body = { ...req.body };
   delete body.shopee; delete body.amazon; delete body.fiscal;
-  delete body.custos_pass_hash; delete body.custos_user;
+  delete body.custos_pass_hash; delete body.custos_user; delete body.meta_capi_token;
   const updated = { ...current, ...body };
   writeData('settings.json', updated);
   const { custos_pass_hash, shopee, amazon, fiscal, ...ecoSeguro } = updated;
@@ -1768,6 +1769,7 @@ registerAsaasRoutes(app, requireAuth, requireOwner);
 registerAtendenteRoutes(app, requireAuth);
 registerOnlineRoutes(app, requireAuth);
 registerMlRoutes(app, requireAuth);
+registerCapiRoutes(app, requireAuth);
 registerInsightsRoutes(app, requireAuth);
 registerNfeRoutes(app, readData, writeData, requireAuth);
 registerGuiaRoutes(app);

@@ -629,6 +629,15 @@
               <span class="hint">Meta Business → Gerenciador de Eventos → Pixels</span>
             </div>
             <div class="form-row">
+              <label>Meta Conversions API — Token <span style="font-size:.72rem;color:var(--muted)">(rastreamento server-side, à prova de bloqueador)</span></label>
+              <div style="display:flex;gap:8px">
+                <input type="password" id="ac-meta-capi-token" placeholder="Cole o token gerado no Gerenciador de Eventos" style="flex:1" />
+                <button type="button" class="btn btn-secondary" onclick="saveCapiToken()">Salvar token</button>
+              </div>
+              <span class="hint">Gerenciador de Eventos → escolha o Pixel → aba <b>Configurações</b> → <b>Conversions API</b> → <b>Gerar token de acesso</b>. Fica só no servidor, nunca aparece de novo aqui depois de salvo.</span>
+              <span class="hint" id="ac-capi-status" style="font-weight:600"></span>
+            </div>
+            <div class="form-row">
               <label>Google Tag Manager ID</label>
               <input type="text" id="ac-gtm-id" placeholder="Ex: GTM-XXXXXXX" oninput="updateAdStatus()" />
               <span class="hint">tagmanager.google.com → ID do contêiner</span>

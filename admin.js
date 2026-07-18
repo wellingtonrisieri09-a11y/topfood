@@ -4312,6 +4312,33 @@ function loadAdCenter() {
   document.getElementById('ac-gads-label').value  = s.google_ads_label || '';
   document.getElementById('ac-tiktok-pixel').value= s.tiktok_pixel_id  || '';
   updateAdStatus();
+  loadCapiStatus();
+}
+
+async function loadCapiStatus() {
+  const el = document.getElementById('ac-capi-status');
+  if(!el) return;
+  try {
+    const st = await api('/api/eco/capi/status');
+    el.textContent = st.configurado
+      ? '✅ Token salvo'+(st.via_env?' (via .env do servidor)':'')+' — conversões sendo enviadas à Meta.'
+      : '⚠️ Ainda não configurado.';
+    el.style.color = st.configurado ? 'var(--green)' : 'var(--muted)';
+  } catch(e) { el.textContent = ''; }
+}
+
+async function saveCapiToken() {
+  const input = document.getElementById('ac-meta-capi-token');
+  const val = input.value.trim();
+  if(!val) return toast('Cole o token antes de salvar.', 'error');
+  try {
+    await api('/api/eco/capi/config', { method:'PUT', body: JSON.stringify({ meta_capi_token: val }) });
+    input.value = '';
+    toast('✅ Token da Conversions API salvo!');
+    loadCapiStatus();
+  } catch(e) {
+    toast('❌ Erro ao salvar: '+e.message, 'error');
+  }
 }
 
 function updateAdStatus() {

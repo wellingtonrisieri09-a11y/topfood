@@ -12,10 +12,38 @@
 // fluxo de pagamento.
 // ============================================================
 const crypto = require('crypto');
+const { readSettings, writeData, auditLog } = require('../db');
 
-function pixelId()        { return process.env.META_PIXEL_ID || '1202105157078230'; }
-function token()          { return process.env.META_CAPI_TOKEN || ''; }
+function pixelId() {
+  const s = readSettings();
+  return process.env.META_PIXEL_ID || s.meta_pixel_id || '1202105157078230';
+}
+function token() {
+  const s = readSettings();
+  return process.env.META_CAPI_TOKEN || s.meta_capi_token || '';
+}
 function capiConfigured() { return !!token(); }
+
+function registerCapiRoutes(app, requireAuth) {
+  app.get('/api/eco/capi/status', requireAuth, (req, res) => {
+    const s = readSettings();
+    res.json({
+      ok: true,
+      configurado: capiConfigured(),
+      via_env: !!process.env.META_CAPI_TOKEN,
+      token_salvo: !!s.meta_capi_token,
+      pixel_id: pixelId(),
+    });
+  });
+
+  app.put('/api/eco/capi/config', requireAuth, (req, res) => {
+    const patch = {};
+    if (req.body?.meta_capi_token !== undefined) patch.meta_capi_token = String(req.body.meta_capi_token || '').trim();
+    writeData('settings.json', patch);
+    auditLog(req.user?.id, req.user?.username, 'capi-config', 'settings', 'meta_capi_token', '', req.ip);
+    res.json({ ok: true, configurado: capiConfigured() });
+  });
+}
 
 // Meta exige PII com hash SHA-256 (minúsculo, sem espaços nas pontas)
 function hash(v) {
@@ -72,4 +100,4 @@ async function sendPurchase(order) {
   }
 }
 
-module.exports = { sendPurchase, capiConfigured };
+module.exports = { sendPurchase, capiConfigured, registerCapiRoutes };
