@@ -15,8 +15,9 @@ const crypto = require('crypto');
 const { readSettings, writeData, auditLog } = require('../db');
 
 function pixelId() {
-  const s = readSettings();
-  return process.env.META_PIXEL_ID || s.meta_pixel_id || '1362777799250881';
+  // Fixo no Pixel novo (portfolio 100pilas) — não depende mais do campo salvo
+  // no banco (que ainda guarda o Pixel antigo até o painel ser reaberto/salvo).
+  return process.env.META_PIXEL_ID || '1362777799250881';
 }
 function token() {
   const s = readSettings();
