@@ -175,7 +175,19 @@ async function resolveAttributes(categoryId, accountId) {
     if (a.id === 'BRAND') { out.push({ id: 'BRAND', values: [{ name: 'TopFood Embalagens' }] }); continue; }
     if (a.id === 'MODEL') { out.push({ id: 'MODEL', values: [{ name: 'Padrão' }] }); continue; }
     if (a.id === 'ITEM_CONDITION') { out.push({ id: 'ITEM_CONDITION', values: [{ name: 'Novo' }] }); continue; }
-    if (Array.isArray(a.values) && a.values.length) { out.push({ id: a.id, values: [{ id: a.values[0].id, name: a.values[0].name }] }); continue; }
+    if (Array.isArray(a.values) && a.values.length) {
+      // "Formato de venda": nunca pegar "Unidade" no automático — cada anúncio
+      // nosso é um PACOTE fechado (kit) de N unidades, não venda unitária.
+      // Se pegasse "Unidade", o ML passa a exigir Unidades por kit = 1 (errado).
+      let escolhido = a.values[0];
+      const nome = String(a.name || '').toLowerCase();
+      if (nome.includes('formato') && nome.includes('venda')) {
+        const kit = a.values.find(v => /kit|pacote|pack/i.test(v.name || ''));
+        if (kit) escolhido = kit;
+      }
+      out.push({ id: a.id, values: [{ id: escolhido.id, name: escolhido.name }] });
+      continue;
+    }
     // Não deu pra resolver sozinho — sinaliza pro painel (usuário preenche depois no próprio ML)
   }
   return out;
