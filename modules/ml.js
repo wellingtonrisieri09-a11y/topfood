@@ -300,13 +300,12 @@ function buildItemPayload(product, variant, categoryId, attributes, opts) {
   opts = opts || {};
   const stock = parseInt(product.stock, 10) || 0;
   const available = variant.units ? Math.max(0, Math.floor(stock / variant.units)) : 0;
-  // "Unidades por kit" tem que bater com o pacote de CADA anúncio (50/100/250),
-  // então não dá pra vir do resolveAttributes (que é resolvido 1x, compartilhado
-  // entre as variantes do produto). Algumas categorias só passam a exigir esse
-  // campo quando "Formato de venda" resolve pra "Unidade" — manda sempre que
-  // souber o valor real, não custa nada nas categorias que não pedem.
+  // Essa categoria não tem opção "Kit/Pacote" em "Formato de venda" — só
+  // "Unidade" existe. Quando é "Unidade", o ML EXIGE Unidades por kit = 1
+  // (confirmado pelo erro real da API, 2 tentativas). A quantidade de fato
+  // (50/100/250 un) já fica clara no título, descrição e preço do anúncio.
   const attrs = (attributes || []).filter(a => a.id !== 'UNITS_PER_PACK');
-  if (variant.units) attrs.push({ id: 'UNITS_PER_PACK', values: [{ name: String(variant.units) }] });
+  attrs.push({ id: 'UNITS_PER_PACK', values: [{ name: '1' }] });
   const payload = {
     category_id: categoryId,
     price: variant.price || 0,
