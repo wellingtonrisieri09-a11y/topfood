@@ -507,6 +507,42 @@ async function processarPedidoML(mlOrderId, accountId) {
 }
 
 // ------------------------------------------------------------
+// Importação de vendas recentes (todas as contas) — usada pelo botão
+// do painel E pela varredura automática de 10 em 10 minutos
+// ------------------------------------------------------------
+async function importarPedidosRecentes() {
+  const resultado = [];
+  for (const accId of accountIds()) {
+    try {
+      const uid = accounts[accId].user_id;
+      const d = await mlGet(`/orders/search?seller=${uid}&sort=date_desc&limit=20`, accId);
+      const vistos = (d.results || []).map(o => String(o.id));
+      let importados = 0;
+      const antes = (readData('orders.json') || []).filter(o => o.ml_order_id).map(o => String(o.ml_order_id));
+      for (const mlId of vistos) {
+        if (antes.includes(mlId)) continue;
+        await processarPedidoML(mlId, accId);
+        importados++;
+      }
+      resultado.push({ conta: accountLabel(accId), encontrados: vistos.length, importados });
+    } catch (e) {
+      resultado.push({ conta: accountLabel(accId), erro: e.message });
+    }
+  }
+  return resultado;
+}
+
+// Varredura automática: enquanto o webhook do DevCenter não estiver salvo,
+// o próprio servidor confere vendas novas a cada 10 min (mesma idempotência
+// do botão — pedido já importado é pulado; sem conta conectada, não faz nada)
+setInterval(() => {
+  if (!accountIds().length) return;
+  importarPedidosRecentes()
+    .then(r => { const tot = r.reduce((s, x) => s + (x.importados || 0), 0); if (tot) console.log(`🛒 [ML] varredura automática: ${tot} pedido(s) novo(s) importado(s)`); })
+    .catch(e => console.error('[ML] varredura automática:', e.message));
+}, 10 * 60 * 1000);
+
+// ------------------------------------------------------------
 // Radar de concorrência (M12) — cache 12h
 // ------------------------------------------------------------
 async function buildRadar() {
@@ -699,24 +735,7 @@ function registerMlRoutes(app, requireAuth) {
   // configurado no DevCenter) — idempotente: pedido já importado é pulado
   app.post('/api/eco/ml/importar', requireAuth, async (req, res) => {
     try {
-      const resultado = [];
-      for (const accId of accountIds()) {
-        try {
-          const uid = accounts[accId].user_id;
-          const d = await mlGet(`/orders/search?seller=${uid}&sort=date_desc&limit=20`, accId);
-          const vistos = (d.results || []).map(o => String(o.id));
-          let importados = 0;
-          const antes = (readData('orders.json') || []).filter(o => o.ml_order_id).map(o => String(o.ml_order_id));
-          for (const mlId of vistos) {
-            if (antes.includes(mlId)) continue;
-            await processarPedidoML(mlId, accId);
-            importados++;
-          }
-          resultado.push({ conta: accountLabel(accId), encontrados: vistos.length, importados });
-        } catch (e) {
-          resultado.push({ conta: accountLabel(accId), erro: e.message });
-        }
-      }
+      const resultado = await importarPedidosRecentes();
       auditLog(req.user?.id, req.user?.username, 'ml-importar', 'orders', '', JSON.stringify(resultado), req.ip);
       res.json({ ok: true, resultado });
     } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
