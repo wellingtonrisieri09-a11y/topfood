@@ -464,6 +464,7 @@ async function processarPedidoML(mlOrderId, accountId) {
   const newOrder = {
     id: generateMlOrderId(orders),
     ml_order_id: mlOrderId,
+    ml_shipment_id: (mlOrder.shipping && mlOrder.shipping.id) || null,
     ml_account: accId,
     ml_account_nickname: accountLabel(accId),
     channel: 'mercado_livre',
@@ -694,7 +695,46 @@ function registerMlRoutes(app, requireAuth) {
     }
   });
 
-  console.log('[ML] Rotas registradas: callback + webhook + radar + contas (contas conectadas=' + accountIds().length + ')');
+  // Etiqueta do Mercado Envios (PDF) — pro pedido importado do ML, direto no painel
+  app.get('/api/eco/ml/etiqueta/:orderId', requireAuth, async (req, res) => {
+    try {
+      const orders = readData('orders.json') || [];
+      const order = orders.find(o => o.id === req.params.orderId);
+      if (!order) return res.status(404).json({ ok: false, error: 'Pedido não encontrado' });
+      if (!order.ml_order_id) return res.status(400).json({ ok: false, error: 'Este pedido não veio do Mercado Livre' });
+
+      const accId = accounts[order.ml_account] ? String(order.ml_account) : anyAccountId();
+      if (!accId) return res.status(400).json({ ok: false, error: 'Nenhuma conta Mercado Livre conectada' });
+
+      // Pedido importado antes desta função pode não ter o shipment salvo — busca no ML
+      let shipmentId = order.ml_shipment_id;
+      if (!shipmentId) {
+        const mlOrder = await mlGet(`/orders/${order.ml_order_id}`, accId);
+        shipmentId = mlOrder.shipping && mlOrder.shipping.id;
+        if (shipmentId) {
+          order.ml_shipment_id = shipmentId;
+          writeData('orders.json', orders);
+        }
+      }
+      if (!shipmentId) return res.status(400).json({ ok: false, error: 'Pedido ainda sem envio no Mercado Livre (etiqueta não gerada lá)' });
+
+      const t = await getToken(accId);
+      const r = await fetch(`${API}/shipment_labels?shipment_ids=${shipmentId}&response_type=pdf`, {
+        headers: { Authorization: `Bearer ${t}` }
+      });
+      if (!r.ok) {
+        const txt = (await r.text().catch(() => '')).slice(0, 300);
+        return res.status(502).json({ ok: false, error: 'Mercado Livre não liberou a etiqueta (' + r.status + '): ' + txt });
+      }
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="etiqueta-${order.id}.pdf"`);
+      res.send(Buffer.from(await r.arrayBuffer()));
+    } catch (e) {
+      res.status(500).json({ ok: false, error: e.message });
+    }
+  });
+
+  console.log('[ML] Rotas registradas: callback + webhook + radar + contas + etiqueta (contas conectadas=' + accountIds().length + ')');
 }
 
 module.exports = { registerMlRoutes };

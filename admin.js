@@ -491,6 +491,7 @@ function viewOrder(id) {
     </div>`;
   document.getElementById('modal-footer').innerHTML = `
     <button class="btn btn-wa" onclick="contactWA('${o.customer.phone}','${o.customer.name}','${o.id}')"><i class="fa-brands fa-whatsapp"></i> WhatsApp</button>
+    ${o.ml_order_id ? `<button class="btn btn-secondary" style="background:#FFF159;color:#333;border-color:#E6D84E;font-weight:700" onclick="mlEtiqueta('${o.id}')"><i class="fa fa-tag"></i> Etiqueta Mercado Livre</button>` : ''}
     <button class="btn btn-secondary" style="background:var(--orange-l);color:var(--orange);border-color:var(--orange)" onclick="printLabel('${o.id}')"><i class="fa fa-print"></i> Imprimir Etiqueta</button>
     ${STATE.canDelete ? `<button class="btn btn-secondary btn-delete-order" style="background:var(--red);color:#fff;border-color:var(--red)" onclick="deleteOrder('${o.id}')"><i class="fa fa-trash"></i> Excluir Pedido</button>` : ''}
     <button class="btn btn-secondary" onclick="closeModal()">Fechar</button>`;
@@ -542,6 +543,26 @@ async function pollNfe(id) {
     else if (st === 'erro_autorizacao' || st === 'cancelado') { toast('NF-e ' + (st==='cancelado'?'cancelada':'rejeitada') + ': ' + (d.mensagem_sefaz||''), 'error'); viewOrder(id); }
     else { toast('Ainda processando... aguarde'); setTimeout(() => pollNfe(id), 6000); }
   } catch (e) { toast('Erro ao consultar NF-e: ' + e.message, 'error'); }
+}
+
+// Baixa a etiqueta oficial do Mercado Envios (PDF) pelo nosso servidor
+async function mlEtiqueta(id) {
+  toast('Buscando etiqueta no Mercado Livre...');
+  try {
+    const res = await fetch('/api/eco/ml/etiqueta/' + id, { headers: { 'Authorization': 'Bearer ' + token() } });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      toast('❌ ' + (d.error || 'Etiqueta indisponível'), 'error');
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'etiqueta-ML-' + id + '.pdf';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    toast('Etiqueta baixada! Imprime direto do PDF.');
+  } catch (e) { toast('Erro ao baixar etiqueta: ' + e.message, 'error'); }
 }
 
 async function baixarDanfe(id) {
