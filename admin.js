@@ -164,7 +164,13 @@ function escapeHtml(str) {
 async function api(path, opts={}) {
   const headers = {'Authorization':'Bearer '+token(),'Content-Type':'application/json',...(opts.headers||{})};
   const r = await fetch(path, {...opts, headers});
-  if(!r.ok) throw new Error(r.status);
+  if(!r.ok) {
+    // Inclui a mensagem real do servidor (mantendo o código no começo — vários
+    // tratamentos procuram '401'/'403'/'404' dentro do texto do erro)
+    let msg = '';
+    try { const d = await r.json(); msg = d.error || d.erro || d.message || ''; } catch(e) {}
+    throw new Error(r.status + (msg ? ': ' + msg : ''));
+  }
   return r.json();
 }
 
