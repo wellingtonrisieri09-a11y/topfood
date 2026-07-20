@@ -455,7 +455,10 @@
       <section id="page-orders" class="page">
         <div class="page-header">
           <div><h1>Pedidos</h1><p>Gerencie e acompanhe todos os pedidos</p></div>
-          <button class="btn btn-primary" onclick="exportCSV('orders')"><i class="fa fa-download"></i> Exportar</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" style="background:#FFF159;color:#333;border-color:#E6D84E;font-weight:700" onclick="mlImportarPedidos(this)"><i class="fa fa-cart-arrow-down"></i> Importar do Mercado Livre</button>
+            <button class="btn btn-primary" onclick="exportCSV('orders')"><i class="fa fa-download"></i> Exportar</button>
+          </div>
         </div>
         <div class="card" style="padding:16px 20px">
           <div class="filter-bar">

@@ -568,6 +568,24 @@ async function pollNfe(id) {
   } catch (e) { toast('Erro ao consultar NF-e: ' + e.message, 'error'); }
 }
 
+// Puxa as vendas recentes do Mercado Livre pro painel (plano B do webhook)
+async function mlImportarPedidos(btn) {
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa fa-spinner fa-spin"></i> Importando...'; }
+  try {
+    const d = await api('/api/eco/ml/importar', { method:'POST' });
+    const tot = (d.resultado||[]).reduce((s,r)=>s+(r.importados||0),0);
+    const erros = (d.resultado||[]).filter(r=>r.erro);
+    if(erros.length) toast('⚠️ '+erros.map(r=>r.conta+': '+r.erro).join(' · '), 'error');
+    else if(tot) toast('✅ '+tot+' pedido(s) importado(s) do Mercado Livre!');
+    else toast('Nenhum pedido novo — tudo que o Mercado Livre mostrou já está no painel.');
+    if(tot){ await loadAll(); renderOrders(); updateBadges(); }
+  } catch(e) {
+    toast('❌ Erro ao importar: '+e.message, 'error');
+  } finally {
+    if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa fa-cart-arrow-down"></i> Importar do Mercado Livre'; }
+  }
+}
+
 // Baixa a etiqueta oficial do Mercado Envios (PDF) pelo nosso servidor
 async function mlEtiqueta(id) {
   toast('Buscando etiqueta no Mercado Livre...');

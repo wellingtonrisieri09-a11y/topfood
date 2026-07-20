@@ -695,6 +695,33 @@ function registerMlRoutes(app, requireAuth) {
     }
   });
 
+  // Importa vendas recentes manualmente (plano B enquanto o webhook não está
+  // configurado no DevCenter) — idempotente: pedido já importado é pulado
+  app.post('/api/eco/ml/importar', requireAuth, async (req, res) => {
+    try {
+      const resultado = [];
+      for (const accId of accountIds()) {
+        try {
+          const uid = accounts[accId].user_id;
+          const d = await mlGet(`/orders/search?seller=${uid}&sort=date_desc&limit=20`, accId);
+          const vistos = (d.results || []).map(o => String(o.id));
+          let importados = 0;
+          const antes = (readData('orders.json') || []).filter(o => o.ml_order_id).map(o => String(o.ml_order_id));
+          for (const mlId of vistos) {
+            if (antes.includes(mlId)) continue;
+            await processarPedidoML(mlId, accId);
+            importados++;
+          }
+          resultado.push({ conta: accountLabel(accId), encontrados: vistos.length, importados });
+        } catch (e) {
+          resultado.push({ conta: accountLabel(accId), erro: e.message });
+        }
+      }
+      auditLog(req.user?.id, req.user?.username, 'ml-importar', 'orders', '', JSON.stringify(resultado), req.ip);
+      res.json({ ok: true, resultado });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+  });
+
   // Etiqueta do Mercado Envios (PDF) — pro pedido importado do ML, direto no painel
   app.get('/api/eco/ml/etiqueta/:orderId', requireAuth, async (req, res) => {
     try {
