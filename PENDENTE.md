@@ -64,9 +64,13 @@ _Responsáveis: **[W]** Wellington · **[Caio]** · **[Contador]** · **[Claude]
 - [ ] **[W]** Conectar as outras 2 contas do ML que pretende usar ("+ Conectar outra conta" no produto).
 - [ ] **[W]** Decidir depois: NF-e automática pra pedido de marketplace, ou manual (botão) como hoje?
 
-### Shopee — módulo existe no painel (tela "Marketplaces"), falta configurar
-- [ ] **[W]** Salvar Partner ID/Key na tela Marketplaces e clicar "Conectar loja Shopee".
-- [ ] **[Claude]** Acompanhar o primeiro teste e ajustar o que a API devolver (mesmo processo do ML).
+### Shopee — ADIADO por decisão do Wellington (21/07): vendas manuais por enquanto
+> Bloqueio real: a Shopee REJEITOU a verificação do perfil de desenvolvedor
+> ("Profile Verification Unsuccessful") — sem perfil aprovado não dá pra criar
+> app nem gerar Partner ID/Key. Vendas na Shopee seguem manuais pela Central
+> do Vendedor até resolver.
+- [ ] **[W]** (Sem pressa) Ver o motivo da rejeição em "Go To Profile", corrigir e reenviar. Aprovou → criar o app, pegar Partner ID/Key.
+- [ ] **[W+Claude]** Depois da aprovação: colar as chaves na tela Marketplaces, conectar a loja, e Claude constrói a publicação de produtos (fase 2).
 
 ### Amazon — módulo existe no painel, falta configurar
 - [ ] **[W]** Salvar as chaves LWA (SP-API) na tela Marketplaces e autorizar.
