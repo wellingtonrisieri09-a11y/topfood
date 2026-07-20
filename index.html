@@ -419,6 +419,10 @@
     }
     .cat-grid::-webkit-scrollbar { display: none; }
     .cat-grid .cat-card { flex: 0 0 auto; width: 140px; scroll-snap-align: start; }
+    /* Centraliza quando as categorias cabem todas na tela; com muitas
+       categorias as margens somem sozinhas e o carrossel rola normal */
+    .cat-grid .cat-card:first-child { margin-left: auto; }
+    .cat-grid .cat-card:last-child  { margin-right: auto; }
     /* Setas do carrossel de categorias (estilo Instagram) */
     .cat-arrow {
       position: absolute; top: 52px; z-index: 5;
