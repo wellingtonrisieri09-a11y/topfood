@@ -35,6 +35,11 @@ let STATE = {
 /* ══════════════════════════════════════════════════════
    AUTH
 ══════════════════════════════════════════════════════ */
+// Entrou pela porta do Portal da Empresa? (tela verde — /empresa)
+function isPortalEmpresaDoor() {
+  return new URLSearchParams(location.search).get('perfil') === 'empresa';
+}
+
 function doLogin() {
   const username = (document.getElementById('login-user')?.value || '').trim();
   const pass     = (document.getElementById('login-pass')?.value || '').trim();
@@ -46,6 +51,13 @@ function doLogin() {
     body: JSON.stringify({ username, password: pass })
   }).then(r=>r.json()).then(d=>{
     if(d.ok) {
+      // Porta do Portal da Empresa só admite login de empresa — outros perfis
+      // devem usar o painel normal (evita sessão administrativa numa tela de cliente)
+      if (isPortalEmpresaDoor() && d.role !== 'empresa') {
+        err.style.display='block';
+        err.textContent = 'Esta entrada é exclusiva do Portal da Empresa. Administradores: use topfoodembalagens.com.br/admin.html';
+        return;
+      }
       sessionStorage.setItem('admin-token', d.token);
       sessionStorage.setItem('admin-role',  d.role  || 'admin');
       sessionStorage.setItem('admin-name',  d.name  || 'Admin');
@@ -55,7 +67,12 @@ function doLogin() {
       err.textContent = d.error || 'Usuário ou senha incorretos.';
     }
   }).catch(()=>{
-    // Fallback demo offline
+    // Fallback demo offline (nunca na porta do portal — cliente não vê tela demo)
+    if (isPortalEmpresaDoor()) {
+      err.style.display='block';
+      err.textContent = 'Servidor indisponível no momento. Tente novamente em instantes.';
+      return;
+    }
     if(pass==='topfood2026'||pass==='demo') {
       sessionStorage.setItem('admin-token','demo-token');
       sessionStorage.setItem('admin-role','admin');
@@ -4315,8 +4332,11 @@ const DEMO_ABANDONED = [
   {id:'AB-003',date:'2026-05-24T11:05:00Z',cep:'30130-110',items:[{name:'Embalagem de Churros (pacote 100 un)',qty:3,price:95}],total:285,recovered:true},
 ];
 
-// Auto-load if already logged in
-if(sessionStorage.getItem('admin-token')) {
+// Auto-load if already logged in — mas a porta do Portal da Empresa não
+// reaproveita sessão de outro perfil (admin abriria o painel geral numa
+// tela destinada ao cliente); nesse caso mostra o login normalmente.
+if(sessionStorage.getItem('admin-token') &&
+   !(isPortalEmpresaDoor() && sessionStorage.getItem('admin-role') !== 'empresa')) {
   document.getElementById('login-wrap').classList.add('hidden');
   document.getElementById('admin-app').classList.remove('hidden');
   initApp();
