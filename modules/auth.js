@@ -29,7 +29,9 @@ function setSessionCookie(res, token) {
 function decodeUser(req) {
   const bearerHeader = req.headers["authorization"] || "";
   const bearerToken  = bearerHeader.startsWith("Bearer ") ? bearerHeader.slice(7).trim() : "";
-  const token = req.cookies?.[COOKIE_NAME] || req.headers["x-session-token"] || bearerToken;
+  // Bearer (sessão explícita da aba) tem prioridade sobre o cookie (navegador
+  // inteiro) — senão logar no portal numa aba derruba o admin nas outras.
+  const token = bearerToken || req.cookies?.[COOKIE_NAME] || req.headers["x-session-token"];
   if (!token || isTokenBlacklisted(token)) return null;
   try { return jwt.verify(token, JWT_SECRET); } catch { return null; }
 }
@@ -38,7 +40,8 @@ function decodeUser(req) {
 function requireAuth(req, res, next) {
   const bearerHeader = req.headers["authorization"] || "";
   const bearerToken  = bearerHeader.startsWith("Bearer ") ? bearerHeader.slice(7).trim() : "";
-  const token = req.cookies?.[COOKIE_NAME] || req.headers["x-session-token"] || bearerToken;
+  // Mesma prioridade do decodeUser: Bearer da aba > cookie do navegador
+  const token = bearerToken || req.cookies?.[COOKIE_NAME] || req.headers["x-session-token"];
   if (!token) return res.status(401).json({ ok: false, error: "Não autenticado" });
   if (isTokenBlacklisted(token))
     return res.status(401).json({ ok: false, error: "Sessão encerrada" });
