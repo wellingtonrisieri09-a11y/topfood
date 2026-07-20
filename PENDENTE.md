@@ -57,20 +57,20 @@ _Responsáveis: **[W]** Wellington · **[Caio]** · **[Contador]** · **[Claude]
 ## 🛒 M10 — Marketplace Hub (ML / Shopee / Amazon) — EM ANDAMENTO
 > Objetivo: publicar produto, vender, pedido cai no mesmo painel, baixa estoque, e permite emitir NF-e/etiqueta como hoje.
 
-### Mercado Livre — fase 1 construída e publicação TESTADA COM SUCESSO (11/07)
-- [x] **[Claude]** Publicar produto (1 anúncio por pacote), sugestão de categoria, sincronizar estoque, receber pedido via webhook (baixa estoque automaticamente).
-- [x] **[W+Claude]** Testado no painel: Embalagem de Pastel publicada com sucesso nos 3 pacotes (categoria MLB277903 "Caixas para Alimentos") — 2 rodadas de ajuste (`family_name`/`title`), como esperado.
-- [ ] **[W]** Conferir os 3 anúncios direto no Mercado Livre (título/foto/preço) e fazer uma compra de teste real.
-- [ ] **[W]** Confirmar que o pedido de teste caiu em Admin → Pedidos com a tag "🛒 Mercado Livre" e que o estoque descontou certo.
-- [ ] **[W]** Decidir depois: quer emissão de NF-e automática pra pedido de marketplace, ou continua manual (botão) como hoje?
+### Mercado Livre — ✅ CICLO COMPLETO FUNCIONANDO (21/07) — 1ª venda real despachada
+- [x] Publicar produto pelo painel (multi-conta), venda real, pedido cai sozinho (varredura 10 min + botão Importar), etiqueta Mercado Envios pelo painel, baixa/sincronização de estoque.
+- [ ] **[W]** Publicar os produtos que faltaram (Churros e Fritas aberta — correção do "Unidades por kit" já no ar, só tentar de novo).
+- [ ] **[W]** (Quando o ML normalizar) Salvar a URL do webhook no DevCenter — falha por erro/cota do lado deles; a varredura de 10 min já cobre tudo, sem pressa.
+- [ ] **[W]** Conectar as outras 2 contas do ML que pretende usar ("+ Conectar outra conta" no produto).
+- [ ] **[W]** Decidir depois: NF-e automática pra pedido de marketplace, ou manual (botão) como hoje?
 
-### Shopee — próxima fase (não iniciada)
-- [ ] **[W]** Confirmar Partner ID/Key já testados (tem, mas não testado nesta integração).
-- [ ] **[Claude]** Construir `modules/shopee.js`: OAuth da loja, publicar item, receber pedido (mesmo padrão do ML).
+### Shopee — módulo existe no painel (tela "Marketplaces"), falta configurar
+- [ ] **[W]** Salvar Partner ID/Key na tela Marketplaces e clicar "Conectar loja Shopee".
+- [ ] **[Claude]** Acompanhar o primeiro teste e ajustar o que a API devolver (mesmo processo do ML).
 
-### Amazon — próxima fase (não iniciada)
-- [ ] **[W]** Confirmar chaves LWA (SP-API) já testadas.
-- [ ] **[Claude]** Construir `modules/amazon.js`: autorização SP-API, Listings Items API, Orders API (mesmo padrão do ML).
+### Amazon — módulo existe no painel, falta configurar
+- [ ] **[W]** Salvar as chaves LWA (SP-API) na tela Marketplaces e autorizar.
+- [ ] **[Claude]** Acompanhar o primeiro teste e ajustar (mesmo processo do ML).
 
 ### M16 — IA altera o site
 - [ ] **[Claude]** Construir "controles seguros" pra IA mudar produto/banner/cor/telefone com aprovação do Wellington (sem tocar no código).

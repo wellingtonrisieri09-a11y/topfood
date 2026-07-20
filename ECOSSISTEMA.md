@@ -5,6 +5,20 @@ _Documento-mestre. Versionado no Git para nunca mais se perder (o PC com o hist�
 
 ---
 
+## 🔄 ATUALIZAÇÃO — sessão de 20-21/07 (Claude Code)
+**Primeira venda real no Mercado Livre + ciclo ML completo + B2B funcionando de ponta a ponta:**
+
+- 🏆 **PRIMEIRA VENDA REAL NO MERCADO LIVRE** (20/07): 2 pacotes de Fritas Aberta 50un, R$64 — dias depois de publicar os produtos. Despachada com nota fiscal (lançamento manual desta vez).
+- ✅ **Publicação no ML corrigida de vez:** categoria "Caixas para Alimentos" só tem formato de venda "Unidade" e exige "Unidades por kit = 1" (2 rodadas de erro real da API até fechar). Pastel, Hambúrguer e Fritas fechada publicados; conta real (wellingtonr) conectada no lugar da conta de teste.
+- ✅ **Pedido do ML cai SOZINHO no painel:** varredura automática a cada 10 min (mesmo esquema da Shopee) + botão "Importar do Mercado Livre" na página Pedidos. Dispensou o webhook do DevCenter, que não salva (erro/captcha do lado do ML — pendência externa, não bloqueia mais nada).
+- ✅ **Etiqueta Mercado Envios pelo painel:** botão amarelo no pedido importado baixa o PDF oficial. Pacote já postado → mensagem clara (ML bloqueia reimpressão, comportamento correto).
+- ✅ **Portal B2B redondo:** porta da tela verde só admite login de empresa (admin é avisado a usar admin.html); empresa baixa a própria NF-e (DANFE) pelo portal depois que o admin emite; erros de API agora mostram a mensagem real ("400: Selecione a loja de entrega") em vez de só o número.
+- ✅ **Bug sério de sessão corrigido:** o cookie (navegador inteiro) tinha prioridade sobre o Bearer (aba) — logar no portal derrubava o admin nas outras abas (403 em tudo). Bearer da aba agora vence.
+- ✅ **Home:** carrossel de categorias centralizado enquanto são poucas (auto-ajusta quando entrarem mais).
+- ⏳ **Pendência externa (não urgente):** salvar a URL do webhook no DevCenter do ML segue falhando por erro/cota do lado deles; a varredura de 10 min cobre o fluxo por completo enquanto isso.
+
+---
+
 ## 🔄 ATUALIZAÇÃO — sessão de 18/07 (Claude Code)
 **M4b (CAPI) concluído + bug de infraestrutura descoberto e corrigido:**
 
