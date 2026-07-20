@@ -750,8 +750,10 @@ function registerMlRoutes(app, requireAuth) {
         headers: { Authorization: `Bearer ${t}` }
       });
       if (!r.ok) {
-        const txt = (await r.text().catch(() => '')).slice(0, 300);
-        return res.status(502).json({ ok: false, error: 'Mercado Livre não liberou a etiqueta (' + r.status + '): ' + txt });
+        const txt = (await r.text().catch(() => '')).slice(0, 500);
+        if (txt.includes('NOT_PRINTABLE_STATUS') || txt.includes('dropped_off'))
+          return res.status(409).json({ ok: false, error: 'Este pacote já foi postado — o Mercado Livre não permite reimprimir etiqueta de envio que já está em trânsito.' });
+        return res.status(502).json({ ok: false, error: 'Mercado Livre não liberou a etiqueta (' + r.status + '): ' + txt.slice(0, 300) });
       }
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `inline; filename="etiqueta-${order.id}.pdf"`);
