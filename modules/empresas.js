@@ -226,6 +226,7 @@ function portalOrderView(o) {
     payment_link: o.payment_link || null,
     pix_copy_paste: o.pix_copy_paste || null,
     tracking_code: o.tracking_code || "",
+    nfe_autorizada: !!(o.nfe && o.nfe.status === "autorizado"),
   };
 }
 
@@ -366,6 +367,32 @@ function registerEmpresasRoutes(app, { readData, writeData, requireAdminPlus, re
       .slice(0, 100)
       .map(portalOrderView);
     res.json({ ok: true, pedidos });
+  });
+
+  // DANFE (PDF da nota fiscal) — só de pedido DESTA empresa, e só após autorizada
+  app.get("/api/portal/danfe/:orderId", requireEmpresa, async (req, res) => {
+    try {
+      const order = readData("orders.json")
+        .find(o => o.id === req.params.orderId && o.channel === "empresa" && o.empresa_id === req.empresa.id);
+      if (!order) return res.status(404).send("Pedido não encontrado");
+      if (!order.nfe || order.nfe.status !== "autorizado")
+        return res.status(404).send("Nota fiscal ainda não emitida para este pedido");
+
+      const { getFiscalConfig, consultarNFe } = require("./nfe");
+      const axios = require("axios");
+      const cfg = getFiscalConfig(readData);
+      let caminho = order.nfe.caminho_danfe;
+      if (!caminho) { const d = await consultarNFe(order.nfe.ref, cfg); caminho = d && d.caminho_danfe; }
+      if (!caminho) return res.status(404).send("DANFE ainda não disponível (nota em processamento)");
+
+      const base = cfg.ambiente === "producao" ? "https://api.focusnfe.com.br" : "https://homologacao.focusnfe.com.br";
+      const token = cfg.ambiente === "producao" ? cfg.token_producao : cfg.token_homologacao;
+      const pdf = await axios.get(base + caminho, { auth: { username: token, password: "" }, responseType: "arraybuffer", validateStatus: () => true });
+      if (pdf.status !== 200) return res.status(502).send("DANFE indisponível no momento");
+      res.set("Content-Type", "application/pdf");
+      res.set("Content-Disposition", 'inline; filename="DANFE-' + order.id + '.pdf"');
+      res.send(Buffer.from(pdf.data));
+    } catch (e) { res.status(500).send("Erro: " + e.message); }
   });
 
   console.log("✅ M11-F2 Empresas registrado: /api/empresas (+pedido) + /api/portal (login da empresa)");

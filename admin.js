@@ -4116,6 +4116,22 @@ async function portalPedido() {
   btn.disabled = false; btn.innerHTML = '<i class="fa fa-paper-plane"></i> Enviar pedido';
 }
 
+// Empresa baixa a própria nota fiscal (DANFE) pelo portal
+async function portalDanfe(id) {
+  toast('Baixando nota fiscal...');
+  try {
+    const res = await fetch('/api/portal/danfe/' + id, { headers: { 'Authorization': 'Bearer ' + token() } });
+    if (!res.ok) { toast((await res.text().catch(()=>'')) || 'Nota indisponível', 'error'); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'DANFE-' + id + '.pdf';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    toast('Nota fiscal baixada!');
+  } catch (e) { toast('Erro ao baixar a nota: ' + e.message, 'error'); }
+}
+
 async function portalPedidos() {
   const box = document.getElementById('pt-pedidos');
   if (!box) return;
@@ -4135,7 +4151,7 @@ async function portalPedidos() {
               <td style="white-space:nowrap">R$ ${fmt(o.total)}</td>
               <td><span class="badge ${o.status}">${statusLabel(o.status)}</span></td>
               <td style="font-size:.72rem">${o.tracking_code ? `<code>${escapeHtml(o.tracking_code)}</code>` : '—'}</td>
-              <td>${o.payment_link && o.status === 'pending' ? `<a class="btn btn-ghost btn-icon" href="${o.payment_link}" target="_blank" rel="noopener" title="Pagar"><i class="fa fa-credit-card"></i></a>` : ''}</td>
+              <td style="white-space:nowrap">${o.payment_link && o.status === 'pending' ? `<a class="btn btn-ghost btn-icon" href="${o.payment_link}" target="_blank" rel="noopener" title="Pagar"><i class="fa fa-credit-card"></i></a>` : ''}${o.nfe_autorizada ? `<button class="btn btn-ghost btn-icon" onclick="portalDanfe('${o.id}')" title="Baixar nota fiscal (DANFE)"><i class="fa fa-file-invoice" style="color:#15803d"></i></button>` : ''}</td>
             </tr>`).join('')}</tbody>
         </table>`;
   } catch(e) {
