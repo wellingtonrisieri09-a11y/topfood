@@ -4872,18 +4872,31 @@ async function loadRadarML(force) {
 
     const nomes = { burger:'Hambúrguer', hamburger:'Hambúrguer', hamburguer:'Hambúrguer', pastel:'Pastel', churros:'Churros', fritas:'Fritas', batata:'Batata Frita', pizza:'Pizza', sushi:'Sushi' };
     const nomeSeg = id => nomes[id] || (String(id).charAt(0).toUpperCase() + String(id).slice(1));
-    const buscas = (d.buscas||[]).map(b => `
+    const buscas = (d.buscas||[]).map(b => {
+      const media = b.media_un || 0;
+      const nossos = (b.nossos||[]).map(n => {
+        if(!media) return `<div style="font-size:.73rem;margin-top:4px">Nosso ${n.units} un: <b>R$ ${fmt(n.preco)}</b> (R$ ${fmt(n.preco_un)}/un)</div>`;
+        const diff = Math.round(((n.preco_un - media) / media) * 100);
+        const cor  = diff <= 0 ? 'var(--green)' : (diff <= 15 ? 'var(--yellow)' : 'var(--red)');
+        const rot  = diff <= 0 ? (Math.abs(diff)+'% ABAIXO da média') : (diff+'% acima da média');
+        return `<div style="font-size:.73rem;margin-top:4px">Nosso ${n.units} un: <b>R$ ${fmt(n.preco)}</b> (R$ ${fmt(n.preco_un)}/un) · <b style="color:${cor}">${rot}</b></div>`;
+      }).join('');
+      return `
       <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
           <b style="font-size:.82rem">${nomeSeg(b.id)}</b>
-          <span style="font-size:.7rem;color:var(--muted)">${b.total ? b.total+' anúncios concorrendo' : ''}</span>
+          <span style="font-size:.7rem;color:var(--muted)">${b.total ? b.total+' anúncios' : ''}</span>
         </div>
-        ${b.erro ? `<p style="color:var(--red);font-size:.72rem;margin:6px 0 0">${escapeHtml(b.erro)}</p>` :
-          (b.ofertas||[]).map(o => `<div style="font-size:.73rem;margin-top:5px;display:flex;justify-content:space-between;gap:8px">
+        ${media ? `<div style="font-size:.75rem;margin-top:6px;background:var(--bg);border-radius:8px;padding:6px 10px">Média do mercado: <b>R$ ${fmt(media)}/unidade</b> <span style="color:var(--muted)">(${b.amostra} anúncios com quantidade identificada)</span></div>` : ''}
+        ${nossos ? `<div style="margin-top:6px">${nossos}</div>` : ''}
+        ${b.erro ? `<p style="color:var(--red);font-size:.72rem;margin:6px 0 0">${escapeHtml(b.erro)}</p>` : `
+        <div style="margin-top:8px;font-size:.68rem;color:var(--muted);text-transform:uppercase;font-weight:600">Concorrentes mais baratos por unidade</div>
+        ${(b.ofertas||[]).map(o => `<div style="font-size:.73rem;margin-top:5px;display:flex;justify-content:space-between;gap:8px">
             <a href="${o.link}" target="_blank" rel="noopener" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(o.titulo)}</a>
-            <span style="white-space:nowrap">R$ ${fmt(o.preco)}${o.vendidos ? ' · '+o.vendidos+' vend.' : ''}</span>
-          </div>`).join('')}
-      </div>`).join('');
+            <span style="white-space:nowrap">${o.unidades ? o.unidades+' un · ' : ''}R$ ${fmt(o.preco)}${o.preco_un ? ' (R$ '+fmt(o.preco_un)+'/un)' : ''}${o.vendidos ? ' · '+o.vendidos+' vend.' : ''}</span>
+          </div>`).join('')}`}
+      </div>`;
+    }).join('');
 
     box.innerHTML = `
       <div style="display:grid;gap:14px">

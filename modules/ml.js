@@ -548,7 +548,7 @@ setInterval(() => {
 async function buildRadar() {
   const acc = anyAccountId();
   if (!acc) throw new Error('Nenhuma conta Mercado Livre conectada');
-  const radar = { v: 2, ts: Date.now(), buscas: [], tendencias: [], mais_vendidos: [] };
+  const radar = { v: 3, ts: Date.now(), buscas: [], tendencias: [], mais_vendidos: [] };
 
   // 1) Concorrência por segmento — segue o CATÁLOGO: uma busca por categoria
   // de produto ativo (cadastrou embalagem nova → entra no radar sozinha)
@@ -567,21 +567,51 @@ async function buildRadar() {
   }));
   if (!consultas.length) consultas.push(...RADAR_QUERIES);
 
+  // Lê a quantidade de unidades no título do anúncio ("100 un", "c/ 50", "kit 200 unidades"...)
+  const qtdDoTitulo = (t) => {
+    const m = String(t || '').match(/(?:c\/\s*|com\s+|kit\s+)?(\d{2,4})\s*(?:un\b|und\b|unid|unidades|p(?:e|ê)?c(?:a|as)?\b|p[cç]s?\b)/i);
+    const n = m ? parseInt(m[1], 10) : 0;
+    return (n >= 10 && n <= 5000) ? n : 0;
+  };
+
+  const produtosAtivos = findProducts().filter(p => p.active !== false);
   for (const item of consultas) {
     try {
-      const d = await mlGet(`/sites/MLB/search?q=${encodeURIComponent(item.q)}&limit=8&sort=price_asc`, acc);
-      const ofertas = (d.results || [])
-        .filter(o => o.price > 1) // ignora lixo de R$0,xx
+      const d = await mlGet(`/sites/MLB/search?q=${encodeURIComponent(item.q)}&limit=50`, acc);
+      const brutos = (d.results || []).filter(o => o.price > 1); // ignora lixo de R$0,xx
+      // Preço POR UNIDADE dos concorrentes (só anúncios cuja quantidade dá pra identificar)
+      const comQtd = brutos.map(o => {
+        const unidades = qtdDoTitulo(o.title);
+        return unidades ? { o, unidades, preco_un: o.price / unidades } : null;
+      }).filter(Boolean);
+      const media_un = comQtd.length
+        ? Math.round((comQtd.reduce((s, x) => s + x.preco_un, 0) / comQtd.length) * 100) / 100 : 0;
+
+      const ofertas = comQtd
+        .sort((a, b) => a.preco_un - b.preco_un)
         .slice(0, 5)
-        .map(o => ({
+        .map(({ o, unidades, preco_un }) => ({
           titulo: String(o.title || '').slice(0, 90),
           preco: o.price,
+          unidades,
+          preco_un: Math.round(preco_un * 100) / 100,
           vendidos: o.sold_quantity || 0,
           vendedor: (o.seller && o.seller.nickname) || '',
           frete_gratis: !!(o.shipping && o.shipping.free_shipping),
           link: o.permalink
         }));
-      radar.buscas.push({ id: item.id, busca: item.q, total: d.paging ? d.paging.total : 0, ofertas });
+
+      // Nossos pacotes desse segmento, com preço por unidade (pra comparar com a média)
+      const nossos = [];
+      produtosAtivos
+        .filter(p => String(p.category || '').toLowerCase().trim() === item.id)
+        .forEach(p => (p.variants || []).forEach(v => {
+          if (v.units && v.price) nossos.push({ produto: p.name, units: v.units, preco: v.price,
+            preco_un: Math.round((v.price / v.units) * 100) / 100 });
+        }));
+
+      radar.buscas.push({ id: item.id, busca: item.q, total: d.paging ? d.paging.total : 0,
+        media_un, amostra: comQtd.length, ofertas, nossos });
     } catch (e) {
       radar.buscas.push({ id: item.id, busca: item.q, erro: e.message, ofertas: [] });
     }
@@ -772,7 +802,7 @@ function registerMlRoutes(app, requireAuth) {
   app.get('/api/eco/ml/radar', requireAuth, async (req, res) => {
     try {
       let radar = loadJSON(RADAR_FILE, null);
-      if (!radar || radar.v !== 2 || req.query.force === '1' || Date.now() - radar.ts > 12 * 60 * 60 * 1000) {
+      if (!radar || radar.v !== 3 || req.query.force === '1' || Date.now() - radar.ts > 12 * 60 * 60 * 1000) {
         radar = await buildRadar();
       }
       res.json(radar);
