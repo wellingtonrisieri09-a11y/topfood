@@ -548,10 +548,26 @@ setInterval(() => {
 async function buildRadar() {
   const acc = anyAccountId();
   if (!acc) throw new Error('Nenhuma conta Mercado Livre conectada');
-  const radar = { ts: Date.now(), buscas: [], tendencias: [], mais_vendidos: [] };
+  const radar = { v: 2, ts: Date.now(), buscas: [], tendencias: [], mais_vendidos: [] };
 
-  // 1) Concorrência por segmento (nossos 4 tipos de embalagem)
-  for (const item of RADAR_QUERIES) {
+  // 1) Concorrência por segmento — segue o CATÁLOGO: uma busca por categoria
+  // de produto ativo (cadastrou embalagem nova → entra no radar sozinha)
+  const fixas = {
+    burger: 'embalagem hamburguer delivery papel', hamburger: 'embalagem hamburguer delivery papel',
+    hamburguer: 'embalagem hamburguer delivery papel',
+    pastel: 'embalagem pastel delivery', churros: 'caixa churros embalagem',
+    fritas: 'embalagem batata frita delivery', batata: 'embalagem batata frita delivery',
+  };
+  const catsProdutos = [...new Set(findProducts()
+    .filter(p => p.active !== false)
+    .map(p => String(p.category || '').toLowerCase().trim()).filter(Boolean))];
+  const consultas = catsProdutos.slice(0, 8).map(c => ({
+    id: c,
+    q: fixas[c] || ('embalagem ' + c + ' delivery'),
+  }));
+  if (!consultas.length) consultas.push(...RADAR_QUERIES);
+
+  for (const item of consultas) {
     try {
       const d = await mlGet(`/sites/MLB/search?q=${encodeURIComponent(item.q)}&limit=8&sort=price_asc`, acc);
       const ofertas = (d.results || [])
@@ -756,7 +772,7 @@ function registerMlRoutes(app, requireAuth) {
   app.get('/api/eco/ml/radar', requireAuth, async (req, res) => {
     try {
       let radar = loadJSON(RADAR_FILE, null);
-      if (!radar || !radar.tendencias || req.query.force === '1' || Date.now() - radar.ts > 12 * 60 * 60 * 1000) {
+      if (!radar || radar.v !== 2 || req.query.force === '1' || Date.now() - radar.ts > 12 * 60 * 60 * 1000) {
         radar = await buildRadar();
       }
       res.json(radar);

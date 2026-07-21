@@ -4870,11 +4870,12 @@ async function loadRadarML(force) {
             <td>${m.vendidos||'—'}</td></tr>`).join('')}</tbody></table></div>`
       : '<p style="color:var(--muted);font-size:.78rem">Ranking indisponível agora.</p>';
 
-    const nomes = { burger:'Hambúrguer', pastel:'Pastel', churros:'Churros', fritas:'Fritas' };
+    const nomes = { burger:'Hambúrguer', hamburger:'Hambúrguer', hamburguer:'Hambúrguer', pastel:'Pastel', churros:'Churros', fritas:'Fritas', batata:'Batata Frita', pizza:'Pizza', sushi:'Sushi' };
+    const nomeSeg = id => nomes[id] || (String(id).charAt(0).toUpperCase() + String(id).slice(1));
     const buscas = (d.buscas||[]).map(b => `
       <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
-          <b style="font-size:.82rem">${nomes[b.id]||b.id}</b>
+          <b style="font-size:.82rem">${nomeSeg(b.id)}</b>
           <span style="font-size:.7rem;color:var(--muted)">${b.total ? b.total+' anúncios concorrendo' : ''}</span>
         </div>
         ${b.erro ? `<p style="color:var(--red);font-size:.72rem;margin:6px 0 0">${escapeHtml(b.erro)}</p>` :
