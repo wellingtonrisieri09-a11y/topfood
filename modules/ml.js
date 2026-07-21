@@ -160,6 +160,19 @@ async function mlWrite(method, pathUrl, body, accountId) {
 const mlPost = (p, b, acc) => mlWrite('POST', p, b, acc);
 const mlPut  = (p, b, acc) => mlWrite('PUT', p, b, acc);
 
+// Rotas de LEITURA pública (busca/ranking/detalhe de item) devolvem 403 pra
+// apps sem o escopo específico — tenta autenticado e, se barrar, repete como
+// visitante (sem credencial), que é como o site aberto do ML responde.
+async function mlGetLeitura(pathUrl, accountId) {
+  try { return await mlGet(pathUrl, accountId); }
+  catch (e) {
+    if (!/40[13]/.test(String(e.message))) throw e;
+    const r = await fetch(`${API}${pathUrl}`);
+    if (!r.ok) throw new Error(`ML GET público ${pathUrl} → ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    return r.json();
+  }
+}
+
 // ------------------------------------------------------------
 // Publicar produto (M10) — cada pacote (variante) vira um anúncio, por conta
 // ------------------------------------------------------------
@@ -577,7 +590,7 @@ async function buildRadar() {
   const produtosAtivos = findProducts().filter(p => p.active !== false);
   for (const item of consultas) {
     try {
-      const d = await mlGet(`/sites/MLB/search?q=${encodeURIComponent(item.q)}&limit=50`, acc);
+      const d = await mlGetLeitura(`/sites/MLB/search?q=${encodeURIComponent(item.q)}&limit=50`, acc);
       const brutos = (d.results || []).filter(o => o.price > 1); // ignora lixo de R$0,xx
       // Preço POR UNIDADE dos concorrentes (só anúncios cuja quantidade dá pra identificar)
       const comQtd = brutos.map(o => {
@@ -634,10 +647,10 @@ async function buildRadar() {
 
   // 3) Mais vendidos da categoria — ranking oficial (highlights) + detalhes dos itens
   try {
-    const h = await mlGet(`/highlights/MLB/category/${cats[0]}`, acc);
+    const h = await mlGetLeitura(`/highlights/MLB/category/${cats[0]}`, acc);
     const ids = (h.content || []).filter(c => c.type === 'ITEM').slice(0, 20).map(c => c.id);
     if (ids.length) {
-      const det = await mlGet(`/items?ids=${ids.join(',')}&attributes=id,title,price,sold_quantity,permalink`, acc);
+      const det = await mlGetLeitura(`/items?ids=${ids.join(",")}&attributes=id,title,price,sold_quantity,permalink`, acc);
       const porId = {};
       (Array.isArray(det) ? det : []).forEach(r => { if (r.code === 200 && r.body) porId[r.body.id] = r.body; });
       radar.mais_vendidos = ids.map((id, i) => {
