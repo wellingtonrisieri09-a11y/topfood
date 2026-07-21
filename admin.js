@@ -4868,7 +4868,7 @@ async function loadRadarML(force) {
             <td><a href="${m.link}" target="_blank" rel="noopener">${escapeHtml(m.titulo)}</a></td>
             <td style="white-space:nowrap">R$ ${fmt(m.preco)}</td>
             <td>${m.vendidos||'—'}</td></tr>`).join('')}</tbody></table></div>`
-      : '<p style="color:var(--muted);font-size:.78rem">Ranking indisponível agora.</p>';
+      : `<p style="color:var(--muted);font-size:.78rem">Ranking indisponível agora.${d.mais_vendidos_erro ? ' <span style="color:var(--red)">('+escapeHtml(d.mais_vendidos_erro)+')</span>' : ''}</p>`;
 
     const nomes = { burger:'Hambúrguer', hamburger:'Hambúrguer', hamburguer:'Hambúrguer', pastel:'Pastel', churros:'Churros', fritas:'Fritas', batata:'Batata Frita', pizza:'Pizza', sushi:'Sushi' };
     const nomeSeg = id => nomes[id] || (String(id).charAt(0).toUpperCase() + String(id).slice(1));
@@ -4889,7 +4889,11 @@ async function loadRadarML(force) {
         </div>
         ${media ? `<div style="font-size:.75rem;margin-top:6px;background:var(--bg);border-radius:8px;padding:6px 10px">Média do mercado: <b>R$ ${fmt(media)}/unidade</b> <span style="color:var(--muted)">(${b.amostra} anúncios com quantidade identificada)</span></div>` : ''}
         ${nossos ? `<div style="margin-top:6px">${nossos}</div>` : ''}
-        ${b.erro ? `<p style="color:var(--red);font-size:.72rem;margin:6px 0 0">${escapeHtml(b.erro)}</p>` : `
+        ${b.erro ? (
+          /403/.test(b.erro)
+            ? `<p style="color:var(--muted);font-size:.72rem;margin:6px 0 0">🔒 O Mercado Livre bloqueou a consulta de concorrência pra aplicativos <b>não certificados</b> (o nosso está com a certificação pendente no DevCenter). Não é falha do painel — quando o app for certificado, este bloco liga sozinho.</p>`
+            : `<p style="color:var(--red);font-size:.72rem;margin:6px 0 0">${escapeHtml(b.erro)}</p>`
+        ) : `
         <div style="margin-top:8px;font-size:.68rem;color:var(--muted);text-transform:uppercase;font-weight:600">Concorrentes mais baratos por unidade</div>
         ${(b.ofertas||[]).map(o => `<div style="font-size:.73rem;margin-top:5px;display:flex;justify-content:space-between;gap:8px">
             <a href="${o.link}" target="_blank" rel="noopener" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(o.titulo)}</a>
