@@ -1309,6 +1309,18 @@
           <button class="btn btn-secondary" onclick="loadInsights()"><i class="fa fa-rotate"></i> Atualizar</button>
         </div>
 
+        <!-- RADAR MERCADO LIVRE (M12) -->
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <h3 style="margin:0">🛒 Radar Mercado Livre <span style="font-size:.72rem;font-weight:400;color:var(--muted)">demanda real da categoria — pra decidir onde investir divulgação</span></h3>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span id="radar-quando" style="font-size:.72rem;color:var(--muted)"></span>
+              <button class="btn btn-secondary" style="font-size:.78rem" onclick="loadRadarML(true)"><i class="fa fa-rotate"></i> Atualizar agora</button>
+            </div>
+          </div>
+          <div id="radar-ml-body" style="margin-top:12px"><p style="color:var(--muted);font-size:.82rem">Carregando radar…</p></div>
+        </div>
+
         <div class="card" style="margin-bottom:16px">
           <div style="display:flex;gap:28px;flex-wrap:wrap">
             <div>📊 Eventos: <b id="in-eventos">0</b></div>

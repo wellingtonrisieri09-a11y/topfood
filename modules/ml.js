@@ -548,7 +548,9 @@ setInterval(() => {
 async function buildRadar() {
   const acc = anyAccountId();
   if (!acc) throw new Error('Nenhuma conta Mercado Livre conectada');
-  const radar = { ts: Date.now(), buscas: [] };
+  const radar = { ts: Date.now(), buscas: [], tendencias: [], mais_vendidos: [] };
+
+  // 1) Concorrência por segmento (nossos 4 tipos de embalagem)
   for (const item of RADAR_QUERIES) {
     try {
       const d = await mlGet(`/sites/MLB/search?q=${encodeURIComponent(item.q)}&limit=8&sort=price_asc`, acc);
@@ -568,6 +570,38 @@ async function buildRadar() {
       radar.buscas.push({ id: item.id, busca: item.q, erro: e.message, ofertas: [] });
     }
   }
+
+  // Categoria dos nossos produtos (todas caem em "Caixas para Alimentos" hoje)
+  const cats = [...new Set(findProducts().map(p => p.ml_category_id).filter(Boolean))];
+  if (!cats.length) cats.push('MLB277903');
+
+  // 2) Tendências de busca da categoria — o que os compradores estão digitando
+  for (const cat of cats.slice(0, 2)) {
+    try {
+      const t = await mlGet(`/trends/MLB/${cat}`, acc);
+      (Array.isArray(t) ? t : []).slice(0, 15).forEach(x => {
+        if (x && x.keyword && !radar.tendencias.some(k => k.termo === x.keyword))
+          radar.tendencias.push({ termo: x.keyword, link: x.url || '' });
+      });
+    } catch (e) { console.error('[ML] trends', cat, ':', e.message); }
+  }
+
+  // 3) Mais vendidos da categoria — ranking oficial (highlights) + detalhes dos itens
+  try {
+    const h = await mlGet(`/highlights/MLB/category/${cats[0]}`, acc);
+    const ids = (h.content || []).filter(c => c.type === 'ITEM').slice(0, 20).map(c => c.id);
+    if (ids.length) {
+      const det = await mlGet(`/items?ids=${ids.join(',')}&attributes=id,title,price,sold_quantity,permalink`, acc);
+      const porId = {};
+      (Array.isArray(det) ? det : []).forEach(r => { if (r.code === 200 && r.body) porId[r.body.id] = r.body; });
+      radar.mais_vendidos = ids.map((id, i) => {
+        const b = porId[id];
+        return b ? { posicao: i + 1, titulo: String(b.title || '').slice(0, 90), preco: b.price,
+                     vendidos: b.sold_quantity || 0, link: b.permalink } : null;
+      }).filter(Boolean);
+    }
+  } catch (e) { console.error('[ML] highlights:', e.message); radar.mais_vendidos_erro = e.message; }
+
   saveJSON(RADAR_FILE, radar);
   return radar;
 }
@@ -722,7 +756,7 @@ function registerMlRoutes(app, requireAuth) {
   app.get('/api/eco/ml/radar', requireAuth, async (req, res) => {
     try {
       let radar = loadJSON(RADAR_FILE, null);
-      if (!radar || req.query.force === '1' || Date.now() - radar.ts > 12 * 60 * 60 * 1000) {
+      if (!radar || !radar.tendencias || req.query.force === '1' || Date.now() - radar.ts > 12 * 60 * 60 * 1000) {
         radar = await buildRadar();
       }
       res.json(radar);

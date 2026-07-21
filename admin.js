@@ -4843,6 +4843,57 @@ async function loadInsights() {
   } catch(e) { toast('Erro ao carregar inteligência', 'error'); }
   iaRender();   // inicializa/mostra o chat da IA Gestora
   loadMetrics(); // M7: dashboard de métricas reais (Windsor)
+  loadRadarML(); // M12: radar do Mercado Livre (demanda/concorrência)
+}
+
+/* ── M12: Radar Mercado Livre — tendências, mais vendidos, concorrência ── */
+async function loadRadarML(force) {
+  const box = document.getElementById('radar-ml-body');
+  if(!box) return;
+  if(force) box.innerHTML = '<p style="color:var(--muted);font-size:.82rem">Atualizando no Mercado Livre… (leva alguns segundos)</p>';
+  try {
+    const d = await api('/api/eco/ml/radar' + (force ? '?force=1' : ''));
+    const quando = document.getElementById('radar-quando');
+    if(quando && d.ts) quando.textContent = 'Atualizado ' + new Date(d.ts).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+
+    const tend = (d.tendencias||[]).length
+      ? `<div style="display:flex;flex-wrap:wrap;gap:6px">${d.tendencias.map(t =>
+          `<a href="${t.link||'#'}" target="_blank" rel="noopener" style="background:var(--yellow-l);color:#92400e;font-size:.75rem;font-weight:600;padding:4px 10px;border-radius:20px;text-decoration:none">${escapeHtml(t.termo)}</a>`).join('')}</div>`
+      : '<p style="color:var(--muted);font-size:.78rem">Sem tendências disponíveis agora.</p>';
+
+    const top = (d.mais_vendidos||[]).length
+      ? `<div class="table-wrap"><table style="font-size:.78rem;width:100%"><thead><tr style="text-align:left;color:var(--muted)"><th style="padding:4px">#</th><th>Anúncio</th><th>Preço</th><th>Vendidos</th></tr></thead><tbody>
+          ${d.mais_vendidos.slice(0,10).map(m => `<tr style="border-top:1px solid var(--border)">
+            <td style="padding:5px 4px;font-weight:700">${m.posicao}</td>
+            <td><a href="${m.link}" target="_blank" rel="noopener">${escapeHtml(m.titulo)}</a></td>
+            <td style="white-space:nowrap">R$ ${fmt(m.preco)}</td>
+            <td>${m.vendidos||'—'}</td></tr>`).join('')}</tbody></table></div>`
+      : '<p style="color:var(--muted);font-size:.78rem">Ranking indisponível agora.</p>';
+
+    const nomes = { burger:'Hambúrguer', pastel:'Pastel', churros:'Churros', fritas:'Fritas' };
+    const buscas = (d.buscas||[]).map(b => `
+      <div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+          <b style="font-size:.82rem">${nomes[b.id]||b.id}</b>
+          <span style="font-size:.7rem;color:var(--muted)">${b.total ? b.total+' anúncios concorrendo' : ''}</span>
+        </div>
+        ${b.erro ? `<p style="color:var(--red);font-size:.72rem;margin:6px 0 0">${escapeHtml(b.erro)}</p>` :
+          (b.ofertas||[]).map(o => `<div style="font-size:.73rem;margin-top:5px;display:flex;justify-content:space-between;gap:8px">
+            <a href="${o.link}" target="_blank" rel="noopener" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(o.titulo)}</a>
+            <span style="white-space:nowrap">R$ ${fmt(o.preco)}${o.vendidos ? ' · '+o.vendidos+' vend.' : ''}</span>
+          </div>`).join('')}
+      </div>`).join('');
+
+    box.innerHTML = `
+      <div style="display:grid;gap:14px">
+        <div><h4 style="margin:0 0 8px;font-size:.8rem;text-transform:uppercase;color:var(--muted)">🔍 O que estão buscando na categoria</h4>${tend}</div>
+        <div><h4 style="margin:0 0 8px;font-size:.8rem;text-transform:uppercase;color:var(--muted)">🏆 Mais vendidos da categoria</h4>${top}</div>
+        <div><h4 style="margin:0 0 8px;font-size:.8rem;text-transform:uppercase;color:var(--muted)">⚔️ Concorrência por segmento (mais baratos)</h4>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">${buscas}</div></div>
+      </div>`;
+  } catch(e) {
+    box.innerHTML = '<p style="color:var(--red);font-size:.82rem">Erro ao carregar o radar: '+escapeHtml(e.message)+'</p>';
+  }
 }
 
 /* ── M7: Dashboard de Métricas de Marketing (via Windsor) ── */
