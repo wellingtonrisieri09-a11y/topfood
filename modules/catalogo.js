@@ -305,7 +305,7 @@ function renderCustos(readData) {
       <td>${esc(l.variacao)}</td>
       <td class="dir">R$ ${money(l.preco)}</td>
       <td class="dir">
-        <input type="number" class="in-custo in-custoun" data-pid="${esc(l.pid)}" data-vidx="${l.vidx}" step="0.01" min="0" style="width:72px" value="${l.custoUn}" placeholder="0,19" title="Custo POR UNIDADE com tudo embutido: papel + impressão + acabamento (ex.: pastel 0,19)">
+        <input type="number" class="in-custo in-custoun" data-pid="${esc(l.pid)}" data-vidx="${l.vidx}" step="0.01" min="0" style="width:72px" value="${l.custoUn}" placeholder="digite" title="Custo POR UNIDADE com tudo embutido: papel + impressão + acabamento (ex.: pastel 0,19)">
         <div class="mini c-run">—</div>
       </td>
       <td class="dir c-totmp" style="font-weight:800;color:#92400e">—</td>
