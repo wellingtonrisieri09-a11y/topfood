@@ -1,101 +1,59 @@
-# 🗺️ TopFood — MAPA DO QUE FALTA (checklist de execução)
-_Só pendências. Módulo por módulo. Marque `[x]` conforme fechar. Atualizado: 30/06._
-_Responsáveis: **[W]** Wellington · **[Caio]** · **[Contador]** · **[Claude]** (código)._
+# 🚀 TopFood — LISTA DE IMPULSO (fazer em ordem, uma por vez)
+_Método do Wellington: pega a próxima, faz, marca `[x]`, vai pra seguinte._
+_Responsáveis: **[W]** Wellington · **[Claude]** (código) · **[Contador]**. Atualizado: 22/07._
 
 ---
 
-## 🟡 FALTA POUCO (rápido, alta alavanca)
+## 🔥 AGORA — colheita imediata (quase sem esforço, retorno na hora)
 
-### M4b — Rastreamento server-side (CAPI) — ✅ CONCLUÍDO (18/07)
-- [x] **[W+Claude]** Pixel antigo estava preso a uma conta pessoal fora do portfólio (nunca liberava o token) → criado Pixel novo `1362777799250881` dentro do portfólio "100pilas". Atualizado em `index.html`, `product.html` e `modules/capi.js`.
-- [x] **[Claude]** Campo pra colar o token no painel (Ad Center → "Meta Conversions API — Token") em vez de precisar editar `.env` na mão.
-- [x] **[W]** Token gerado e salvo no painel.
-- [x] **[Claude]** Bug de infra descoberto no caminho: `deploy.sh` tinha perdido a permissão de execução no servidor (o cron rodava a cada 2 min e falhava com "Permission denied" silenciosamente — nada de novo entrava no ar havia um tempo). Corrigido no servidor e no Git (modo `755`).
+1. [ ] **[W]** Publicar **Pizza** no Mercado Livre (Produtos → editar → Publicar) — o radar mostrou que a categoria é dominada por busca de embalagem de pizza
+2. [ ] **[W]** Publicar **Sushi** no Mercado Livre
+3. [ ] **[W]** Publicar **Churros** no Mercado Livre (a correção do "Unidades por kit" já está no ar — só tentar de novo)
+4. [ ] **[W]** Publicar **Fritas aberta** no Mercado Livre
+5. [ ] **[W]** Finalizar campanha Meta da **Fritas** (estava em andamento) e criar a do **Churros** (mesmo modelo do Pastel — textos prontos no chat)
+6. [ ] **[W]** **Repor verba no Facebook Ads** (campanha parou em R$16 de R$20)
 
-### M6 — Retenção / E-mail
-> Conta do domínio (contato@topfoodembalagens.com.br) + e-mail de confirmação JÁ ligados e funcionando. Resta só automação (opcional).
-- [ ] **[Claude]** (Opcional) Sequências automáticas de pós-venda: boas-vindas, pós-compra, recompra. *(Carrinho abandonado já existe.)*
+## 🎯 CANAL NOVO — Google Shopping (o maior canal ainda não usado)
 
-### SEO (prioridade máxima — não custa verba)
-- [ ] **[W]** Solicitar **indexação dos guias** no Google Search Console (acelera de semanas → dias).
-- [ ] **[W]** Conseguir **avaliações no Google Meu Negócio** (só 1 hoje — maior alavanca local).
+7. [ ] **[W+Claude]** Conectar o feed ao **Google Merchant Center** (Claude guia passo a passo, feed já está pronto no site)
+8. [ ] **[W+Claude]** Criar a **campanha Shopping** no Google Ads (aproveita pixel + CAPI já ligados)
 
----
+## 🛠️ FERRAMENTAS DE CANAL — Claude constrói (uma por vez)
 
-## 🔜 PRÓXIMA FASE — CRESCER COM ANÚNCIOS
+9. [ ] **[Claude]** **Precificador por canal** — preço certo por pacote em cada canal (site/ML/Shopee/Amazon), descontando a taxa de cada um e protegendo a margem alvo (usa os custos já cadastrados)
+10. [ ] **[Claude]** **Relatório semanal no WhatsApp** — toda segunda: vendas por canal, produto campeão, margem real
+11. [ ] **[Claude]** **Pedido de avaliação pós-entrega** — mensagem automática pedindo avaliação (ML + Google) quando o pedido vira "entregue"
+12. [ ] **[Claude]** **IA Gestora camada 2** — executa ajuste de campanha (pausar/verba) com aprovação do Wellington
 
-### M14 — Publicação Unificada de Anúncios
-> Subir 1 criativo/produto e publicar no Google + Facebook/Instagram + TikTok.
-- [ ] **[W+Claude]** Conectar feed ao **Google Merchant Center** + campanha Shopping (Claude guia, Wellington configura).
-- [ ] **[W+Claude]** Repetir no **Facebook Commerce** e **TikTok Catalog**.
-- [x] **[Claude]** ~~Tela no painel pra subir criativo + botão **Publicar**~~ → **feito (01/07)**: aba Campanhas → "Publicar Anúncio" (produto + plataformas + criativo + verba; Publicar gera o **pacote pronto**: link rastreável UTM + texto por plataforma). *Publicação 100% automática liga quando as APIs forem aprovadas.*
-- [ ] **[W]** Solicitar **aprovações de API de anúncios** (Meta → TikTok → Google) — leva dias/semanas, começar cedo.
-- [ ] **[Claude]** Controle de verba (teto diário, alerta, pausar) — verba aprovada R$ 3.000/mês.
-- [ ] **[W]** Repor fundos no **Facebook Ads** (campanha parou em R$16 de R$20).
+## 🔓 DESTRAVAS EXTERNAS (não dependem de código — fazer quando der)
 
-### M15 — IA Gestora de Tráfego (Camada 2 / "Fase 3")
-> Hoje ela analisa e recomenda. Falta deixar ela **executar**.
-- [ ] **[Claude]** IA recomenda **e executa** ajustes de campanha (pausar/ativar/ajustar verba em Meta e Google) — sempre com aprovação do Wellington. *(Windsor já permite agir.)*
+13. [ ] **[W]** **Certificar o app no DevCenter do ML** (círculo 70/100 → "Configuração de segurança") — destrava o radar de preços da concorrência
+14. [ ] **[W]** **Shopee**: ver motivo da rejeição do perfil ("Go To Profile"), corrigir e reenviar → depois app + chaves → Claude constrói a publicação
+15. [ ] **[W]** **Amazon**: salvar as chaves LWA (SP-API) na tela Marketplaces e autorizar → Claude acompanha o 1º teste
+16. [ ] **[W]** Conectar as **outras contas do Mercado Livre** ("+ Conectar outra conta" no produto)
+17. [ ] **[W]** (Quando o ML normalizar) Salvar a URL do webhook no DevCenter — sem pressa, a varredura de 10 min já cobre
 
----
+## 🧹 ARRUMAÇÃO RÁPIDA
 
-## ⏳ BLOQUEADO (depende de terceiro)
+18. [ ] **[W]** Excluir o pedido duplicado **ML-2026-001** (a venda das fritas — a nota está no TF manual) e conferir o estoque das Fritas
+19. [ ] **[W]** Apagar os **pedidos de teste** antigos em Admin → Pedidos
+20. [ ] **[W]** Rotacionar a **chave do Windsor** e a **senha de e-mail** (apareceram em chat)
+21. [ ] **[W]** Solicitar **indexação dos guias** no Search Console + conseguir **avaliações no Google Meu Negócio**
 
-### M11 — Portal B2B (Nota Fiscal + Boleto)
-- [ ] **[Contador]** Certificado digital + credenciamento **NF-e** → destrava o módulo.
-- [ ] **[Claude]** Depois do NF-e: área CNPJ, **boleto** (B2B), emissão de nota fiscal.
+## ⏳ BLOQUEADO (terceiros)
 
----
+22. [ ] **[Contador]** Certificado digital + credenciamento NF-e → destrava boleto B2B e NF-e automática
+23. [ ] **[Claude]** (depois do 22) Área CNPJ + boleto B2B + NF-e automática de marketplace
 
-## 🔮 FUTURO / REAVALIAR
+## 💤 OPCIONAL / FUTURO
 
-### M12 — Inteligência Competitiva
-- [ ] **[Claude]** Definir a fonte (radar do Mercado Livre é inviável) → virá do **comportamento do próprio site** (via M15). A desenhar.
-
----
-
-## 🛒 M10 — Marketplace Hub (ML / Shopee / Amazon) — EM ANDAMENTO
-> Objetivo: publicar produto, vender, pedido cai no mesmo painel, baixa estoque, e permite emitir NF-e/etiqueta como hoje.
-
-### Mercado Livre — ✅ CICLO COMPLETO FUNCIONANDO (21/07) — 1ª venda real despachada
-- [x] Publicar produto pelo painel (multi-conta), venda real, pedido cai sozinho (varredura 10 min + botão Importar), etiqueta Mercado Envios pelo painel, baixa/sincronização de estoque.
-- [ ] **[W]** Publicar os produtos que faltaram (Churros e Fritas aberta — correção do "Unidades por kit" já no ar, só tentar de novo).
-- [ ] **[W]** (Quando o ML normalizar) Salvar a URL do webhook no DevCenter — falha por erro/cota do lado deles; a varredura de 10 min já cobre tudo, sem pressa.
-- [ ] **[W]** Conectar as outras 2 contas do ML que pretende usar ("+ Conectar outra conta" no produto).
-- [ ] **[W]** Decidir depois: NF-e automática pra pedido de marketplace, ou manual (botão) como hoje?
-
-### Shopee — ADIADO por decisão do Wellington (21/07): vendas manuais por enquanto
-> Bloqueio real: a Shopee REJEITOU a verificação do perfil de desenvolvedor
-> ("Profile Verification Unsuccessful") — sem perfil aprovado não dá pra criar
-> app nem gerar Partner ID/Key. Vendas na Shopee seguem manuais pela Central
-> do Vendedor até resolver.
-- [ ] **[W]** (Sem pressa) Ver o motivo da rejeição em "Go To Profile", corrigir e reenviar. Aprovou → criar o app, pegar Partner ID/Key.
-- [ ] **[W+Claude]** Depois da aprovação: colar as chaves na tela Marketplaces, conectar a loja, e Claude constrói a publicação de produtos (fase 2).
-
-### Amazon — módulo existe no painel, falta configurar
-- [ ] **[W]** Salvar as chaves LWA (SP-API) na tela Marketplaces e autorizar.
-- [ ] **[Claude]** Acompanhar o primeiro teste e ajustar (mesmo processo do ML).
-
-### M16 — IA altera o site
-- [ ] **[Claude]** Construir "controles seguros" pra IA mudar produto/banner/cor/telefone com aprovação do Wellington (sem tocar no código).
+24. [ ] **[Claude]** Sequências de e-mail pós-venda (boas-vindas, recompra)
+25. [ ] **[Claude]** M16 — IA altera conteúdo do site com aprovação
+26. [ ] **[W]** Aprovações de API de anúncios (Meta → TikTok → Google) pra publicação 100% automática de campanha
 
 ---
 
-## 🔒 HIGIENE / SEGURANÇA (rápido)
-- [ ] **[W]** Rotacionar a **chave do Windsor** e a **senha de e-mail** (apareceram em chat).
-- [ ] **[W]** Apagar os **pedidos de teste** (TF-2026-004 etc.) em Admin → Pedidos.
-
----
-
-## ✅ MÓDULOS SEM PENDÊNCIA (fechados)
-M1 · M2 · M3 · M4 · M5 · M7 · M8 · M9 — e M13 removido. _(Não mexer sem motivo.)_
-
----
-
-### 🎯 Ordem sugerida (maior retorno primeiro)
-1. **SEO** (indexação + avaliações) — grátis, traz cliente orgânico.
-2. **M14** (Google Merchant Center) — liga a torneira de anúncios numa loja que já converte.
-3. **M6** (e-mail do domínio) — profissionaliza + abre retenção.
-4. **M4b** (token CAPI) — melhora a medição dos anúncios do passo 2.
-5. **M15 Camada 2** — IA passa a otimizar a verba sozinha.
-6. **M11** (B2B) — quando o contador liberar a NF-e.
+### ✅ CONQUISTADO (não mexer)
+Site + checkout PIX/cartão · NF-e Focus · IA Atendente WhatsApp · CAPI Meta (pixel novo 100pilas) ·
+**Mercado Livre ciclo completo com 1ª venda real (21/07)** · Portal B2B com DANFE no portal ·
+Radar de tendências ML · Custo/margem por pacote + tabela /custos · Auto-deploy · Backup diário
