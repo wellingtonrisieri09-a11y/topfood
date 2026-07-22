@@ -590,28 +590,50 @@ async function buildRadar() {
   const produtosAtivos = findProducts().filter(p => p.active !== false);
   for (const item of consultas) {
     try {
-      const d = await mlGetLeitura(`/sites/MLB/search?q=${encodeURIComponent(item.q)}&limit=50`, acc);
-      const brutos = (d.results || []).filter(o => o.price > 1); // ignora lixo de R$0,xx
-      // Preço POR UNIDADE dos concorrentes (só anúncios cuja quantidade dá pra identificar)
-      const comQtd = brutos.map(o => {
-        const unidades = qtdDoTitulo(o.title);
-        return unidades ? { o, unidades, preco_un: o.price / unidades } : null;
-      }).filter(Boolean);
+      // Busca no CATÁLOGO do ML (/products/search com q=). O /sites/MLB/search é
+      // bloqueado para apps não certificados, mas o catálogo responde — e traz os
+      // preços de todos os vendedores que disputam cada produto.
+      const d = await mlGetLeitura(`/products/search?site_id=MLB&status=active&q=${encodeURIComponent(item.q)}&limit=12`, acc);
+      const candidatos = (d.results || []).filter(r => r && r.id && r.name);
+
+      // Para cada produto do catálogo: menor preço entre os vendedores + quantidade do título
+      const comQtd = [];
+      for (const r of candidatos.slice(0, 8)) {
+        const unidades = qtdDoTitulo(r.name);
+        if (!unidades) continue;
+        let precos = [], vendedores = 0;
+        try {
+          const itens = await mlGetLeitura(`/products/${r.id}/items`, acc);
+          precos = (itens.results || []).map(x => Number(x.price)).filter(n => n > 1).sort((a, b) => a - b);
+          vendedores = (itens.paging && itens.paging.total) || precos.length;
+        } catch (_) { continue; }
+        if (!precos.length) continue;
+        comQtd.push({
+          titulo: String(r.name).slice(0, 90),
+          preco: precos[0],
+          unidades,
+          preco_un: precos[0] / unidades,
+          vendedores,
+          link: `https://www.mercadolivre.com.br/p/${r.id}`,
+        });
+      }
+
       const media_un = comQtd.length
         ? Math.round((comQtd.reduce((s, x) => s + x.preco_un, 0) / comQtd.length) * 100) / 100 : 0;
 
       const ofertas = comQtd
         .sort((a, b) => a.preco_un - b.preco_un)
         .slice(0, 5)
-        .map(({ o, unidades, preco_un }) => ({
-          titulo: String(o.title || '').slice(0, 90),
-          preco: o.price,
-          unidades,
-          preco_un: Math.round(preco_un * 100) / 100,
-          vendidos: o.sold_quantity || 0,
-          vendedor: (o.seller && o.seller.nickname) || '',
-          frete_gratis: !!(o.shipping && o.shipping.free_shipping),
-          link: o.permalink
+        .map(x => ({
+          titulo: x.titulo,
+          preco: x.preco,
+          unidades: x.unidades,
+          preco_un: Math.round(x.preco_un * 100) / 100,
+          vendedores: x.vendedores,
+          vendedor: x.vendedores ? x.vendedores + ' vendedor(es)' : '',
+          vendidos: 0,
+          frete_gratis: false,
+          link: x.link,
         }));
 
       // Nossos pacotes desse segmento, com preço por unidade (pra comparar com a média)
@@ -645,20 +667,36 @@ async function buildRadar() {
     } catch (e) { console.error('[ML] trends', cat, ':', e.message); }
   }
 
-  // 3) Mais vendidos da categoria — ranking oficial (highlights) + detalhes dos itens
+  // 3) Mais vendidos da categoria — ranking oficial (highlights) pelo CATÁLOGO.
+  // O ML bloqueia /items e /sites/search para apps não certificados, mas /products/*
+  // responde normalmente: nome do produto + preços de TODOS os vendedores que o disputam.
   try {
     const h = await mlGetLeitura(`/highlights/MLB/category/${cats[0]}`, acc);
-    const ids = (h.content || []).filter(c => c.type === 'ITEM').slice(0, 20).map(c => c.id);
-    if (ids.length) {
-      const det = await mlGetLeitura(`/items?ids=${ids.join(",")}&attributes=id,title,price,sold_quantity,permalink`, acc);
-      const porId = {};
-      (Array.isArray(det) ? det : []).forEach(r => { if (r.code === 200 && r.body) porId[r.body.id] = r.body; });
-      radar.mais_vendidos = ids.map((id, i) => {
-        const b = porId[id];
-        return b ? { posicao: i + 1, titulo: String(b.title || '').slice(0, 90), preco: b.price,
-                     vendidos: b.sold_quantity || 0, link: b.permalink } : null;
-      }).filter(Boolean);
+    const destaques = (h.content || []).filter(c => c.type === 'PRODUCT' && c.id).slice(0, 10);
+    const lista = [];
+    for (const c of destaques) {
+      try {
+        const [prod, itens] = await Promise.all([
+          mlGetLeitura(`/products/${c.id}`, acc),
+          mlGetLeitura(`/products/${c.id}/items`, acc).catch(() => ({ results: [], paging: {} })),
+        ]);
+        const precos = (itens.results || []).map(r => Number(r.price)).filter(n => n > 0).sort((a, b) => a - b);
+        const titulo = String(prod.name || '').slice(0, 90);
+        const unidades = qtdDoTitulo(titulo);
+        lista.push({
+          posicao: c.position || lista.length + 1,
+          titulo,
+          preco: precos[0] || 0,
+          preco_un: (unidades && precos[0]) ? Math.round((precos[0] / unidades) * 100) / 100 : 0,
+          unidades,
+          vendedores: (itens.paging && itens.paging.total) || precos.length,
+          link: `https://www.mercadolivre.com.br/p/${c.id}`,
+        });
+      } catch (e) { /* produto sem catálogo acessível — segue o baile */ }
     }
+    // Só entra no ranking quem tem preço real de vendedor ativo
+    radar.mais_vendidos = lista.filter(x => x.preco > 0 && x.vendedores > 0);
+    if (!radar.mais_vendidos.length) radar.mais_vendidos_erro = 'nenhum produto de catálogo com vendedor ativo';
   } catch (e) { console.error('[ML] highlights:', e.message); radar.mais_vendidos_erro = e.message; }
 
   saveJSON(RADAR_FILE, radar);

@@ -4862,12 +4862,13 @@ async function loadRadarML(force) {
       : '<p style="color:var(--muted);font-size:.78rem">Sem tendências disponíveis agora.</p>';
 
     const top = (d.mais_vendidos||[]).length
-      ? `<div class="table-wrap"><table style="font-size:.78rem;width:100%"><thead><tr style="text-align:left;color:var(--muted)"><th style="padding:4px">#</th><th>Anúncio</th><th>Preço</th><th>Vendidos</th></tr></thead><tbody>
+      ? `<div class="table-wrap"><table style="font-size:.78rem;width:100%"><thead><tr style="text-align:left;color:var(--muted)"><th style="padding:4px">#</th><th>Produto no catálogo do ML</th><th>Menor preço</th><th>Por unidade</th><th>Vendedores</th></tr></thead><tbody>
           ${d.mais_vendidos.slice(0,10).map(m => `<tr style="border-top:1px solid var(--border)">
             <td style="padding:5px 4px;font-weight:700">${m.posicao}</td>
             <td><a href="${m.link}" target="_blank" rel="noopener">${escapeHtml(m.titulo)}</a></td>
             <td style="white-space:nowrap">R$ ${fmt(m.preco)}</td>
-            <td>${m.vendidos||'—'}</td></tr>`).join('')}</tbody></table></div>`
+            <td style="white-space:nowrap">${m.preco_un ? 'R$ '+fmt(m.preco_un)+'/un' : '—'}</td>
+            <td>${m.vendedores||'—'}</td></tr>`).join('')}</tbody></table></div>`
       : `<p style="color:var(--muted);font-size:.78rem">Ranking indisponível agora.${d.mais_vendidos_erro ? ' <span style="color:var(--red)">('+escapeHtml(d.mais_vendidos_erro)+')</span>' : ''}</p>`;
 
     const nomes = { burger:'Hambúrguer', hamburger:'Hambúrguer', hamburguer:'Hambúrguer', pastel:'Pastel', churros:'Churros', fritas:'Fritas', batata:'Batata Frita', pizza:'Pizza', sushi:'Sushi' };
@@ -4887,18 +4888,16 @@ async function loadRadarML(force) {
           <b style="font-size:.82rem">${nomeSeg(b.id)}</b>
           <span style="font-size:.7rem;color:var(--muted)">${b.total ? b.total+' anúncios' : ''}</span>
         </div>
-        ${media ? `<div style="font-size:.75rem;margin-top:6px;background:var(--bg);border-radius:8px;padding:6px 10px">Média do mercado: <b>R$ ${fmt(media)}/unidade</b> <span style="color:var(--muted)">(${b.amostra} anúncios com quantidade identificada)</span></div>` : ''}
+        ${media ? `<div style="font-size:.75rem;margin-top:6px;background:var(--bg);border-radius:8px;padding:6px 10px">Média do mercado: <b>R$ ${fmt(media)}/unidade</b> <span style="color:var(--muted)">(${b.amostra} produtos do catálogo ML)</span></div>` : ''}
         ${nossos ? `<div style="margin-top:6px">${nossos}</div>` : ''}
-        ${b.erro ? (
-          /403/.test(b.erro)
-            ? `<p style="color:var(--muted);font-size:.72rem;margin:6px 0 0">🔒 O Mercado Livre bloqueou a consulta de concorrência pra aplicativos <b>não certificados</b> (o nosso está com a certificação pendente no DevCenter). Não é falha do painel — quando o app for certificado, este bloco liga sozinho.</p>`
-            : `<p style="color:var(--red);font-size:.72rem;margin:6px 0 0">${escapeHtml(b.erro)}</p>`
-        ) : `
+        ${b.erro ? `<p style="color:var(--red);font-size:.72rem;margin:6px 0 0">${escapeHtml(b.erro)}</p>`
+        : (b.ofertas||[]).length ? `
         <div style="margin-top:8px;font-size:.68rem;color:var(--muted);text-transform:uppercase;font-weight:600">Concorrentes mais baratos por unidade</div>
         ${(b.ofertas||[]).map(o => `<div style="font-size:.73rem;margin-top:5px;display:flex;justify-content:space-between;gap:8px">
             <a href="${o.link}" target="_blank" rel="noopener" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(o.titulo)}</a>
-            <span style="white-space:nowrap">${o.unidades ? o.unidades+' un · ' : ''}R$ ${fmt(o.preco)}${o.preco_un ? ' (R$ '+fmt(o.preco_un)+'/un)' : ''}${o.vendidos ? ' · '+o.vendidos+' vend.' : ''}</span>
-          </div>`).join('')}`}
+            <span style="white-space:nowrap">${o.unidades ? o.unidades+' un · ' : ''}R$ ${fmt(o.preco)}${o.preco_un ? ' (R$ '+fmt(o.preco_un)+'/un)' : ''}${o.vendedores ? ' · '+o.vendedores+' vend.' : ''}</span>
+          </div>`).join('')}`
+        : `<p style="color:var(--muted);font-size:.72rem;margin:6px 0 0">Sem produtos de catálogo com preço para este segmento agora.</p>`}
       </div>`;
     }).join('');
 
