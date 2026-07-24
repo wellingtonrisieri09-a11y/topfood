@@ -481,7 +481,7 @@ async function processarPedidoML(mlOrderId, accountId) {
     ml_account: accId,
     ml_account_nickname: accountLabel(accId),
     channel: 'mercado_livre',
-    date: new Date().toISOString(),
+    date: mlOrder.date_created || new Date().toISOString(), // data REAL da venda, não a da importação
     customer: {
       name: [buyer.first_name, buyer.last_name].filter(Boolean).join(' ') || buyer.nickname || 'Comprador Mercado Livre',
       email: buyer.email || '',
@@ -523,13 +523,30 @@ async function processarPedidoML(mlOrderId, accountId) {
 // Importação de vendas recentes (todas as contas) — usada pelo botão
 // do painel E pela varredura automática de 10 em 10 minutos
 // ------------------------------------------------------------
+// Data de corte da importação: só puxa venda a partir daqui (ignora o
+// histórico antigo de outros produtos que já existia na conta do ML).
+// Na 1ª vez fixa em 7 dias atrás e salva — daí pra frente o corte não se move
+// sozinho, então nada some se o servidor ficar um tempo fora.
+function importCutoff() {
+  const s = readData('settings.json') || {};
+  if (s.ml_import_desde) return s.ml_import_desde;
+  const iso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  try { writeData('settings.json', { ml_import_desde: iso }); } catch (_) {}
+  return iso;
+}
+
 async function importarPedidosRecentes() {
   const resultado = [];
+  const desde = importCutoff();
+  const desdeMs = new Date(desde).getTime();
   for (const accId of accountIds()) {
     try {
       const uid = accounts[accId].user_id;
-      const d = await mlGet(`/orders/search?seller=${uid}&sort=date_desc&limit=20`, accId);
-      const vistos = (d.results || []).map(o => String(o.id));
+      const d = await mlGet(`/orders/search?seller=${uid}&order.date_created.from=${encodeURIComponent(desde)}&sort=date_desc&limit=30`, accId);
+      // Segurança extra: mesmo que o filtro do ML falhe, corta pela data real aqui
+      const vistos = (d.results || [])
+        .filter(o => !o.date_created || new Date(o.date_created).getTime() >= desdeMs)
+        .map(o => String(o.id));
       let importados = 0;
       const antes = (readData('orders.json') || []).filter(o => o.ml_order_id).map(o => String(o.ml_order_id));
       for (const mlId of vistos) {
