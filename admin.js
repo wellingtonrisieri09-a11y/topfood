@@ -2983,13 +2983,17 @@ function exportCSV(type) {
     rows=[['Email','Nome'],...[...seen.entries()].map(([email,name])=>[email,name])];
   } else if(type==='products') {
     filename='precos-custos-topfood.csv';
-    rows=[['Produto','Categoria','Pacote (un)','Preço venda','Custo','Lucro R$','Margem %']];
+    rows=[['Produto','Categoria','Pacote (un)','Preço venda','Custo','Lucro R$','Margem %','Descrição','Fotos (links)']];
     STATE.products.forEach(p=>{
+      // Links absolutos de TODAS as fotos (pra reaproveitar em marketplaces/planilhas)
+      const fotos = (p.images && p.images.length ? p.images : (p.image ? [p.image] : []))
+        .map(im => /^https?:/i.test(im) ? im : location.origin + '/' + String(im).replace(/^\//,''))
+        .join(' | ');
       (p.variants||[]).forEach(v=>{
         const custo  = parseFloat(v.cost)||0;
         const lucro  = (v.price||0) - custo;
         const margem = v.price ? ((lucro/v.price)*100).toFixed(1) : '0.0';
-        rows.push([p.name, p.category||'', v.units, v.price||0, custo, lucro.toFixed(2), margem]);
+        rows.push([p.name, p.category||'', v.units, v.price||0, custo, lucro.toFixed(2), margem, (p.description||'').replace(/[\r\n;]+/g,' '), fotos]);
       });
     });
   }
