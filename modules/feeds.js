@@ -1,9 +1,21 @@
 ﻿// modules/feeds.js — Módulo 1: Feeds Google Shopping, Meta Catalog, TikTok, GMB
 const { readData, readSettings } = require("../db");
 
+// A loja (/api/products) não filtra por `active` — o feed espelha o que o site vende.
+function feedProducts() {
+  return readData("products.json");
+}
+
+// p.images[] já vem com prefixo "images/"; encodeURI cobre nomes com espaço (fotos do WhatsApp).
+function feedImageUrl(baseUrl, path) {
+  if (!path) return "";
+  const p = String(path);
+  return encodeURI(p.startsWith("http") ? p : baseUrl + "/" + p.replace(/^\/+/, ""));
+}
+
 function buildGoogleFeed(req, res) {
   try {
-    const products = readData("products.json").filter(p => p.active !== false);
+    const products = feedProducts();
     const settings = readSettings();
     const baseUrl  = process.env.BASE_URL || "https://topfoodembalagens.com.br";
     const storeName = settings.store_name || "TopFood Embalagens";
@@ -11,7 +23,7 @@ function buildGoogleFeed(req, res) {
     let items = "";
     products.forEach(p => {
       const variants = p.variants || p.packs || [];
-      const imageUrl  = (p.images && p.images[0]) ? (p.images[0].startsWith("http") ? p.images[0] : baseUrl + "/images/" + p.images[0]) : "";
+      const imageUrl  = feedImageUrl(baseUrl, p.images && p.images[0]);
       const productUrl = baseUrl + "/produto/" + encodeURIComponent(p.id);
       variants.forEach((v, vi) => {
         const price = parseFloat(v.price || v.valor || 0).toFixed(2);
@@ -19,14 +31,18 @@ function buildGoogleFeed(req, res) {
         if (!price || !units) return;
         const itemId = p.id + "-" + units;
         const title  = p.name + " — Pacote com " + units + " unidades";
-        const weight = parseFloat((p.weight_per_unit || 0.05) * units).toFixed(3);
+        const vImage = v.image ? feedImageUrl(baseUrl, v.image) : imageUrl;
+        // weight_per_unit no banco mistura GRAMAS (pastel=30) e KG placeholder (starprint=0.02)
+        const wpu = parseFloat(p.weight_per_unit) || 20;
+        const gramasPorUn = wpu >= 1 ? wpu : wpu * 1000;
+        const weight = ((gramasPorUn * units) / 1000).toFixed(3);
         items += `
     <item>
       <g:id>${itemId}</g:id>
       <g:title><![CDATA[${title}]]></g:title>
       <g:description><![CDATA[${(p.description||p.name).replace(/[<>]/g,"")}]]></g:description>
       <g:link>${productUrl}</g:link>
-      <g:image_link>${imageUrl}</g:image_link>
+      <g:image_link>${vImage}</g:image_link>
       <g:condition>new</g:condition>
       <g:availability>in_stock</g:availability>
       <g:price>${price} BRL</g:price>
@@ -60,13 +76,13 @@ function buildGoogleFeed(req, res) {
 
 function buildMetaFeed(req, res) {
   try {
-    const products = readData("products.json").filter(p => p.active !== false);
+    const products = feedProducts();
     const baseUrl  = process.env.BASE_URL || "https://topfoodembalagens.com.br";
 
     const items = [];
     products.forEach(p => {
       const variants = p.variants || p.packs || [];
-      const imageUrl  = (p.images && p.images[0]) ? (p.images[0].startsWith("http") ? p.images[0] : baseUrl + "/images/" + p.images[0]) : "";
+      const imageUrl  = feedImageUrl(baseUrl, p.images && p.images[0]);
       const productUrl = baseUrl + "/produto/" + encodeURIComponent(p.id);
       variants.forEach(v => {
         const price = parseFloat(v.price || v.valor || 0);
@@ -80,7 +96,7 @@ function buildMetaFeed(req, res) {
           condition: "new",
           price: price.toFixed(2) + " BRL",
           link: productUrl,
-          image_link: imageUrl,
+          image_link: v.image ? feedImageUrl(baseUrl, v.image) : imageUrl,
           brand: "TopFood Embalagens",
           google_product_category: "2",
           product_type: "Embalagens > Food Service",
@@ -99,13 +115,13 @@ function buildMetaFeed(req, res) {
 
 function buildTikTokFeed(req, res) {
   try {
-    const products = readData("products.json").filter(p => p.active !== false);
+    const products = feedProducts();
     const baseUrl  = process.env.BASE_URL || "https://topfoodembalagens.com.br";
 
     const items = [];
     products.forEach(p => {
       const variants = p.variants || p.packs || [];
-      const imageUrl  = (p.images && p.images[0]) ? (p.images[0].startsWith("http") ? p.images[0] : baseUrl + "/images/" + p.images[0]) : "";
+      const imageUrl  = feedImageUrl(baseUrl, p.images && p.images[0]);
       const productUrl = baseUrl + "/produto/" + encodeURIComponent(p.id);
       variants.forEach(v => {
         const price = parseFloat(v.price || v.valor || 0);
@@ -117,7 +133,7 @@ function buildTikTokFeed(req, res) {
           price: price.toFixed(2),
           currency: "BRL",
           link: productUrl,
-          image_link: imageUrl,
+          image_link: v.image ? feedImageUrl(baseUrl, v.image) : imageUrl,
           availability: "in stock",
           brand: "TopFood Embalagens",
           description: (p.description || p.name).substring(0, 200),
@@ -144,7 +160,7 @@ function registerFeedRoutes(app) {
   app.get("/feed-tiktok.json", buildTikTokFeed);
   // Status de todos os feeds
   app.get("/api/admin/feeds/status", (req, res) => {
-    const products = readData("products.json").filter(p => p.active !== false);
+    const products = feedProducts();
     let googleItems = 0, metaItems = 0, tiktokItems = 0;
     products.forEach(p => {
       const v = p.variants || p.packs || [];
