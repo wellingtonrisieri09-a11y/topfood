@@ -96,6 +96,66 @@ const GUIAS = {
       { q: 'Qual é o pedido mínimo?', a: 'O pedido mínimo é de 50 unidades, com pacotes de 100 e 250 a preço de atacado.' },
       { q: 'Vocês entregam em todo o Brasil?', a: 'Sim. O frete é calculado pelo seu CEP no checkout, com envio via Correios para todo o Brasil.' }
     ]
+  },
+
+  'tamanho-de-embalagem-para-delivery': {
+    title: 'Tamanho de Embalagem para Delivery: Medidas Reais de Cada Caixa | TopFood',
+    h1: 'Qual o tamanho ideal de embalagem para delivery? (medidas reais)',
+    desc: 'Medidas exatas de embalagem para delivery: caixa de hambúrguer 12,5x12,5x7,5 cm, pillow box de pastel 25x15 cm, caixa de churros 16,8x4x3 cm e mais. Escolha o tamanho certo antes de comprar.',
+    keywords: 'tamanho embalagem delivery, medidas caixa hamburguer, tamanho caixa pastel, medidas embalagem churros, tamanho embalagem batata frita, dimensões caixa delivery',
+    cta: 'Ver embalagens com medidas exatas',
+    secoes: [
+      { h2: 'Por que o tamanho certo importa', p: 'Embalagem grande demais deixa o lanche <strong>balançar e desmontar</strong> no transporte; pequena demais amassa e esmaga. Antes de comprar, meça o seu produto pronto e compare com as medidas reais da embalagem — parece óbvio, mas é o erro mais comum de quem compra a primeira vez.' },
+      { h2: 'Medidas reais das nossas embalagens', p: 'Publicamos as medidas exatas de cada embalagem (a maioria dos fornecedores não publica): <strong>Caixa de hambúrguer: 12,5 x 12,5 x 7,5 cm</strong> — serve lanche artesanal alto. <strong>Pillow box de pastel: 25 x 15 cm</strong> (área útil de 21,5 cm e 4 cm de profundidade) — pastel de feira grande cabe com folga. <strong>Caixa de churros fechada: 16,8 x 4 x 3 cm</strong> e <strong>aberta: 16 x 3 x 3 cm</strong>. <strong>Embalagem de fritas aberta: 9,5 cm de boca, 10,2 cm de altura e 3,2 cm de base</strong> — porção individual de 150-200 g.' },
+      { h2: 'Como conferir se o seu produto cabe', p: 'Meça o seu produto pronto (com recheio, montado) e some <strong>1 cm de folga</strong> em cada direção. Hambúrguer artesanal costuma ter 10-11 cm de diâmetro — cabe na caixa de 12,5 cm com a folga certa pra não amassar. Pastel de feira tem 18-20 cm — dentro da área útil de 21,5 cm do pillow box.' },
+      { h2: 'Na dúvida, pergunte com o produto na mão', p: 'Chama no WhatsApp com a medida do seu produto que a gente confirma na hora qual embalagem serve. E cada produto do site mostra as medidas exatas na página, com imagem cotada.' }
+    ],
+    faq: [
+      { q: 'Qual o tamanho da caixa de hambúrguer?', a: 'A caixa de hambúrguer delivery da TopFood mede 12,5 x 12,5 x 7,5 cm — serve hambúrguer artesanal alto com folga para não amassar.' },
+      { q: 'Qual o tamanho da embalagem de pastel?', a: 'O pillow box de pastel mede 25 x 15 cm, com área útil de 21,5 cm e profundidade de 4 cm — o pastel de feira tradicional cabe com folga.' },
+      { q: 'Qual o tamanho da caixa de churros?', a: 'A caixa fechada (tubular) mede 16,8 x 4 x 3 cm; a caixa aberta mede 16 x 3 x 3 cm.' },
+      { q: 'E a embalagem de batata frita, qual o tamanho?', a: 'A embalagem aberta de fritas tem 9,5 cm de boca, 10,2 cm de altura e 3,2 cm de base — porção individual de 150 a 200 g.' }
+    ]
+  },
+
+  'quanto-custa-embalagem-para-delivery': {
+    title: 'Quanto Custa Embalagem para Delivery? Preços Reais no Atacado | TopFood',
+    h1: 'Quanto custa embalagem para delivery? (preços reais no atacado)',
+    desc: 'Preço de embalagem para delivery no atacado: caixa de hambúrguer, pillow box de pastel, caixa de churros e embalagem de fritas a partir de R$ 0,36 por unidade. Veja como calcular o custo por lanche.',
+    keywords: 'quanto custa embalagem delivery, preço embalagem hamburguer, preço caixa pastel atacado, embalagem delivery barata, custo embalagem por lanche',
+    cta: 'Ver preços de atacado',
+    secoes: [
+      { h2: 'O jeito certo de olhar o preço: custo por unidade', p: 'Embalagem não se compara pelo preço do pacote, e sim pelo <strong>custo por unidade</strong> — e pelo quanto ela representa no preço do lanche. Uma caixa de R$ 0,90 num lanche de R$ 25 é 3,6% do preço: menos que uma taxa de máquina de cartão, e é ela que define a primeira impressão do cliente.' },
+      { h2: 'Faixas de preço reais (atacado direto do fabricante)', p: 'Na TopFood, os pacotes começam em 50 unidades e o preço por unidade CAI conforme o volume: embalagens a partir de <strong>R$ 0,36/un</strong> nos pacotes de 250 (churros aberta) até <strong>R$ 0,96/un</strong> em caixas maiores de hambúrguer nos pacotes de 50. Ou seja: com menos de R$ 1 por pedido você entrega com embalagem profissional.' },
+      { h2: 'Por que atacado direto do fabricante sai mais barato', p: 'Comprando direto de quem produz, você corta o intermediário: distribuidora e loja de embalagens revendem com margem em cima. No pacote de 250 unidades a diferença aparece — é onde o custo por lanche fica mais baixo e a margem do seu negócio agradece.' },
+      { h2: 'Quando vale subir de pacote', p: 'Se você vende mais de 10 lanches por dia, o pacote de 50 acaba em menos de uma semana — nesse ritmo, o de 250 se paga rápido pela economia por unidade. Regra prática: <strong>estoque para 3-4 semanas</strong> é o ponto de equilíbrio entre economia e capital parado.' }
+    ],
+    faq: [
+      { q: 'Quanto custa uma embalagem de hambúrguer?', a: 'No atacado da TopFood, a caixa de hambúrguer delivery sai a partir de R$ 0,96/un no pacote de 250 unidades (R$ 240,00 o pacote).' },
+      { q: 'Qual o pedido mínimo e quanto custa?', a: 'O pedido mínimo é de 50 unidades — pacotes a partir de R$ 18,00 (churros aberta). Pacotes de 100 e 250 têm preço por unidade menor.' },
+      { q: 'Embalagem encarece muito o lanche?', a: 'Não. Em média a embalagem representa de 2% a 4% do preço do lanche — e é o item que mais influencia a apresentação no delivery.' },
+      { q: 'Tem desconto para volume?', a: 'Sim, o preço por unidade cai nos pacotes de 100 e 250. Para volumes acima disso (contrato B2B), fale com a gente no WhatsApp.' }
+    ]
+  },
+
+  'embalagem-personalizada-vale-a-pena': {
+    title: 'Embalagem Personalizada Vale a Pena? Quando Investir na Sua Marca | TopFood',
+    h1: 'Embalagem personalizada vale a pena? Quando investir (e quando não)',
+    desc: 'Embalagem personalizada para hamburgueria, pastelaria e delivery: quando vale a pena investir, quanto custa e qual o caminho para começar sem estourar o orçamento.',
+    keywords: 'embalagem personalizada vale a pena, embalagem personalizada hamburgueria, embalagem com logo, embalagem personalizada delivery, embalagem personalizada preço',
+    cta: 'Falar sobre personalização',
+    secoes: [
+      { h2: 'O que a embalagem comunica sobre o seu negócio', p: 'No delivery, a embalagem É a fachada da sua loja: o cliente não vê o balcão, vê a caixa que chegou. Uma embalagem <strong>com design profissional</strong> transmite cuidado e permite cobrar mais — a mesma comida em saco pardo e em caixa bonita têm percepção de valor completamente diferente.' },
+      { h2: 'O caminho inteligente: comece com design pronto', p: 'Personalização com a sua marca exige volume mínimo alto (milhares de unidades) e fotolito — caro pra quem está começando. O caminho inteligente: começar com <strong>embalagem de design profissional pronto</strong>, como a linha chalk art da TopFood, que já entrega apresentação premium a partir de 50 unidades, e personalizar com a sua marca quando o volume justificar.' },
+      { h2: 'Quando a personalização se paga', p: 'A conta é simples: personalização compensa quando você tem <strong>volume constante</strong> (acima de 1.000-2.000 embalagens/mês) e quer construir marca — recompra, indicação, foto no Instagram. Abaixo disso, o dinheiro rende mais em ingrediente melhor ou tráfego pago.' },
+      { h2: 'Um meio-termo que funciona: adesivo com a sua marca', p: 'Enquanto o volume não chega: <strong>embalagem pronta + adesivo com o seu logo</strong>. Custa centavos, personaliza a entrega e testa a identidade visual antes de investir pesado. Muitos clientes nossos começam assim.' }
+    ],
+    faq: [
+      { q: 'Qual o volume mínimo para embalagem personalizada?', a: 'Personalização com impressão própria costuma exigir milhares de unidades. Para volumes menores, a linha de design pronto da TopFood (a partir de 50 un) + adesivo com a sua marca resolve com custo baixo.' },
+      { q: 'A embalagem com design pronto parece profissional?', a: 'Sim — a linha chalk art da TopFood tem design exclusivo de estilo artesanal premium, usada por hamburguerias e pastelarias em todo o Brasil.' },
+      { q: 'Como faço para personalizar com a minha marca?', a: 'Chama no WhatsApp (11) 98885-6367 com o seu volume mensal que a gente orienta o melhor caminho — do adesivo à impressão exclusiva.' },
+      { q: 'Vocês ajudam com o design?', a: 'Sim, orientamos sobre formato, acabamento e aplicação da marca na embalagem para o seu tipo de produto.' }
+    ]
   }
 };
 

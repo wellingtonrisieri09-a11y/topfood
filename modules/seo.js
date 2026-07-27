@@ -146,6 +146,33 @@ function homeContent() {
 }
 
 // Registra a rota da home com SSR. DEVE ser chamada ANTES do express.static.
+// Product JSON-LD dinâmico da home — preços/medidas sempre atuais (o bloco
+// fixo do index.html desatualizava e preço divergente derruba rich results)
+function productSchemas(products) {
+  return products.map(p => {
+    const precos = (p.variants || []).map(v => parseFloat(v.price)).filter(n => n > 0);
+    if (!precos.length) return '';
+    const img = (p.images && p.images[0]) || p.image || '';
+    const obj = {
+      '@context': 'https://schema.org/', '@type': 'Product',
+      name: p.name,
+      image: img ? 'https://topfoodembalagens.com.br/' + encodeURI(String(img).replace(/^\//, '')) : undefined,
+      description: (p.description || '').slice(0, 300),
+      brand: { '@type': 'Brand', name: 'TopFood Embalagens' },
+      offers: {
+        '@type': 'AggregateOffer',
+        lowPrice: Math.min(...precos).toFixed(2),
+        highPrice: Math.max(...precos).toFixed(2),
+        priceCurrency: 'BRL',
+        offerCount: precos.length,
+        availability: 'https://schema.org/InStock',
+        seller: { '@type': 'Organization', name: 'TopFood Embalagens' }
+      }
+    };
+    return '<script type="application/ld+json">' + JSON.stringify(obj) + '<\/script>';
+  }).filter(Boolean).join('\n');
+}
+
 function registerSeoRoutes(app, readData) {
   app.get('/', function (req, res, next) {
     try {
@@ -159,6 +186,8 @@ function registerSeoRoutes(app, readData) {
       // injeta os cards ANTES do spinner (Google lê; JS depois substitui o grid)
       const cards = products.map(cardHTML).join('');
       html = html.replace(anchor, cards + '\n    <div id="products-loading"');
+      // schemas de produto sempre com preço atual
+      html = html.replace('<!-- SSR-PRODUCT-SCHEMA -->', productSchemas(products));
       // injeta a seção de conteúdo SEO antes do rodapé
       if (html.indexOf('<footer>') !== -1) html = html.replace('<footer>', homeContent() + '<footer>');
       res.set('Content-Type', 'text/html; charset=utf-8');
