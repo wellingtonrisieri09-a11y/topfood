@@ -177,7 +177,8 @@ async function askClaude(jid, userText) {
       const unit = v.units ? (v.price / v.units).toFixed(2).replace('.', ',') : null;
       return v.units + ' un = R$ ' + v.price + (unit ? ` (R$ ${unit}/un)` : '');
     }).join(' · ');
-    return `- id "${p.id}" (${p.name}): ${pacs}`;
+    const med = p.medidas ? ` | MEDIDAS: ${p.medidas}` : '';
+    return `- id "${p.id}" (${p.name}${med}): ${pacs}`;
   }).join('\n');
 
   const system = [
@@ -197,6 +198,7 @@ async function askClaude(jid, userText) {
     '6. Se não souber a resposta, se o cliente reclamar, pedir arte/quantidade fora do catálogo, ou pedir para falar com uma pessoa: responda EXATAMENTE começando com [HUMANO] seguido de uma frase educada avisando que vai chamar um atendente.',
     '7. Não invente fretes nem prazos — use SEMPRE a ferramenta para calcular. Não fale sobre assuntos fora da TopFood.',
     '8. Se o cliente disser o nome dele, passe a usá-lo naturalmente.',
+    '9. MEDIDAS: quando o cliente perguntar tamanho, medida ou dimensão de uma embalagem, informe as MEDIDAS exatas que estão na lista de produtos (campo MEDIDAS). NUNCA invente medida; se o produto não tiver medida cadastrada na lista, diga que vai confirmar com o atendente ([HUMANO]).',
     ficha ? '\n' + ficha : '',
     cfg.promptExtra ? `\nINSTRUÇÕES EXTRAS DO DONO:\n${cfg.promptExtra}` : ''
   ].join('\n');

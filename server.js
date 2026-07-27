@@ -1786,6 +1786,37 @@ registerAmazonRoutes(app, requireAuth);
 // Limpar blacklist e reservas expiradas a cada 30min
 setInterval(() => { try { cleanBlacklist(); releaseExpiredReservations(); } catch(e){} }, 30 * 60 * 1000);
 
+// ── Medidas exatas das embalagens (das artes de medidas do Wellington, 27/07) ──
+// Grava no cadastro (campo `medidas` + specs + fim da descrição) de forma
+// idempotente no boot — cliente vê no site/feeds e a IA do WhatsApp informa.
+(function aplicarMedidasProdutos() {
+  const MEDIDAS = [
+    { re: /pastel.*pillow/i,     m: '25 x 15 cm (área útil 21,5 cm · profundidade 4 cm)' },
+    { re: /hamburguer.*delivery/i, m: '12,5 x 12,5 x 7,5 cm' },
+    { re: /churros.*fechada/i,   m: '16,8 x 4 x 3 cm' },
+    { re: /churros.*aberta/i,    m: '16 x 3 x 3 cm' },
+    { re: /fritas.*aberta/i,     m: '9,5 cm (boca) x 10,2 cm (altura) x 3,2 cm (base)' },
+  ];
+  try {
+    const products = readData('products.json') || [];
+    let mudou = false;
+    for (const p of products) {
+      const hit = MEDIDAS.find(x => x.re.test(p.name || ''));
+      if (!hit || p.medidas === hit.m) continue;
+      p.medidas = hit.m;
+      // specs: troca qualquer "Dimensões" aproximada antiga pela medida exata
+      p.specs = (p.specs || []).filter(s => !/dimens|medida/i.test(s.label || ''));
+      p.specs.push({ label: 'Medidas exatas', value: hit.m });
+      if (!/medidas:/i.test(p.description || '')) {
+        p.description = ((p.description || '').trim() + ' Medidas: ' + hit.m + '.').trim();
+      }
+      mudou = true;
+      console.log('📏 Medidas aplicadas em:', p.name);
+    }
+    if (mudou) writeData('products.json', products);
+  } catch (e) { console.error('[medidas] erro:', e.message); }
+})();
+
 app.listen(PORT, () => {
   console.log('\n══════════════════════════════════════════════');
   console.log('  🍔 TopFood Embalagens — Servidor');
