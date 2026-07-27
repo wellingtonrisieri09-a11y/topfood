@@ -1791,27 +1791,37 @@ setInterval(() => { try { cleanBlacklist(); releaseExpiredReservations(); } catc
 // idempotente no boot — cliente vê no site/feeds e a IA do WhatsApp informa.
 (function aplicarMedidasProdutos() {
   const MEDIDAS = [
-    { re: /pastel.*pillow/i,     m: '25 x 15 cm (área útil 21,5 cm · profundidade 4 cm)' },
-    { re: /hamburguer.*delivery/i, m: '12,5 x 12,5 x 7,5 cm' },
-    { re: /churros.*fechada/i,   m: '16,8 x 4 x 3 cm' },
-    { re: /churros.*aberta/i,    m: '16 x 3 x 3 cm' },
-    { re: /fritas.*aberta/i,     m: '9,5 cm (boca) x 10,2 cm (altura) x 3,2 cm (base)' },
+    { re: /pastel.*pillow/i,       m: '25 x 15 cm (área útil 21,5 cm · profundidade 4 cm)', img: 'images/medidas/medidas-pastel.png' },
+    { re: /hamburguer.*delivery/i, m: '12,5 x 12,5 x 7,5 cm',                               img: 'images/medidas/medidas-hamburguer.png' },
+    { re: /churros.*fechada/i,     m: '16,8 x 4 x 3 cm',                                    img: 'images/medidas/medidas-churros-fechada.png' },
+    { re: /churros.*aberta/i,      m: '16 x 3 x 3 cm',                                      img: 'images/medidas/medidas-churros-aberta.png' },
+    { re: /fritas.*aberta/i,       m: '9,5 cm (boca) x 10,2 cm (altura) x 3,2 cm (base)',   img: 'images/medidas/medidas-fritas-aberta.png' },
   ];
   try {
     const products = readData('products.json') || [];
     let mudou = false;
     for (const p of products) {
       const hit = MEDIDAS.find(x => x.re.test(p.name || ''));
-      if (!hit || p.medidas === hit.m) continue;
-      p.medidas = hit.m;
-      // specs: troca qualquer "Dimensões" aproximada antiga pela medida exata
-      p.specs = (p.specs || []).filter(s => !/dimens|medida/i.test(s.label || ''));
-      p.specs.push({ label: 'Medidas exatas', value: hit.m });
-      if (!/medidas:/i.test(p.description || '')) {
-        p.description = ((p.description || '').trim() + ' Medidas: ' + hit.m + '.').trim();
+      if (!hit) continue;
+      let alterou = false;
+      if (p.medidas !== hit.m) {
+        p.medidas = hit.m;
+        // specs: troca qualquer "Dimensões" aproximada antiga pela medida exata
+        p.specs = (p.specs || []).filter(s => !/dimens|medida/i.test(s.label || ''));
+        p.specs.push({ label: 'Medidas exatas', value: hit.m });
+        if (!/medidas:/i.test(p.description || '')) {
+          p.description = ((p.description || '').trim() + ' Medidas: ' + hit.m + '.').trim();
+        }
+        alterou = true;
       }
-      mudou = true;
-      console.log('📏 Medidas aplicadas em:', p.name);
+      // arte de medidas entra como última foto da galeria (capa continua a mesma)
+      const imgs = (p.images && p.images.length ? p.images : (p.image ? [p.image] : []));
+      if (!imgs.includes(hit.img)) {
+        p.images = [...imgs, hit.img];
+        if (!p.image) p.image = p.images[0];
+        alterou = true;
+      }
+      if (alterou) { mudou = true; console.log('📏 Medidas aplicadas em:', p.name); }
     }
     if (mudou) writeData('products.json', products);
   } catch (e) { console.error('[medidas] erro:', e.message); }
