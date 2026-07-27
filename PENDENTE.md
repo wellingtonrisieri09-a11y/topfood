@@ -15,7 +15,7 @@ _Responsáveis: **[W]** Wellington · **[Claude]** (código) · **[Contador]**. 
 
 ## 🎯 CANAL NOVO — Google Shopping (o maior canal ainda não usado)
 
-7. [ ] **[W+Claude]** Conectar o feed ao **Google Merchant Center** (Claude guia passo a passo, feed já está pronto no site)
+7. [x] **[W+Claude]** Conectar o feed ao **Google Merchant Center** — FEITO 27/07: conta 5815768973 ja existia (26 produtos via rastreamento + 28 cliques/28d), feed.xml corrigido (343 itens, imagens 100% ok, pesos normalizados) e conectado como fonte com busca diaria 00:00; frete padrao Brasil ja configurado
 8. [ ] **[W+Claude]** Criar a **campanha Shopping** no Google Ads (aproveita pixel + CAPI já ligados)
 
 ## 🛠️ FERRAMENTAS DE CANAL — Claude constrói (uma por vez)
