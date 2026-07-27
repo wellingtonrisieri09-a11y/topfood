@@ -24,6 +24,7 @@ function buildGoogleFeed(req, res) {
     products.forEach(p => {
       const variants = p.variants || p.packs || [];
       const imageUrl  = feedImageUrl(baseUrl, p.images && p.images[0]);
+      const galeria   = (p.images || []).map(img => feedImageUrl(baseUrl, img)).filter(Boolean);
       const productUrl = baseUrl + "/produto/" + encodeURIComponent(p.id);
       variants.forEach((v, vi) => {
         const price = parseFloat(v.price || v.valor || 0).toFixed(2);
@@ -32,6 +33,9 @@ function buildGoogleFeed(req, res) {
         const itemId = p.id + "-" + units;
         const title  = p.name + " — Pacote com " + units + " unidades";
         const vImage = v.image ? feedImageUrl(baseUrl, v.image) : imageUrl;
+        // Google aceita até 10 fotos extras — manda a galeria toda (menos a principal)
+        const extras = galeria.filter(u => u !== vImage).slice(0, 10)
+          .map(u => "<g:additional_image_link>" + u + "</g:additional_image_link>").join("\n      ");
         // weight_per_unit no banco mistura GRAMAS (pastel=30) e KG placeholder (starprint=0.02)
         const wpu = parseFloat(p.weight_per_unit) || 20;
         const gramasPorUn = wpu >= 1 ? wpu : wpu * 1000;
@@ -43,6 +47,7 @@ function buildGoogleFeed(req, res) {
       <g:description><![CDATA[${(p.description||p.name).replace(/[<>]/g,"")}]]></g:description>
       <g:link>${productUrl}</g:link>
       <g:image_link>${vImage}</g:image_link>
+      ${extras}
       <g:condition>new</g:condition>
       <g:availability>in_stock</g:availability>
       <g:price>${price} BRL</g:price>
@@ -97,6 +102,7 @@ function buildMetaFeed(req, res) {
           price: price.toFixed(2) + " BRL",
           link: productUrl,
           image_link: v.image ? feedImageUrl(baseUrl, v.image) : imageUrl,
+          additional_image_link: (p.images || []).slice(1, 11).map(img => feedImageUrl(baseUrl, img)),
           brand: "TopFood Embalagens",
           google_product_category: "2",
           product_type: "Embalagens > Food Service",
