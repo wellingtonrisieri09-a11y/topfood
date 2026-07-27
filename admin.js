@@ -1260,6 +1260,8 @@ function renderProducts() {
             <span>${p.active?'Ativo':'Inativo'}</span>
           </div>
           <div style="display:flex;gap:6px">
+            <button class="btn btn-secondary" onclick="gerarVideo('${p.id}','quadrado',this)" style="font-size:.75rem;padding:6px 10px" title="Gerar vídeo quadrado (Shopee/feed)"><i class="fa fa-film"></i> ▢</button>
+            <button class="btn btn-secondary" onclick="gerarVideo('${p.id}','vertical',this)" style="font-size:.75rem;padding:6px 10px" title="Gerar vídeo vertical (Reels/TikTok)"><i class="fa fa-film"></i> ▯</button>
             <button class="btn btn-secondary" onclick="editProduct('${p.id}')" style="font-size:.75rem;padding:6px 12px"><i class="fa fa-pen"></i> Editar</button>
             <button class="btn btn-secondary" onclick="deleteProduct('${p.id}')" style="font-size:.75rem;padding:6px 10px;color:var(--red);border-color:var(--red)" title="Excluir produto"><i class="fa fa-trash"></i></button>
           </div>
@@ -1267,6 +1269,44 @@ function renderProducts() {
       </div>
     </div>`).join('');
 }
+/* ── Gerador de vídeo de produto (fotos → MP4 no servidor) ── */
+const VIDEO_JOBS = {};
+async function gerarVideo(id, formato, btn) {
+  const key = id + '|' + formato;
+  if (VIDEO_JOBS[key]) return toast('Esse vídeo já está sendo gerado — aguarda uns segundos.');
+  const original = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>'; }
+  try {
+    await api('/api/eco/video/' + id, { method: 'POST', body: JSON.stringify({ formato }) });
+    toast('🎬 Gerando vídeo ' + (formato === 'vertical' ? 'vertical (Reels/TikTok)' : 'quadrado (Shopee/feed)') + '... uns 30 segundos.');
+    VIDEO_JOBS[key] = setInterval(async () => {
+      try {
+        const st = await api('/api/eco/video/' + id + '/status?formato=' + formato);
+        if (st.status === 'pronto') {
+          clearInterval(VIDEO_JOBS[key]); delete VIDEO_JOBS[key];
+          if (btn) { btn.disabled = false; btn.innerHTML = original; }
+          const res = await fetch('/api/eco/video/' + id + '/download?formato=' + formato,
+            { headers: { 'Authorization': 'Bearer ' + token() } });
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'video-' + id + '-' + formato + '.mp4';
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 30000);
+          toast('✅ Vídeo baixado! Está na pasta de downloads.');
+        } else if (st.status === 'erro') {
+          clearInterval(VIDEO_JOBS[key]); delete VIDEO_JOBS[key];
+          if (btn) { btn.disabled = false; btn.innerHTML = original; }
+          toast('❌ Erro ao gerar vídeo: ' + (st.error || ''), 'error');
+        }
+      } catch (e) { /* tenta de novo no próximo tique */ }
+    }, 3000);
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.innerHTML = original; }
+    toast('❌ ' + e.message, 'error');
+  }
+}
+
 async function toggleProduct(id, el) {
   const p = STATE.products.find(x=>x.id===id);
   if(!p) return;

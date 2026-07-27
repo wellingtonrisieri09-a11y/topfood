@@ -1770,6 +1770,7 @@ registerAtendenteRoutes(app, requireAuth);
 registerOnlineRoutes(app, requireAuth);
 registerMlRoutes(app, requireAuth);
 registerCapiRoutes(app, requireAuth);
+require('./modules/videos').registerVideoRoutes(app, requireAuth);
 registerInsightsRoutes(app, requireAuth);
 registerNfeRoutes(app, readData, writeData, requireAuth);
 registerGuiaRoutes(app);
