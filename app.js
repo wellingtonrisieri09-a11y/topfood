@@ -1756,6 +1756,7 @@
       saveCartLocal(); renderCart(); renderCartTotals();
       checkoutStep = 4;
       renderCheckoutStep();
+      tfGcrOptIn(orderId);
 
     } catch(err) {
       if (alertEl) { alertEl.textContent = '❌ ' + err.message; alertEl.classList.add('show'); }
@@ -2094,6 +2095,41 @@
     const back = document.getElementById('ckBack');
     if (back) back.style.display = 'none';
     showToast('💚 PIX confirmado! Pedido liberado para envio!');
+    tfGcrOptIn(orderId);
+  }
+
+  // ─── Google Avaliações do Consumidor: convite de pesquisa pós-compra ───
+  // Só roda em pagamento CONFIRMADO (PIX/cartão). Falha silenciosa: nunca
+  // pode atrapalhar a tela de confirmação.
+  function tfGcrOptIn(orderId) {
+    try {
+      let email = (checkoutData && checkoutData.email) || '';
+      if (!email) {
+        try { email = (JSON.parse(localStorage.getItem('tf-customer') || 'null') || {}).email || ''; } catch (e) {}
+      }
+      if (!orderId || !email || !email.includes('@')) return;
+      const d = new Date(); d.setDate(d.getDate() + 7);
+      const entrega = d.toISOString().slice(0, 10);
+      window.renderOptIn = function () {
+        window.gapi.load('surveyoptin', function () {
+          window.gapi.surveyoptin.render({
+            merchant_id: 5815768973,
+            order_id: String(orderId),
+            email: email,
+            delivery_country: 'BR',
+            estimated_delivery_date: entrega,
+          });
+        });
+      };
+      if (window.gapi && window.gapi.surveyoptin) { window.renderOptIn(); return; }
+      if (!document.getElementById('gcr-platform')) {
+        const s = document.createElement('script');
+        s.id = 'gcr-platform';
+        s.src = 'https://apis.google.com/js/platform.js?onload=renderOptIn';
+        s.async = true; s.defer = true;
+        document.head.appendChild(s);
+      }
+    } catch (e) { /* silencioso */ }
   }
 
   /** Copia o código PIX para a área de transferência */
