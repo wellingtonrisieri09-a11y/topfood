@@ -102,6 +102,14 @@ CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
 CREATE INDEX IF NOT EXISTS idx_audit_created   ON audit_log(created_at);
 `);
 
+// ─── Migracoes idempotentes (auto-corrige bancos antigos) ───
+// updated_at faltava em orders/users; sem ela, confirmacao de pagamento
+// (cartao/PIX/webhook/polling) e troca de senha estouravam.
+for (const _t of ["orders","users"]) {
+  try { db.prepare("ALTER TABLE " + _t + " ADD COLUMN updated_at TEXT").run(); }
+  catch (_e) { /* coluna ja existe */ }
+}
+
 // ─── Mapeamento arquivo→tabela ───────────────────────────────
 const TABLE_MAP = {
   "products.json":         "products",

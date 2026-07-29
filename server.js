@@ -12,7 +12,7 @@ const { registerAmazonRoutes } = require('./modules/amazon');
 const { registerFeedRoutes }   = require('./modules/feeds');
 const { registerBudgetRoutes } = require('./modules/budget');
 const { registerBackupRoutes } = require('./modules/backup');
-const { registerAsaasRoutes, createPixCharge } = require('./modules/asaas');
+const { registerAsaasRoutes, createPixCharge, splitPhone } = require('./modules/asaas');
 const { registerAtendenteRoutes } = require('./modules/atendente');
 const { registerOnlineRoutes } = require('./modules/online');
 const { registerMlRoutes } = require('./modules/ml');
@@ -1336,7 +1336,7 @@ app.post('/api/asaas/credit-card', async (req, res) => {
       const r = await asaasApi.post('/customers', {
         name:    customer.name,
         email:   customer.email   || undefined,
-        phone:   (customer.phone  || '').replace(/\D/g, '') || undefined,
+        ...splitPhone(customer.phone),
         cpfCnpj: cpfCnpj          || undefined,
       });
       customerId = r.data.id;
@@ -1363,7 +1363,7 @@ app.post('/api/asaas/credit-card', async (req, res) => {
         cpfCnpj,
         postalCode:    (billingAddress && billingAddress.cep   || '').replace(/\D/g, ''),
         addressNumber: (billingAddress && billingAddress.number || 'S/N'),
-        phone:         (customer.phone || '').replace(/\D/g, ''),
+        ...splitPhone(customer.phone),
       },
     };
 

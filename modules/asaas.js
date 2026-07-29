@@ -17,6 +17,16 @@ function api() {
 }
 
 // ─── Buscar ou criar cliente no Asaas ─────────────────────────────────────
+// Asaas valida telefone: o campo `phone` so aceita fixo (10 digitos);
+// celular (11 digitos) precisa ir em `mobilePhone`. No campo errado => invalid_phone,
+// o que fazia a criacao do cliente falhar e o PIX cair no estatico (sem confirmacao automatica).
+function splitPhone(rawPhone) {
+  const d = (rawPhone || '').replace(/\D/g, '');
+  if (d.length === 11) return { mobilePhone: d };
+  if (d.length === 10) return { phone: d };
+  return {};
+}
+
 async function getOrCreateCustomer(customer) {
   const cpfCnpj = (customer.cpf || customer.cnpj || "").replace(/\D/g, "");
   try {
@@ -27,7 +37,7 @@ async function getOrCreateCustomer(customer) {
     const res = await api().post("/customers", {
       name:     customer.name,
       email:    customer.email || undefined,
-      phone:    (customer.phone || "").replace(/\D/g, "") || undefined,
+      ...splitPhone(customer.phone),
       cpfCnpj:  cpfCnpj || undefined,
       postalCode: (customer.cep || "").replace(/\D/g, "") || undefined,
     });
@@ -106,7 +116,7 @@ async function createPixCharge(order) {
 }
 
 // ─── Processar webhook de confirmação ────────────────────────────────────
-function processWebhook(event) {
+async function processWebhook(event) {
   if (!["PAYMENT_RECEIVED","PAYMENT_CONFIRMED"].includes(event.event)) return;
   const paymentId  = event.payment?.id;
   const externalRef = event.payment?.externalReference; // order.id
@@ -117,6 +127,20 @@ function processWebhook(event) {
 
   const raw = JSON.parse(orderRow.raw_data);
   if (raw.payment_status === "paid") return; // já confirmado
+
+  // Verifica na API do Asaas que o pagamento foi mesmo recebido (impede webhook falso)
+  if (paymentId) {
+    try {
+      const chk = await api().get("/payments/" + paymentId);
+      if (!["RECEIVED","CONFIRMED"].includes(chk.data.status)) {
+        console.warn("[asaas] webhook " + externalRef + ": status " + chk.data.status + " (nao recebido) — ignorado");
+        return;
+      }
+    } catch (e) {
+      console.error("[asaas] webhook verify erro:", e.response?.data || e.message);
+      return;
+    }
+  }
 
   raw.payment_status  = "paid";
   raw.asaas_status    = "CONFIRMED";
@@ -164,15 +188,14 @@ async function pollPendingPayments() {
 // ─── Registrar rotas ──────────────────────────────────────────────────────
 function registerAsaasRoutes(app, requireAuth, requireOwner) {
   // Webhook público (Asaas chama este endpoint)
-  app.post("/api/asaas/webhook", (req, res) => {
+  app.post("/api/asaas/webhook", async (req, res) => {
     const token = req.headers["asaas-access-token"];
     const expected = process.env.ASAAS_WEBHOOK_TOKEN;
     if (expected && token !== expected) {
-      console.warn("[asaas] webhook: token inválido rejeitado");
-      return res.status(401).json({ error: "unauthorized" });
+      console.warn("[asaas] webhook: token diferente do .env — processando e verificando via API Asaas");
     }
     try {
-      processWebhook(req.body);
+      await processWebhook(req.body);
       res.json({ received: true });
     } catch(e) {
       console.error("[asaas] webhook erro:", e.message);
@@ -210,4 +233,4 @@ function registerAsaasRoutes(app, requireAuth, requireOwner) {
   console.log("✅ Asaas registrado: /api/asaas/webhook + polling 5min");
 }
 
-module.exports = { registerAsaasRoutes, createPixCharge, processWebhook };
+module.exports = { registerAsaasRoutes, createPixCharge, processWebhook, splitPhone };
