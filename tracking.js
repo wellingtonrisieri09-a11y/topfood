@@ -225,8 +225,25 @@
         value: revenue, currency,
         contents: items.map(i => ({ content_id: String(i.id), quantity: i.qty || 1 })),
       });
-      // Google Ads conversion
       const s = window.__TF_SETTINGS || {};
+      // GA4: envia purchase via gtag. O dataLayer.push acima nao chega ao GA4 sozinho
+      // (GA4 e carregado por gtag('config'), nao por tag do GTM) — sem isto a conversao
+      // de Compra no Google Ads fica zerada.
+      if (window.gtag && s.google_analytics_id) {
+        window.gtag('event', 'purchase', {
+          send_to: s.google_analytics_id,
+          transaction_id: orderId,
+          value: revenue,
+          currency,
+          shipping: parseFloat(shipping) || 0,
+          coupon,
+          items: items.map(i => ({
+            item_id: i.id, item_name: i.name,
+            price: parseFloat(i.price || 0), quantity: i.qty || 1,
+          })),
+        });
+      }
+      // Google Ads conversion (tag direta — so dispara se houver label configurado)
       if (window.gtag && s.google_ads_id && s.google_ads_label) {
         window.gtag('event', 'conversion', {
           send_to: `${s.google_ads_id}/${s.google_ads_label}`,
