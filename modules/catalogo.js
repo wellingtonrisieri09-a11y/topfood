@@ -40,7 +40,7 @@ function renderCatalogo(readData) {
   const settings = readData("settings.json") || {};
   const produtos = (readData("products.json") || []).filter(p => p.active !== false);
   const hoje = new Date().toLocaleDateString("pt-BR");
-  const fone = String(settings.whatsapp || "5511988856367").replace(/^55/, "");
+  const fone = String(settings.whatsapp || "5511947073962").replace(/^55/, "");
   const foneFmt = fone.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
 
   const cards = produtos.map(p => {

@@ -8,7 +8,7 @@
 // ============================================================
 
 const SITE = 'https://topfoodembalagens.com.br';
-const WHATS = 'https://wa.me/5511988856367';
+const WHATS = 'https://wa.me/5511947073962';
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -153,7 +153,7 @@ const GUIAS = {
     faq: [
       { q: 'Qual o volume mínimo para embalagem personalizada?', a: 'Personalização com impressão própria costuma exigir milhares de unidades. Para volumes menores, a linha de design pronto da TopFood (a partir de 50 un) + adesivo com a sua marca resolve com custo baixo.' },
       { q: 'A embalagem com design pronto parece profissional?', a: 'Sim — a linha chalk art da TopFood tem design exclusivo de estilo artesanal premium, usada por hamburguerias e pastelarias em todo o Brasil.' },
-      { q: 'Como faço para personalizar com a minha marca?', a: 'Chama no WhatsApp (11) 98885-6367 com o seu volume mensal que a gente orienta o melhor caminho — do adesivo à impressão exclusiva.' },
+      { q: 'Como faço para personalizar com a minha marca?', a: 'Chama no WhatsApp (11) 94707-3962 com o seu volume mensal que a gente orienta o melhor caminho — do adesivo à impressão exclusiva.' },
       { q: 'Vocês ajudam com o design?', a: 'Sim, orientamos sobre formato, acabamento e aplicação da marca na embalagem para o seu tipo de produto.' }
     ]
   }
@@ -246,7 +246,7 @@ ul,ol{padding-left:20px;margin-bottom:12px}
 </style>
 </head>
 <body>
-<div class="topbar"><span>🚚 Frete para todo Brasil &nbsp;|&nbsp; 📦 Pacotes a partir de 50 un</span><a href="${WHATS}">📱 (11) 98885-6367</a></div>
+<div class="topbar"><span>🚚 Frete para todo Brasil &nbsp;|&nbsp; 📦 Pacotes a partir de 50 un</span><a href="${WHATS}">📱 (11) 94707-3962</a></div>
 <header class="header">
   <a href="/" class="logo-wrap">
     <img src="/images/WhatsApp Image 2026-05-22 at 16.14.11 (1).jpeg" alt="TopFood" onerror="this.style.display='none'"/>
@@ -269,7 +269,7 @@ ul,ol{padding-left:20px;margin-bottom:12px}
     ${faqHtml}
   </div>
 
-  <p style="margin-top:28px">Ficou com dúvida? Fale com a gente no <a href="${WHATS}">WhatsApp (11) 98885-6367</a> e peça seu orçamento.</p>
+  <p style="margin-top:28px">Ficou com dúvida? Fale com a gente no <a href="${WHATS}">WhatsApp (11) 94707-3962</a> e peça seu orçamento.</p>
 
   <div class="outros">
     <h2>Outros guias de embalagem</h2>
@@ -307,7 +307,7 @@ a{color:var(--red);text-decoration:none}
 h1{font-family:Poppins,sans-serif;font-size:1.8rem;font-weight:800;margin-bottom:10px}
 .footer-mini{background:#111;color:#6B7280;text-align:center;padding:24px;font-size:.78rem;margin-top:40px}
 </style></head><body>
-<div class="topbar"><span>🚚 Frete para todo Brasil &nbsp;|&nbsp; 📦 Pacotes a partir de 50 un</span><a href="${WHATS}">📱 (11) 98885-6367</a></div>
+<div class="topbar"><span>🚚 Frete para todo Brasil &nbsp;|&nbsp; 📦 Pacotes a partir de 50 un</span><a href="${WHATS}">📱 (11) 94707-3962</a></div>
 <header class="header"><a href="/" class="logo-wrap"><span class="logo-name">TopFood <span style="color:#111;font-weight:400;font-size:.85rem">Embalagens</span></span></a><a href="/" style="margin-left:auto;font-size:.85rem;color:var(--red);font-weight:600">← Voltar à loja</a></header>
 <div class="container">
   <div style="font-size:.82rem;color:#6B7280;margin-bottom:20px"><a href="/" style="font-weight:600">Início</a> › Guias</div>
