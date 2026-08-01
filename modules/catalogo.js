@@ -126,7 +126,10 @@ function renderCatalogo(readData) {
   .capa-vig { font-size: 11px; color: #6b7280; margin-top: 9px; }
   .capa-rodape { margin-top: auto; padding-top: 26px; font-size: 12px; color: #374151; line-height: 1.9; }
   .capa-rodape b { color: #CC0000; }
-  @media print { .capa { min-height: 248mm; } }
+  /* Na impressão, altura com FOLGA: 248mm cabia justo no A4 do desktop, mas
+     celular (papel Letter/margens do iOS) tem área útil menor e o rodapé da
+     capa vazava pra 2ª folha. 220mm cabe em qualquer combinação. */
+  @media print { .capa { min-height: 220mm; margin-bottom: 0; } }
   @media (max-width: 560px) { .capa-cat { font-size: 32px; letter-spacing: 3px; } .capa-marca { font-size: 26px; } .capa-logo { width: 110px; height: 110px; } }
 
   @media print {
