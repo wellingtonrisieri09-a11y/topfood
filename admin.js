@@ -825,7 +825,7 @@ function buildLabelOverlay(id) {
 
   const s  = STATE.settings || {};
   const storeName    = s.store_name    || 'TopFood Embalagens';
-  const storePhone   = s.whatsapp      ? String(s.whatsapp).replace(/^55/,'').replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3') : '(11) 94707-3962';
+  const storePhone   = s.whatsapp      ? String(s.whatsapp).replace(/^55/,'').replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3') : '(11) 98885-6367';
   const storeAddress = s.store_address || 'Santo André — SP';
   const storeCEP     = s.store_cep     || '';
 
@@ -3064,7 +3064,7 @@ const DEMO_PRODUCTS = [
   {id:'burger',name:'Embalagem de Hamburguer — Caixa Delivery',category:'hamburger',description:'Caixa delivery gourmet.',image:'images/04 - Hamburguer.png',badge:'PROMOÇÃO',badgeColor:'orange',stars:5,active:true,sold:203,variants:[{units:50,price:42},{units:100,price:80},{units:250,price:185}]},
   {id:'fritas',name:'Embalagem de Fritas — Cone e Balde',category:'fritas',description:'Cone e balde para fritas.',image:'images/05 - fritas abertas.png',badge:'',badgeColor:'',stars:4,active:true,sold:124,variants:[{units:50,price:38},{units:100,price:72},{units:250,price:168}]},
 ];
-const DEMO_SETTINGS = {store_name:'TopFood Embalagens',store_email:'contato@topfoodembalagens.com.br',whatsapp:'5511947073962',instagram:'',admin_password:'topfood2026',mp_access_token:'',mp_public_key:'',seo_title:'TopFood Embalagens — Embalagens que valorizam seu alimento',seo_description:'Embalagens food service para restaurantes.',seo_keywords:'embalagens food service',featured_banner:'Novidades 2026 chegando!',min_order_units:50,free_shipping_above:0};
+const DEMO_SETTINGS = {store_name:'TopFood Embalagens',store_email:'contato@topfoodembalagens.com.br',whatsapp:'5511988856367',instagram:'',admin_password:'topfood2026',mp_access_token:'',mp_public_key:'',seo_title:'TopFood Embalagens — Embalagens que valorizam seu alimento',seo_description:'Embalagens food service para restaurantes.',seo_keywords:'embalagens food service',featured_banner:'Novidades 2026 chegando!',min_order_units:50,free_shipping_above:0};
 /* ══════════════════════════════════════════════════════
    M11-F1 — VENDER (área do vendedor) + COMISSÕES
 ══════════════════════════════════════════════════════ */
@@ -4071,7 +4071,7 @@ async function renderPortal() {
     const d = await api('/api/portal/me');
     PORTAL.empresa = d.empresa;
   } catch(e) {
-    root.innerHTML = '<div class="card" style="padding:24px;color:var(--red)">Não foi possível carregar seus dados. Fale com a TopFood: (11) 94707-3962.</div>';
+    root.innerHTML = '<div class="card" style="padding:24px;color:var(--red)">Não foi possível carregar seus dados. Fale com a TopFood: (11) 98885-6367.</div>';
     return;
   }
   const e = PORTAL.empresa;
@@ -4085,7 +4085,7 @@ async function renderPortal() {
           <div style="font-weight:800;font-size:1.05rem">🏢 ${escapeHtml(e.nome)}</div>
           <div style="font-size:.78rem;color:var(--muted);margin-top:3px">Contrato ${escapeHtml(e.contrato?.tipo || '')}${e.contrato?.fim ? ' · vigência até ' + e.contrato.fim.split('-').reverse().join('/') : ''}</div>
         </div>
-        <a class="btn btn-wa" href="https://wa.me/5511947073962?text=${encodeURIComponent('Olá! Sou da ' + e.nome + ' e preciso de ajuda no portal.')}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Falar com a TopFood</a>
+        <a class="btn btn-wa" href="https://wa.me/5511988856367?text=${encodeURIComponent('Olá! Sou da ' + e.nome + ' e preciso de ajuda no portal.')}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Falar com a TopFood</a>
       </div>
 
       <div class="card" style="padding:18px">

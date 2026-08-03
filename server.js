@@ -183,7 +183,7 @@ function buildOrderEmailHtml(order) {
           </div>` : ''}
 
           <p style="margin-top:28px;font-size:13px;color:#6b7280">Dúvidas? Fale conosco pelo WhatsApp:</p>
-          <a href="https://wa.me/5511947073962" style="display:inline-block;margin-top:6px;background:#25d366;color:#fff;font-weight:700;font-size:14px;padding:10px 22px;border-radius:8px;text-decoration:none">💬 Falar no WhatsApp</a>
+          <a href="https://wa.me/5511988856367" style="display:inline-block;margin-top:6px;background:#25d366;color:#fff;font-weight:700;font-size:14px;padding:10px 22px;border-radius:8px;text-decoration:none">💬 Falar no WhatsApp</a>
         </td></tr>
         <!-- FOOTER -->
         <tr><td style="background:#f9fafb;padding:20px 32px;text-align:center;border-top:1px solid #e5e7eb">
@@ -235,7 +235,7 @@ async function sendPixConfirmedEmail(order) {
           <p style="font-size:14px;color:#6b7280">Seu pagamento PIX foi confirmado. Seu pedido está sendo preparado.</p>
           <p style="font-size:22px;font-weight:800;color:#16a34a;margin:20px 0">${order.id} — ${fmt(order.total)}</p>
           <p style="font-size:13px;color:#6b7280">Em breve entraremos em contato para informar o prazo de entrega.</p>
-          <a href="https://wa.me/5511947073962" style="display:inline-block;margin-top:16px;background:#25d366;color:#fff;font-weight:700;font-size:14px;padding:10px 22px;border-radius:8px;text-decoration:none">💬 Falar no WhatsApp</a>
+          <a href="https://wa.me/5511988856367" style="display:inline-block;margin-top:16px;background:#25d366;color:#fff;font-weight:700;font-size:14px;padding:10px 22px;border-radius:8px;text-decoration:none">💬 Falar no WhatsApp</a>
         </td></tr>
         <tr><td style="background:#f9fafb;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb">
           <p style="font-size:12px;color:#9ca3af;margin:0">TopFood Embalagens — São Paulo, SP</p>
@@ -954,7 +954,7 @@ app.get('/api/settings', (req, res) => {
     store_name:        s.store_name        || 'TopFood Embalagens',
     featured_banner:   s.featured_banner   || '',
     free_shipping_above: s.free_shipping_above || 0,
-    whatsapp:          s.whatsapp          || '5511947073962',
+    whatsapp:          s.whatsapp          || '5511988856367',
     instagram:         s.instagram         || '',
     // PIX (chave pública — não é dado sensível)
     pix_key:           String(s.pix_key || ''),
@@ -1076,7 +1076,7 @@ app.post('/api/newsletter', async (req, res) => {
   </table>
 </td></tr>
 <tr><td style="background:#111;padding:24px 40px;text-align:center">
-  <p style="color:#9CA3AF;font-size:12px;margin:0 0 6px">TopFood Embalagens &mdash; (11) 94707-3962</p>
+  <p style="color:#9CA3AF;font-size:12px;margin:0 0 6px">TopFood Embalagens &mdash; (11) 98885-6367</p>
   <p style="color:#6B7280;font-size:11px;margin:0">Você recebeu este e-mail porque se cadastrou em topfoodembalagens.com.br.<br>Para cancelar, responda com "CANCELAR".</p>
 </td></tr>
 </table></td></tr></table>
