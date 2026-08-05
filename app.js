@@ -587,9 +587,12 @@
       checkoutData.cep = cep; // armazena para saveOrderToServer
       const baseOpcoes = FRETE_TABLE[data.uf] || [{nome:'📦 PAC',dias:'Consultar prazo',preco:69.90},{nome:'✈️ SEDEX',dias:'Consultar prazo',preco:99.90}];
       const weightGrams = (isCart || isCheckout) ? calcCartWeightGrams() : 0;
+      const _subtotalAtual = cart.reduce((sum, c) => sum + c.total, 0);
+      const _gratis = freteGratisAtivo(_subtotalAtual);
       const opcoes = baseOpcoes.map(o => ({
         ...o,
-        preco: (isCart || isCheckout) ? Math.round(applyWeightMultiplier(o.preco, weightGrams) * 100) / 100 : o.preco,
+        preco: _gratis ? 0 : ((isCart || isCheckout) ? Math.round(applyWeightMultiplier(o.preco, weightGrams) * 100) / 100 : o.preco),
+        gratis: _gratis,
         dias:  o.dias + ((isCart || isCheckout) && weightGrams > 500 ? ' (estimativa por peso)' : ''),
       }));
       renderFreteResult(ctx, data.localidade, data.uf, data.bairro, opcoes);
@@ -1286,6 +1289,16 @@
     body.scrollTop = 0;
   }
 
+  // Frete grátis acima de X (configurável no admin: free_shipping_above)
+  function freteGratisMin() {
+    const v = parseFloat((window.__TF_SETTINGS || {}).free_shipping_above || 0);
+    return isNaN(v) ? 0 : v;
+  }
+  function freteGratisAtivo(baseValor) {
+    const min = freteGratisMin();
+    return min > 0 && baseValor >= min;
+  }
+
   function ckGetTotals() {
     const subtotal = cart.reduce((s, c) => s + c.total, 0);
     const frete    = selectedShipping ? selectedShipping.preco : 0;
@@ -1296,7 +1309,9 @@
         : Math.min(appliedCoupon.discount_value, subtotal);
       discount = Math.round(discount * 100) / 100;
     }
-    return { subtotal, frete, discount, total: Math.max(0, subtotal - discount + frete) };
+    const freteFinal = freteGratisAtivo(subtotal - discount) ? 0 : frete;
+    return { subtotal, frete: freteFinal, discount, freteGratis: freteFinal === 0 && frete > 0,
+             total: Math.max(0, subtotal - discount + freteFinal) };
   }
 
   // ── Step 1: Carrinho ─────────────────────────
