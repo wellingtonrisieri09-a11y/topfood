@@ -287,10 +287,21 @@
       ]);
       if (settingsRes.ok) {
         const s = await settingsRes.json();
-        if (s.featured_banner) {
+        // Faixa do topo: usa o banner do admin quando houver; senao anuncia
+        // o frete gratis, que hoje e o argumento mais forte da loja.
+        {
           const bar = document.getElementById('promo-bar');
           const txt = document.getElementById('promo-bar-text');
-          if (bar && txt) { txt.textContent = s.featured_banner; bar.style.display = ''; }
+          const minFrete = parseFloat(s.free_shipping_above || 0);
+          if (bar && txt) {
+            if (s.featured_banner) {
+              txt.textContent = s.featured_banner; bar.style.display = '';
+            } else if (minFrete > 0) {
+              txt.innerHTML = '\uD83D\uDE9A <b>FRETE GR\u00c1TIS</b> nas compras acima de R$ ' + minFrete.toFixed(0)
+                            + ' \u2014 para todo o Brasil';
+              bar.style.display = '';
+            }
+          }
         }
         // Guarda as settings tambem aqui: o tracking.js preenche
         // window.__TF_SETTINGS, mas bloqueador de anuncio costuma barrar
@@ -397,6 +408,31 @@
     setText('cartCount',    count);
     setText('cartLabel',    count === 0 ? 'Carrinho' : `${count} item${count > 1 ? 's' : ''}`);
     setText('cartSubtotal', `R$ ${subtotal.toFixed(2).replace('.', ',')}`);
+    renderFreteGratisProgresso(subtotal);
+  }
+
+  // Mostra quanto falta pro frete gratis (ou avisa que ja conquistou).
+  // E o aviso mais eficaz contra o abandono no checkout: o cliente descobre
+  // o frete ANTES da ultima tela, e ainda sobe o valor medio do pedido.
+  function renderFreteGratisProgresso(subtotal) {
+    const box = document.getElementById('freteGratisBox');
+    if (!box) return;
+    const cfg = window.__TF_SETTINGS || window._settings || {};
+    const min = parseFloat(cfg.free_shipping_above || 0);
+    if (!(min > 0) || !cart.length) { box.style.display = 'none'; return; }
+    const msg = document.getElementById('freteGratisMsg');
+    const bar = document.getElementById('freteGratisBar');
+    const falta = min - subtotal;
+    box.style.display = '';
+    if (falta <= 0) {
+      box.style.background = '#F0FDF4'; box.style.borderColor = '#BBF7D0';
+      if (msg) msg.innerHTML = '\u2705 Frete GR\u00c1TIS conquistado! O envio \u00e9 por nossa conta.';
+      if (bar) bar.style.width = '100%';
+    } else {
+      box.style.background = '#FFFBEB'; box.style.borderColor = '#FDE68A';
+      if (msg) msg.innerHTML = 'Faltam <b>R$ ' + falta.toFixed(2).replace('.', ',') + '</b> para o seu frete sair <b>GR\u00c1TIS</b> \uD83D\uDE9A';
+      if (bar) bar.style.width = Math.max(4, Math.min(100, (subtotal / min) * 100)).toFixed(0) + '%';
+    }
   }
 
   function selectShipping(idx) {
