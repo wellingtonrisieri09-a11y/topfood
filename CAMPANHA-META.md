@@ -12,6 +12,8 @@ _Referência rápida pra não perder os IDs entre sessões. Atualizado: 21/08._
 
 ## Anúncios (1 criativo por produto — Meta escolhe qual mostrar pra cada pessoa)
 
+**Status em 21/08: todos ATIVOS, links por produto aplicados, verba R$30/dia.**
+
 | Anúncio | ID | Link de destino | Arte |
 |---|---|---|---|
 | Novo anúncio de Vendas (genérico) | `120247606662070630` | home | — |
