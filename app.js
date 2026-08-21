@@ -781,9 +781,13 @@
       try {
         const total = parseFloat(window._checkoutTotal || 0);
         const items = (window._checkoutItems || []).map(i => ({ id: String(i.id||''), quantity: i.qty||1 }));
-        // Meta Pixel
+        // Meta Pixel — eventID IGUAL ao que o servidor manda em modules/capi.js
+        // ('order-'+id). Sem ele a Meta nao consegue deduplicar e conta a MESMA
+        // compra duas vezes (navegador + CAPI), inflando compras e ROAS.
+        var _oid = (data && data.order_id) ? String(data.order_id) : '';
         if (typeof fbq === 'function') {
-          fbq('track', 'Purchase', { value: total, currency: 'BRL', contents: items, content_type: 'product' });
+          fbq('track', 'Purchase', { value: total, currency: 'BRL', contents: items, content_type: 'product' },
+              _oid ? { eventID: 'order-' + _oid } : undefined);
         }
         // TikTok — compra concluída
         if (typeof ttq !== 'undefined') {
@@ -792,7 +796,7 @@
         // Google Analytics 4 — purchase event (importado pelo Google Ads via GA4)
         if (typeof gtag === 'function') {
           gtag('event', 'purchase', {
-            transaction_id: window._checkoutOrderId || '',
+            transaction_id: _oid,
             value: total,
             currency: 'BRL',
             items: items.map(i => ({ item_id: i.id, quantity: i.quantity }))
