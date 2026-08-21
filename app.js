@@ -292,6 +292,18 @@
           const txt = document.getElementById('promo-bar-text');
           if (bar && txt) { txt.textContent = s.featured_banner; bar.style.display = ''; }
         }
+        // Guarda as settings tambem aqui: o tracking.js preenche
+        // window.__TF_SETTINGS, mas bloqueador de anuncio costuma barrar
+        // arquivo chamado "tracking.js" — sem este fallback o frete gratis
+        // silenciosamente nunca aplicava pra esses visitantes.
+        window.__TF_SETTINGS = Object.assign({}, s, window.__TF_SETTINGS || {});
+        window._settings = s;
+        // Banner da home mostra o valor real configurado no admin
+        try {
+          const el = document.getElementById('frete-gratis-min');
+          const min = parseFloat(s.free_shipping_above || 0);
+          if (el) el.textContent = min > 0 ? ('Acima de R$ ' + min.toFixed(0)) : 'Consulte condicoes';
+        } catch(_) {}
         // Armazena config PIX para uso no checkout
         window._pixConfig = {
           pix_key:  (s.pix_key  || '').trim(),
@@ -1295,7 +1307,8 @@
 
   // Frete grátis acima de X (configurável no admin: free_shipping_above)
   function freteGratisMin() {
-    const v = parseFloat((window.__TF_SETTINGS || {}).free_shipping_above || 0);
+    const cfg = window.__TF_SETTINGS || window._settings || {};
+    const v = parseFloat(cfg.free_shipping_above || 0);
     return isNaN(v) ? 0 : v;
   }
   function freteGratisAtivo(baseValor) {
