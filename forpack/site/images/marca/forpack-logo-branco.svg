@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="900" height="300" role="img" aria-label="Forpack Embalagens">
+  <defs>
+    
+  <linearGradient id="lfoil" x1="0" y1="0" x2="1" y2="0"
+      gradientTransform="rotate(25 .5 .5)">
+    <stop offset="0%"   stop-color="#EDF2F7"/>
+    <stop offset="22%"  stop-color="#C3CEDA"/>
+    <stop offset="40%"  stop-color="#FBFDFE"/>
+    <stop offset="58%"  stop-color="#B4C1CE"/>
+    <stop offset="78%"  stop-color="#E4EBF2"/>
+    <stop offset="100%" stop-color="#C9D4DE"/>
+  </linearGradient>
+    
+  <pattern id="lbrush" width="6" height="6" patternUnits="userSpaceOnUse"
+      patternTransform="rotate(115)">
+    <rect width="6" height="6" fill="none"/>
+    <rect width="1" height="6" fill="#FFFFFF" opacity=".55"/>
+    <rect x="3" width="1" height="6" fill="#8FA0B0" opacity=".16"/>
+  </pattern>
+    <linearGradient id="lacc" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#12A0BC"/><stop offset="100%" stop-color="#095F70"/>
+    </linearGradient>
+  </defs>
+  <!-- chapa hexagonal -->
+  <g transform="translate(40 62)">
+    <path d="M88 0 L172 48 L172 144 L88 192 L4 144 L4 48 Z" fill="url(#lfoil)"/>
+    <path d="M88 0 L172 48 L172 144 L88 192 L4 144 L4 48 Z" fill="url(#lbrush)" opacity=".5"/>
+    <path d="M88 0 L172 48 L172 144 L88 192 L4 144 L4 48 Z" fill="none" stroke="#FFFFFF" stroke-width="3" opacity=".85"/>
+    <!-- caixa aberta, interior metalizado -->
+    <path d="M44 84 L88 62 L132 84 L88 106 Z" fill="#FFFFFF" opacity=".9"/>
+    <path d="M44 84 L88 106 L88 152 L44 130 Z" fill="#2E3945" opacity=".82"/>
+    <path d="M132 84 L88 106 L88 152 L132 130 Z" fill="#4A5A6B" opacity=".7"/>
+    <path d="M44 84 L88 62 L132 84 L88 106 Z" fill="none" stroke="#0C7C92" stroke-width="2.5" opacity=".55"/>
+  </g>
+  <!-- wordmark -->
+  <text x="248" y="150" font-family="Liberation Sans, Helvetica, Arial, sans-serif" font-size="104" font-weight="bold"
+        letter-spacing="2" fill="#FFFFFF">FORPACK</text>
+  <rect x="250" y="172" width="612" height="3" fill="url(#lfoil)"/>
+  <text x="250" y="212" font-family="Liberation Sans, Helvetica, Arial, sans-serif" font-size="30" font-weight="bold"
+        letter-spacing="9.5" fill="#AEBECB">EMBALAGENS METALIZADAS</text>
+</svg>

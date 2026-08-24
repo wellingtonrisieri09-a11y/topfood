@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" role="img" aria-label="Batata frita 200 g">
+  <defs>
+    
+  <linearGradient id="bfoil" x1="0" y1="0" x2="1" y2="0"
+      gradientTransform="rotate(25 .5 .5)">
+    <stop offset="0%"   stop-color="#EDF2F7"/>
+    <stop offset="22%"  stop-color="#C3CEDA"/>
+    <stop offset="40%"  stop-color="#FBFDFE"/>
+    <stop offset="58%"  stop-color="#B4C1CE"/>
+    <stop offset="78%"  stop-color="#E4EBF2"/>
+    <stop offset="100%" stop-color="#C9D4DE"/>
+  </linearGradient>
+    
+  <pattern id="bbrush" width="6" height="6" patternUnits="userSpaceOnUse"
+      patternTransform="rotate(115)">
+    <rect width="6" height="6" fill="none"/>
+    <rect width="1" height="6" fill="#FFFFFF" opacity=".55"/>
+    <rect x="3" width="1" height="6" fill="#8FA0B0" opacity=".16"/>
+  </pattern>
+    <linearGradient id="pbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#E9EFF4"/>
+    </linearGradient>
+  </defs>
+  <rect width="1000" height="1000" fill="url(#pbg)"/>
+  <g transform="rotate(-18 500 500)"><rect x="180" y="-200" width="180" height="1400" fill="#FFFFFF" opacity=".55"/></g>
+  <g transform="translate(180 110) scale(1.35)">
+    <!-- sombra de contato -->
+    <ellipse cx="240" cy="452" rx="230" ry="30" fill="#1B222B" opacity=".13"/>
+    <!-- tampa erguida -->
+    <g transform="rotate(-13 240 150)">
+      <path d="M60 150 L240 62 L420 150 L240 238 Z" fill="url(#bfoil)"/>
+      <path d="M60 150 L240 62 L420 150 L240 238 Z" fill="url(#bbrush)" opacity=".55"/>
+      <path d="M60 150 L240 62 L420 150 L240 238 Z" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+    </g>
+    <!-- interior metalizado -->
+    <path d="M64 262 L240 176 L416 262 L240 348 Z" fill="url(#bfoil)"/>
+    <path d="M64 262 L240 176 L416 262 L240 348 Z" fill="url(#bbrush)" opacity=".7"/>
+    <!-- corpo -->
+    <path d="M64 262 L240 348 L240 452 L64 366 Z" fill="#232D39"/>
+    <path d="M416 262 L240 348 L240 452 L416 366 Z" fill="#3B4856"/>
+    <path d="M64 262 L240 348 L240 452 L64 366 Z" fill="none" stroke="#0C7C92" stroke-width="2" opacity=".45"/>
+    <!-- brilho na aresta -->
+    <path d="M240 176 L416 262" stroke="#FFFFFF" stroke-width="3" opacity=".8"/>
+  </g>
+  <rect x="80" y="828" width="132" height="5" rx="3" fill="url(#bfoil)"/>
+  <text x="80" y="898" font-family="Liberation Sans, Helvetica, Arial, sans-serif" font-size="46" font-weight="bold" fill="#1B222B">Batata frita 200 g</text>
+  <text x="80" y="946" font-family="Liberation Sans, Helvetica, Arial, sans-serif" font-size="27" font-weight="bold" letter-spacing="5" fill="#0C7C92">INTERIOR METALIZADO</text>
+</svg>

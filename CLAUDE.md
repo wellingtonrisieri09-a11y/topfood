@@ -119,6 +119,23 @@ Pacotes: 50, 100 e 250 unidades. Preços: R$30–R$220.
 5. IA Atendente: sugere, mas Wellington aprova — nunca confirma pagamento/desconto/pedido sozinha
 6. `db.js` preserva a interface JSON antiga — não trocar por queries diretas sem necessidade
 
+## Forpack Embalagens (site irmão — embalagens metalizadas)
+O `forpack/` é um **kit**, não um segundo site dentro deste repositório: ele
+gera o site da Forpack (`forpackembalagens.com.br`, embalagens **metalizadas**)
+a partir deste mesmo motor, em `/var/www/forpack`, porta 3002, banco e processo
+pm2 próprios. **Nada em `forpack/` é executado pelo TopFood** — mexer aqui não
+afeta a loja em produção.
+
+| Peça | Função |
+|------|--------|
+| `forpack/clonar-forpack.sh` | Cria/atualiza o site da Forpack na VPS (8 passos) |
+| `forpack/aplicar-marca.js` | Paleta metalizada, artes, textos, SEO e remoção dos pixels do TopFood. Idempotente, com relatório |
+| `forpack/seed-forpack.js` | Catálogo metalizado + identidade da loja no banco (preserva o que foi editado no admin) |
+| `forpack/gerar-artes.js` | Gera logo, banners, fotos-ilustração e OG (SVG + webp via sharp) |
+| `forpack/site/` | Overlay copiado por cima do motor (tema CSS + imagens da marca) |
+
+Detalhes, riscos e o que revisar antes de divulgar: **`forpack/FORPACK.md`**.
+
 ## Concluído
 - Migração de storage JSON → SQLite (`db.js` + `migrate_sqlite.js`) com backup diário
 - Autenticação segura (bcrypt + JWT httpOnly + 2FA TOTP) substituindo senha em texto

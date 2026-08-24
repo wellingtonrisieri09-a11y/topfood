@@ -1,0 +1,267 @@
+/* ============================================================
+   FORPACK EMBALAGENS — tema "metalizado clean"
+   ------------------------------------------------------------
+   Carregado DEPOIS do CSS herdado do TopFood, em todas as
+   páginas da loja. Responsável por toda a identidade visual:
+   grafite + prata escovada + azul-aço polido, sobre fundo claro.
+
+   Regra de ouro: o HTML herdado tem MUITO estilo inline, que
+   vence folha de estilo externa. Por isso:
+     • as CORES chapadas são trocadas no próprio arquivo pelo
+       aplicar-marca.js (mapa de hex);
+     • aqui ficam os BRILHOS (gradientes, reflexos, texturas)
+       que dão o efeito metálico, com !important onde precisa
+       vencer o inline.
+   ============================================================ */
+
+:root {
+  /* Grafite (tinta) */
+  --fp-ink:        #1B222B;
+  --fp-ink-2:      #2E3945;
+  --fp-steel:      #4A5A6B;
+
+  /* Prata */
+  --fp-silver:     #C8D2DC;
+  --fp-silver-2:   #E7EDF3;
+  --fp-mist:       #F6F8FA;
+
+  /* Azul-aço polido (ação / CTA) */
+  --fp-accent:     #0C7C92;
+  --fp-accent-d:   #095F70;
+  --fp-accent-l:   #12A0BC;
+
+  /* Champagne (selo premium — usar pouco) */
+  --fp-gold:       #C6A15B;
+
+  /* Reflexos prontos */
+  --fp-foil:       linear-gradient(115deg,#EDF2F7 0%,#C3CEDA 22%,#FBFDFE 40%,#B4C1CE 58%,#E4EBF2 78%,#C9D4DE 100%);
+  --fp-foil-dark:  linear-gradient(115deg,#252E39 0%,#394552 22%,#4C5A6A 40%,#2B3540 62%,#1E2731 100%);
+  --fp-chrome:     linear-gradient(180deg,#FFFFFF 0%,#EEF3F8 45%,#D7E0E9 55%,#F3F7FA 100%);
+  --fp-edge:       #DCE3EB;
+
+  /* Sombras mais frias que as do TopFood (metal reflete, não absorve) */
+  --shadow-sm: 0 1px 2px rgba(27,34,43,.06), 0 1px 3px rgba(27,34,43,.05);
+  --shadow:    0 4px 16px rgba(27,34,43,.09);
+  --shadow-lg: 0 12px 40px rgba(27,34,43,.13);
+}
+
+/* ── Fundo: prata escovada de baixíssimo contraste ────────── */
+body {
+  background:
+    repeating-linear-gradient(115deg,
+      rgba(255,255,255,0) 0px, rgba(255,255,255,.55) 1px,
+      rgba(255,255,255,0) 2px, rgba(200,210,220,.16) 3px),
+    linear-gradient(180deg,#FBFCFD 0%,#F4F7FA 100%) !important;
+  color: var(--fp-ink);
+}
+
+/* ── Faixa de aviso do topo: grafite com fio prateado ─────── */
+#announcement-bar {
+  background: linear-gradient(90deg,#161C24 0%,#28323D 50%,#161C24 100%) !important;
+  border-bottom: 1px solid rgba(200,210,220,.22);
+}
+#announcement-bar strong { color: #EAF6F9; }
+
+/* ── Header: cromado claro ────────────────────────────────── */
+.header {
+  background: var(--fp-chrome) !important;
+  border-bottom: 1px solid var(--fp-edge);
+  box-shadow: 0 1px 0 rgba(255,255,255,.9) inset, 0 2px 12px rgba(27,34,43,.05);
+}
+.logo-img { filter: drop-shadow(0 1px 2px rgba(27,34,43,.18)); }
+
+/* ── Navegação: pastilhas com leve reflexo ────────────────── */
+.nav-bar {
+  background: linear-gradient(180deg,#FFFFFF,#EFF3F7) !important;
+  border-bottom: 1px solid var(--fp-edge);
+}
+.nav-bar a {
+  border-radius: 999px;
+  transition: background .18s, color .18s, box-shadow .18s;
+}
+.nav-bar a:hover,
+.nav-bar a.active {
+  background: var(--fp-foil);
+  color: var(--fp-ink) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 3px rgba(27,34,43,.12);
+}
+.nav-bar a.nav-cta {
+  background: linear-gradient(135deg,var(--fp-accent-l),var(--fp-accent-d)) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 10px rgba(12,124,146,.32);
+}
+
+/* ── Botões de ação: aço polido com varredura de brilho ───── */
+.add-btn, .btn-primary, .checkout-btn, .search-btn, .cart-btn,
+.ck-btn-primary, button.add-btn {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg,var(--fp-accent-l) 0%,var(--fp-accent) 48%,var(--fp-accent-d) 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 10px rgba(12,124,146,.30), inset 0 1px 0 rgba(255,255,255,.28);
+}
+.add-btn::after, .btn-primary::after, .checkout-btn::after, .ck-btn-primary::after {
+  content: "";
+  position: absolute; top: 0; left: -140%;
+  width: 60%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent);
+  transform: skewX(-18deg);
+  transition: left .55s ease;
+  pointer-events: none;
+}
+.add-btn:hover::after, .btn-primary:hover::after,
+.checkout-btn:hover::after, .ck-btn-primary:hover::after { left: 140%; }
+
+/* ── Cartões de produto: chapa branca com borda prateada ──── */
+.product-card {
+  background: #fff;
+  border: 1px solid var(--fp-edge) !important;
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  transition: transform .2s, box-shadow .2s, border-color .2s;
+}
+.product-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--fp-silver) !important;
+  box-shadow: 0 14px 34px rgba(27,34,43,.13), 0 0 0 1px rgba(200,210,220,.55);
+}
+.product-img { background: linear-gradient(160deg,#FFFFFF,#EFF3F7); }
+
+/* ── Selos: papel-alumínio ────────────────────────────────── */
+.badge {
+  background: var(--fp-foil) !important;
+  color: var(--fp-ink) !important;
+  border: 1px solid rgba(255,255,255,.75);
+  text-shadow: 0 1px 0 rgba(255,255,255,.6);
+  box-shadow: 0 1px 4px rgba(27,34,43,.16);
+  letter-spacing: .3px;
+}
+.badge.badge-new { background: linear-gradient(115deg,#DFF3F8,#9FD6E3 45%,#F2FBFD 60%,#B7E0EA) !important; }
+.badge.badge-sale{ background: linear-gradient(115deg,#F6ECD6,#E0C489 45%,#FDF8EE 60%,#DCBE81) !important; }
+
+/* ── Vitrine de categorias: anel cromado ──────────────────── */
+.cat-ring {
+  background: var(--fp-foil) !important;
+  box-shadow: 0 2px 10px rgba(27,34,43,.14), inset 0 1px 0 rgba(255,255,255,.8);
+}
+.cat-badge {
+  background: linear-gradient(180deg,#FFFFFF,#E3EAF1) !important;
+  border: 1px solid var(--fp-edge);
+}
+.cat-card:hover .cat-ring { box-shadow: 0 4px 18px rgba(12,124,146,.28), inset 0 1px 0 rgba(255,255,255,.9); }
+
+/* ── Títulos de seção com fio metálico embaixo ────────────── */
+.section-head h2, .section h2 {
+  font-family: var(--font-h,'Poppins',sans-serif);
+  letter-spacing: -.4px;
+  color: var(--fp-ink);
+}
+
+/* ── Rodapé: grafite com hairline prateada ────────────────── */
+footer {
+  background: linear-gradient(180deg,#1B222B 0%,#141A21 100%) !important;
+  border-top: 2px solid transparent;
+  border-image: var(--fp-foil) 1;
+}
+
+/* ── Carrinho / checkout: painéis claros com aro prateado ─── */
+.cart-sidebar, .ck-panel, #checkoutOverlay .ck-box {
+  border-left: 1px solid var(--fp-edge);
+  box-shadow: -12px 0 40px rgba(27,34,43,.14);
+}
+
+/* ── Selo "interior metalizado" reutilizável ──────────────── */
+.fp-selo-metal {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: .74rem; font-weight: 700; letter-spacing: .4px;
+  text-transform: uppercase;
+  color: var(--fp-ink);
+  background: var(--fp-foil);
+  border: 1px solid rgba(255,255,255,.7);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 1px 4px rgba(27,34,43,.14);
+}
+
+/* ── Faixa de destaques (trust bar) ───────────────────────── */
+.trust-bar-grid > div {
+  border-radius: 10px;
+  transition: background .2s;
+}
+.trust-bar-grid > div:hover { background: rgba(255,255,255,.75); }
+
+/* ── Banner do herói: moldura metálica ────────────────────── */
+.hero-slider { background: linear-gradient(180deg,#EDF1F5,#DCE3EA); }
+.hero-slider .imgbnr { border-radius: 0; }
+.slider-dot.active { background: var(--fp-accent) !important; }
+
+/* ── Acessibilidade: foco visível em tudo que é clicável ──── */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--fp-accent-l);
+  outline-offset: 2px;
+}
+
+/* ── Mobile: reflexos custam bateria, reduz o exagero ─────── */
+@media (max-width: 640px) {
+  body { background: linear-gradient(180deg,#FBFCFD,#F4F7FA) !important; }
+  .add-btn::after, .btn-primary::after { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .add-btn::after, .btn-primary::after,
+  .checkout-btn::after, .ck-btn-primary::after { transition: none; display: none; }
+}
+
+/* ── Barra de categorias ───────────────────────────────────
+   No TopFood o fundo era vermelho e o texto branco. Com o fundo
+   claro da Forpack, o branco sumia: aqui o texto volta a ser
+   grafite. */
+.nav-bar a { color: var(--fp-steel) !important; }
+.nav-bar a:hover, .nav-bar a.active {
+  color: var(--fp-ink) !important;
+  border-bottom-color: transparent !important;
+}
+.nav-bar a.nav-cta { color: #fff !important; }
+
+/* ── Vitrine de categorias: chapa grafite, aro cromado ─────
+   O gradiente vinho e o anel vermelho/dourado do TopFood não
+   existem aqui — viram grafite escovado e prata. */
+.cat-section-bg {
+  background: linear-gradient(145deg,#1B222B 0%,#232D39 55%,#161C24 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(200,210,220,.14);
+}
+.cat-ring::before {
+  background: conic-gradient(from 180deg,
+    #8FA0B0 0%, #FFFFFF 22%, #C3CEDA 46%, #FFFFFF 70%, #93A3B3 100%) !important;
+}
+.cat-section-bg .section-head .see-all {
+  color: var(--fp-silver) !important;
+  border-color: rgba(200,210,220,.32) !important;
+}
+.cat-section-bg .section-head .see-all:hover {
+  background: var(--fp-accent) !important;
+  color: #fff !important;
+  border-color: var(--fp-accent) !important;
+}
+
+/* ── Miolo do cartão de categoria ──────────────────────────
+   A borda e o brilho eram vermelhos; aqui viram prata sobre
+   grafite, no mesmo tom do resto da vitrine. */
+.cat-img-wrap {
+  background: #232D39 !important;
+  border-color: rgba(200,210,220,.5) !important;
+}
+.cat-card:hover .cat-img-wrap { border-color: var(--fp-silver) !important; }
+.cat-badge {
+  background: linear-gradient(135deg,#FFFFFF,#DCE4EC) !important;
+  border-color: rgba(255,255,255,.55) !important;
+}
+
+/* ── Assinatura do rodapé ──────────────────────────────────
+   O TopFood usava um quadradinho 56x56 com a foto do logo; a
+   Forpack usa a marca branca inteira, que já traz o nome. */
+.footer-logo img {
+  height: auto !important;
+  width: auto !important;
+  max-width: 230px !important;
+  border-radius: 0 !important;
+}

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" role="img" aria-label="Churros">
+  <defs>
+    
+  <linearGradient id="bfoil" x1="0" y1="0" x2="1" y2="0"
+      gradientTransform="rotate(25 .5 .5)">
+    <stop offset="0%"   stop-color="#EDF2F7"/>
+    <stop offset="22%"  stop-color="#C3CEDA"/>
+    <stop offset="40%"  stop-color="#FBFDFE"/>
+    <stop offset="58%"  stop-color="#B4C1CE"/>
+    <stop offset="78%"  stop-color="#E4EBF2"/>
+    <stop offset="100%" stop-color="#C9D4DE"/>
+  </linearGradient>
+    
+  <pattern id="bbrush" width="6" height="6" patternUnits="userSpaceOnUse"
+      patternTransform="rotate(115)">
+    <rect width="6" height="6" fill="none"/>
+    <rect width="1" height="6" fill="#FFFFFF" opacity=".55"/>
+    <rect x="3" width="1" height="6" fill="#8FA0B0" opacity=".16"/>
+  </pattern>
+    <linearGradient id="pbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#E9EFF4"/>
+    </linearGradient>
+  </defs>
+  <rect width="1000" height="1000" fill="url(#pbg)"/>
+  <g transform="rotate(-18 500 500)"><rect x="180" y="-200" width="180" height="1400" fill="#FFFFFF" opacity=".55"/></g>
+  <g transform="translate(180 110) scale(1.35)">
+    <ellipse cx="240" cy="452" rx="200" ry="26" fill="#1B222B" opacity=".13"/>
+    <rect x="96" y="150" width="288" height="286" rx="14" fill="#232D39"/>
+    <rect x="240" y="150" width="144" height="286" rx="14" fill="#3B4856"/>
+    <path d="M96 164 L240 96 L384 164 L240 232 Z" fill="url(#bfoil)"/>
+    <path d="M96 164 L240 96 L384 164 L240 232 Z" fill="url(#bbrush)" opacity=".6"/>
+    <path d="M96 164 L240 96 L384 164 L240 232 Z" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+    <rect x="130" y="268" width="220" height="6" rx="3" fill="url(#bfoil)" opacity=".8"/>
+    <rect x="130" y="300" width="150" height="6" rx="3" fill="url(#bfoil)" opacity=".5"/>
+  </g>
+  <rect x="80" y="828" width="132" height="5" rx="3" fill="url(#bfoil)"/>
+  <text x="80" y="898" font-family="Liberation Sans, Helvetica, Arial, sans-serif" font-size="46" font-weight="bold" fill="#1B222B">Churros</text>
+  <text x="80" y="946" font-family="Liberation Sans, Helvetica, Arial, sans-serif" font-size="27" font-weight="bold" letter-spacing="5" fill="#0C7C92">INTERIOR METALIZADO</text>
+</svg>

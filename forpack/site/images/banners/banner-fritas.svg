@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1000" width="1920" height="1000" role="img" aria-label="Batata frita crocante na entrega">
+  <defs>
+    
+  <linearGradient id="bfoil" x1="0" y1="0" x2="1" y2="0"
+      gradientTransform="rotate(25 .5 .5)">
+    <stop offset="0%"   stop-color="#EDF2F7"/>
+    <stop offset="22%"  stop-color="#C3CEDA"/>
+    <stop offset="40%"  stop-color="#FBFDFE"/>
+    <stop offset="58%"  stop-color="#B4C1CE"/>
+    <stop offset="78%"  stop-color="#E4EBF2"/>
+    <stop offset="100%" stop-color="#C9D4DE"/>
+  </linearGradient>
+    
+  <pattern id="bbrush" width="6" height="6" patternUnits="userSpaceOnUse"
+      patternTransform="rotate(115)">
+    <rect width="6" height="6" fill="none"/>
+    <rect width="1" height="6" fill="#FFFFFF" opacity=".55"/>
+    <rect x="3" width="1" height="6" fill="#8FA0B0" opacity=".16"/>
+  </pattern>
+    <linearGradient id="bbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#FFFFFF"/>
+      <stop offset="55%"  stop-color="#F1F5F9"/>
+      <stop offset="100%" stop-color="#DFE7EE"/>
+    </linearGradient>
+    <linearGradient id="bsweep" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="50%"  stop-color="#FFFFFF" stop-opacity=".85"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="bacc" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#12A0BC"/><stop offset="100%" stop-color="#095F70"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1920" height="1000" fill="url(#bbg)"/>
+  <!-- varredura de luz diagonal (o "reflexo" do metal) -->
+  <g transform="rotate(-18 960 500)">
+    <rect x="380" y="-260" width="330" height="1520" fill="url(#bsweep)" opacity=".9"/>
+    <rect x="900" y="-260" width="140" height="1520" fill="url(#bsweep)" opacity=".55"/>
+  </g>
+  <!-- fio metálico no rodapé -->
+  <rect y="982" width="1920" height="18" fill="url(#bfoil)"/>
+
+  <!-- coluna de texto -->
+  <g transform="translate(150 288)">
+    <rect x="0" y="-58" rx="26" width="278.4" height="52" fill="url(#bfoil)" stroke="#FFFFFF" stroke-width="2"/>
+    <text x="26" y="-22" font-family="Liberation Sans, Helvetica, Arial, sans-serif" font-size="24" font-weight="bold"
+          letter-spacing="3.2" fill="#1B222B">DELIVERY E BALCÃO</text>
+
+    <text x="0" y="96"  font-family="Liberation Sans, Helvetica, Arial, sans-serif" font-size="104" font-weight="bold" letter-spacing="-1" fill="#1B222B">Batata frita</text>
+    <text x="0" y="212" font-family="Liberation Sans, Helvetica, Arial, sans-serif" font-size="104" font-weight="bold" letter-spacing="-1" fill="#0C7C92">crocante na entrega</text>
+
+    <rect x="0" y="252" width="132" height="6" rx="3" fill="url(#bfoil)"/>
+    <text x="0" y="330" font-family="Liberation Sans, Helvetica, Arial, sans-serif" font-size="34" fill="#4A5A6B">Interior metalizado que mantém a temperatura.</text>
+
+    <g transform="translate(0 386)">
+      <rect rx="12" width="330" height="76" fill="url(#bacc)"/>
+      <text x="46" y="50" font-family="Liberation Sans, Helvetica, Arial, sans-serif" font-size="30" font-weight="bold" fill="#FFFFFF">Ver modelos  &#8594;</text>
+    </g>
+  </g>
+
+  <g transform="translate(1140 230) scale(1.12)">
+    <!-- sombra de contato -->
+    <ellipse cx="240" cy="452" rx="230" ry="30" fill="#1B222B" opacity=".13"/>
+    <!-- tampa erguida -->
+    <g transform="rotate(-13 240 150)">
+      <path d="M60 150 L240 62 L420 150 L240 238 Z" fill="url(#bfoil)"/>
+      <path d="M60 150 L240 62 L420 150 L240 238 Z" fill="url(#bbrush)" opacity=".55"/>
+      <path d="M60 150 L240 62 L420 150 L240 238 Z" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+    </g>
+    <!-- interior metalizado -->
+    <path d="M64 262 L240 176 L416 262 L240 348 Z" fill="url(#bfoil)"/>
+    <path d="M64 262 L240 176 L416 262 L240 348 Z" fill="url(#bbrush)" opacity=".7"/>
+    <!-- corpo -->
+    <path d="M64 262 L240 348 L240 452 L64 366 Z" fill="#232D39"/>
+    <path d="M416 262 L240 348 L240 452 L416 366 Z" fill="#3B4856"/>
+    <path d="M64 262 L240 348 L240 452 L64 366 Z" fill="none" stroke="#0C7C92" stroke-width="2" opacity=".45"/>
+    <!-- brilho na aresta -->
+    <path d="M240 176 L416 262" stroke="#FFFFFF" stroke-width="3" opacity=".8"/>
+  </g>
+</svg>

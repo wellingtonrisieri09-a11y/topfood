@@ -1,0 +1,542 @@
+[
+  {
+    "id": "pastel-metalizada",
+    "name": "Embalagem Metalizada para Pastel",
+    "category": "pastel",
+    "description": "Pillow box com interior metalizado: o pastel chega quente, sequinho e apresentável.",
+    "long_description": "A embalagem metalizada para pastel foi feita para o delivery: o interior metalizado devolve o calor para o alimento em vez de absorvê-lo, e a laminação impede que a gordura atravesse o papelão. O resultado é o pastel chegando crocante na casa do cliente — sem mancha na embalagem e sem aquele vapor que murcha a massa.",
+    "features": [
+      "Interior metalizado: segura a temperatura por muito mais tempo",
+      "Barreira contra gordura e umidade — não encharca nem mancha",
+      "Papelão de alta gramatura com corte e vinco de gráfica",
+      "Fechamento reforçado todo por encaixe — monta em segundos",
+      "Material atóxico, próprio para contato com alimento"
+    ],
+    "specs": [
+      {
+        "label": "Material",
+        "value": "Cartão de alta gramatura com laminação metalizada interna"
+      },
+      {
+        "label": "Interior",
+        "value": "Metalizado (barreira térmica e antigordura)"
+      },
+      {
+        "label": "Montagem",
+        "value": "Corte e vinco, fechamento por encaixe — sem cola e sem grampo"
+      },
+      {
+        "label": "Capacidade",
+        "value": "Comporta pastel grande inteiro"
+      },
+      {
+        "label": "Indicação",
+        "value": "Pastelarias, food trucks e delivery"
+      },
+      {
+        "label": "Pedido mínimo",
+        "value": "50 unidades"
+      }
+    ],
+    "images": [
+      "images/produtos/pastel-metalizada.webp"
+    ],
+    "image": "images/produtos/pastel-metalizada.webp",
+    "badge": "Mais Vendido",
+    "badgeColor": "green",
+    "stars": 5,
+    "active": true,
+    "sold": 0,
+    "stock": 5000,
+    "weight_per_unit": 18,
+    "variants": [
+      {
+        "units": 50,
+        "price": 64.9
+      },
+      {
+        "units": 100,
+        "price": 119.9
+      },
+      {
+        "units": 250,
+        "price": 279.9
+      }
+    ],
+    "option_names": [],
+    "preco_provisorio": true,
+    "created_at": "2026-08-24T14:12:02.740Z",
+    "sort_order": 0
+  },
+  {
+    "id": "churros-metalizada",
+    "name": "Embalagem Metalizada para Churros",
+    "category": "churros",
+    "description": "Caixa tubular com interior metalizado — mantém o churros quente e o doce no lugar.",
+    "long_description": "Formato tubular com abertura superior, pensado para churros recheado. O interior metalizado mantém a temperatura e segura o doce quente sem encharcar o papelão; a montagem é por encaixe, então o operador fecha a caixa com uma mão só no meio do movimento.",
+    "features": [
+      "Interior metalizado: segura a temperatura por muito mais tempo",
+      "Barreira contra gordura e umidade — não encharca nem mancha",
+      "Papelão de alta gramatura com corte e vinco de gráfica",
+      "Fechamento reforçado todo por encaixe — monta em segundos",
+      "Material atóxico, próprio para contato com alimento"
+    ],
+    "specs": [
+      {
+        "label": "Material",
+        "value": "Cartão de alta gramatura com laminação metalizada interna"
+      },
+      {
+        "label": "Interior",
+        "value": "Metalizado (barreira térmica e antigordura)"
+      },
+      {
+        "label": "Montagem",
+        "value": "Corte e vinco, fechamento por encaixe — sem cola e sem grampo"
+      },
+      {
+        "label": "Indicação",
+        "value": "Churrerias, quiosques e delivery de doces"
+      },
+      {
+        "label": "Pedido mínimo",
+        "value": "50 unidades"
+      }
+    ],
+    "images": [
+      "images/produtos/churros-metalizada.webp"
+    ],
+    "image": "images/produtos/churros-metalizada.webp",
+    "badge": "",
+    "badgeColor": "",
+    "stars": 5,
+    "active": true,
+    "sold": 0,
+    "stock": 5000,
+    "weight_per_unit": 22,
+    "variants": [
+      {
+        "units": 50,
+        "price": 69.9
+      },
+      {
+        "units": 100,
+        "price": 129.9
+      },
+      {
+        "units": 250,
+        "price": 299.9
+      }
+    ],
+    "option_names": [],
+    "preco_provisorio": true,
+    "created_at": "2026-08-24T14:12:02.741Z",
+    "sort_order": 1
+  },
+  {
+    "id": "hamburguer-metalizada",
+    "name": "Caixa Metalizada para Hambúrguer Artesanal",
+    "category": "hamburger",
+    "description": "Caixa de hambúrguer com interior metalizado: pão firme e queijo derretido na entrega.",
+    "long_description": "A caixa metalizada para hambúrguer artesanal resolve os dois problemas clássicos do delivery de burger: o pão que amolece com o vapor e o lanche que chega frio. O interior metalizado reflete o calor de volta e a laminação bloqueia a gordura do blend, mantendo a caixa apresentável até a mão do cliente.",
+    "features": [
+      "Interior metalizado: segura a temperatura por muito mais tempo",
+      "Barreira contra gordura e umidade — não encharca nem mancha",
+      "Papelão de alta gramatura com corte e vinco de gráfica",
+      "Fechamento reforçado todo por encaixe — monta em segundos",
+      "Material atóxico, próprio para contato com alimento"
+    ],
+    "specs": [
+      {
+        "label": "Material",
+        "value": "Cartão de alta gramatura com laminação metalizada interna"
+      },
+      {
+        "label": "Interior",
+        "value": "Metalizado (barreira térmica e antigordura)"
+      },
+      {
+        "label": "Montagem",
+        "value": "Corte e vinco, fechamento por encaixe — sem cola e sem grampo"
+      },
+      {
+        "label": "Capacidade",
+        "value": "Hambúrguer artesanal com acompanhamento"
+      },
+      {
+        "label": "Indicação",
+        "value": "Hamburguerias artesanais e dark kitchens"
+      },
+      {
+        "label": "Pedido mínimo",
+        "value": "50 unidades"
+      }
+    ],
+    "images": [
+      "images/produtos/hamburguer-metalizada.webp"
+    ],
+    "image": "images/produtos/hamburguer-metalizada.webp",
+    "badge": "Mais Vendido",
+    "badgeColor": "green",
+    "stars": 5,
+    "active": true,
+    "sold": 0,
+    "stock": 5000,
+    "weight_per_unit": 30,
+    "variants": [
+      {
+        "units": 50,
+        "price": 79.9
+      },
+      {
+        "units": 100,
+        "price": 149.9
+      },
+      {
+        "units": 250,
+        "price": 344.9
+      }
+    ],
+    "option_names": [],
+    "preco_provisorio": true,
+    "created_at": "2026-08-24T14:12:02.741Z",
+    "sort_order": 2
+  },
+  {
+    "id": "batata-200g-metalizada",
+    "name": "Caixa Metalizada para Batata Frita Delivery 200 g",
+    "category": "batata",
+    "description": "Caixa fechada de 200 g com interior metalizado — batata crocante do balcão à entrega.",
+    "long_description": "Caixa fechada para porção de batata frita no delivery. O interior metalizado segura a temperatura durante o trajeto e a barreira antigordura evita que o fundo amoleça, que é o que faz a batata chegar mole. Fecha por encaixe e empilha bem na bag do entregador.",
+    "features": [
+      "Interior metalizado: segura a temperatura por muito mais tempo",
+      "Barreira contra gordura e umidade — não encharca nem mancha",
+      "Papelão de alta gramatura com corte e vinco de gráfica",
+      "Fechamento reforçado todo por encaixe — monta em segundos",
+      "Material atóxico, próprio para contato com alimento"
+    ],
+    "specs": [
+      {
+        "label": "Material",
+        "value": "Cartão de alta gramatura com laminação metalizada interna"
+      },
+      {
+        "label": "Interior",
+        "value": "Metalizado (barreira térmica e antigordura)"
+      },
+      {
+        "label": "Montagem",
+        "value": "Corte e vinco, fechamento por encaixe — sem cola e sem grampo"
+      },
+      {
+        "label": "Capacidade",
+        "value": "Porção de aproximadamente 200 g"
+      },
+      {
+        "label": "Indicação",
+        "value": "Delivery de porções e combos"
+      },
+      {
+        "label": "Pedido mínimo",
+        "value": "50 unidades"
+      }
+    ],
+    "images": [
+      "images/produtos/batata-200g-metalizada.webp"
+    ],
+    "image": "images/produtos/batata-200g-metalizada.webp",
+    "badge": "",
+    "badgeColor": "",
+    "stars": 5,
+    "active": true,
+    "sold": 0,
+    "stock": 5000,
+    "weight_per_unit": 24,
+    "variants": [
+      {
+        "units": 50,
+        "price": 69.9
+      },
+      {
+        "units": 100,
+        "price": 129.9
+      },
+      {
+        "units": 250,
+        "price": 299.9
+      }
+    ],
+    "option_names": [],
+    "preco_provisorio": true,
+    "created_at": "2026-08-24T14:12:02.741Z",
+    "sort_order": 3
+  },
+  {
+    "id": "batata-balcao-metalizada",
+    "name": "Embalagem Metalizada para Batata Frita — Balcão",
+    "category": "batata",
+    "description": "Modelo aberto de balcão, com interior metalizado — serve, entrega e vai comendo.",
+    "long_description": "Formato aberto para consumo imediato: praça de alimentação, food truck e balcão. O interior metalizado mantém a porção quente enquanto o cliente come e impede que a gordura marque a parte externa da embalagem.",
+    "features": [
+      "Interior metalizado: segura a temperatura por muito mais tempo",
+      "Barreira contra gordura e umidade — não encharca nem mancha",
+      "Papelão de alta gramatura com corte e vinco de gráfica",
+      "Fechamento reforçado todo por encaixe — monta em segundos",
+      "Material atóxico, próprio para contato com alimento"
+    ],
+    "specs": [
+      {
+        "label": "Material",
+        "value": "Cartão de alta gramatura com laminação metalizada interna"
+      },
+      {
+        "label": "Interior",
+        "value": "Metalizado (barreira térmica e antigordura)"
+      },
+      {
+        "label": "Montagem",
+        "value": "Corte e vinco, fechamento por encaixe — sem cola e sem grampo"
+      },
+      {
+        "label": "Capacidade",
+        "value": "Porção individual"
+      },
+      {
+        "label": "Indicação",
+        "value": "Balcão, praça de alimentação e food truck"
+      },
+      {
+        "label": "Pedido mínimo",
+        "value": "50 unidades"
+      }
+    ],
+    "images": [
+      "images/produtos/batata-balcao-metalizada.webp"
+    ],
+    "image": "images/produtos/batata-balcao-metalizada.webp",
+    "badge": "",
+    "badgeColor": "",
+    "stars": 5,
+    "active": true,
+    "sold": 0,
+    "stock": 5000,
+    "weight_per_unit": 16,
+    "variants": [
+      {
+        "units": 50,
+        "price": 59.9
+      },
+      {
+        "units": 100,
+        "price": 109.9
+      },
+      {
+        "units": 250,
+        "price": 254.9
+      }
+    ],
+    "option_names": [],
+    "preco_provisorio": true,
+    "created_at": "2026-08-24T14:12:02.741Z",
+    "sort_order": 4
+  },
+  {
+    "id": "espetinho-metalizada",
+    "name": "Caixa Metalizada para Espetinho",
+    "category": "espetinho",
+    "description": "Caixa alongada com interior metalizado — o espetinho chega quente e sem vazar.",
+    "long_description": "Caixa alongada, dimensionada para espetinhos montados. O interior metalizado segura o calor da carne e a laminação impede que o molho e a gordura atravessem o papelão durante a entrega. Fechamento reforçado por encaixe, que aguenta o peso sem abrir na bag.",
+    "features": [
+      "Interior metalizado: segura a temperatura por muito mais tempo",
+      "Barreira contra gordura e umidade — não encharca nem mancha",
+      "Papelão de alta gramatura com corte e vinco de gráfica",
+      "Fechamento reforçado todo por encaixe — monta em segundos",
+      "Material atóxico, próprio para contato com alimento"
+    ],
+    "specs": [
+      {
+        "label": "Material",
+        "value": "Cartão de alta gramatura com laminação metalizada interna"
+      },
+      {
+        "label": "Interior",
+        "value": "Metalizado (barreira térmica e antigordura)"
+      },
+      {
+        "label": "Montagem",
+        "value": "Corte e vinco, fechamento por encaixe — sem cola e sem grampo"
+      },
+      {
+        "label": "Indicação",
+        "value": "Espetinhos, churrasquinho e delivery de porções"
+      },
+      {
+        "label": "Pedido mínimo",
+        "value": "50 unidades"
+      }
+    ],
+    "images": [
+      "images/produtos/espetinho-metalizada.webp"
+    ],
+    "image": "images/produtos/espetinho-metalizada.webp",
+    "badge": "Novidade",
+    "badgeColor": "blue",
+    "stars": 5,
+    "active": true,
+    "sold": 0,
+    "stock": 5000,
+    "weight_per_unit": 28,
+    "variants": [
+      {
+        "units": 50,
+        "price": 74.9
+      },
+      {
+        "units": 100,
+        "price": 139.9
+      },
+      {
+        "units": 250,
+        "price": 324.9
+      }
+    ],
+    "option_names": [],
+    "preco_provisorio": true,
+    "created_at": "2026-08-24T14:12:02.741Z",
+    "sort_order": 5
+  },
+  {
+    "id": "hotdog-metalizada",
+    "name": "Embalagem Metalizada para Hot Dog",
+    "category": "hot-dog",
+    "description": "Embalagem de hot dog com interior metalizado: pão macio, sem encharcar.",
+    "long_description": "Embalagem própria para cachorro-quente completo. O interior metalizado retém o calor do pão e da salsicha, enquanto a barreira interna impede que o molho e a maionese passem para o papelão — o cliente abre a embalagem com o lanche inteiro, do jeito que saiu do balcão.",
+    "features": [
+      "Interior metalizado: segura a temperatura por muito mais tempo",
+      "Barreira contra gordura e umidade — não encharca nem mancha",
+      "Papelão de alta gramatura com corte e vinco de gráfica",
+      "Fechamento reforçado todo por encaixe — monta em segundos",
+      "Material atóxico, próprio para contato com alimento"
+    ],
+    "specs": [
+      {
+        "label": "Material",
+        "value": "Cartão de alta gramatura com laminação metalizada interna"
+      },
+      {
+        "label": "Interior",
+        "value": "Metalizado (barreira térmica e antigordura)"
+      },
+      {
+        "label": "Montagem",
+        "value": "Corte e vinco, fechamento por encaixe — sem cola e sem grampo"
+      },
+      {
+        "label": "Indicação",
+        "value": "Dogueiros, carrinhos e delivery"
+      },
+      {
+        "label": "Pedido mínimo",
+        "value": "50 unidades"
+      }
+    ],
+    "images": [
+      "images/produtos/hotdog-metalizada.webp"
+    ],
+    "image": "images/produtos/hotdog-metalizada.webp",
+    "badge": "",
+    "badgeColor": "",
+    "stars": 5,
+    "active": true,
+    "sold": 0,
+    "stock": 5000,
+    "weight_per_unit": 18,
+    "variants": [
+      {
+        "units": 50,
+        "price": 64.9
+      },
+      {
+        "units": 100,
+        "price": 119.9
+      },
+      {
+        "units": 250,
+        "price": 279.9
+      }
+    ],
+    "option_names": [],
+    "preco_provisorio": true,
+    "created_at": "2026-08-24T14:12:02.741Z",
+    "sort_order": 6
+  },
+  {
+    "id": "porcoes-metalizada",
+    "name": "Caixa Metalizada para Porções e Frango Frito",
+    "category": "porcoes",
+    "description": "Caixa de porção com interior metalizado — frango, isca e petisco crocantes na entrega.",
+    "long_description": "Caixa de porção para frango frito, iscas, polenta e petiscos em geral. O interior metalizado mantém a temperatura da fritura e evita que o vapor preso amoleça a crocância; a barreira antigordura mantém a caixa firme mesmo com porção grande e quente.",
+    "features": [
+      "Interior metalizado: segura a temperatura por muito mais tempo",
+      "Barreira contra gordura e umidade — não encharca nem mancha",
+      "Papelão de alta gramatura com corte e vinco de gráfica",
+      "Fechamento reforçado todo por encaixe — monta em segundos",
+      "Material atóxico, próprio para contato com alimento"
+    ],
+    "specs": [
+      {
+        "label": "Material",
+        "value": "Cartão de alta gramatura com laminação metalizada interna"
+      },
+      {
+        "label": "Interior",
+        "value": "Metalizado (barreira térmica e antigordura)"
+      },
+      {
+        "label": "Montagem",
+        "value": "Corte e vinco, fechamento por encaixe — sem cola e sem grampo"
+      },
+      {
+        "label": "Capacidade",
+        "value": "Porção para compartilhar"
+      },
+      {
+        "label": "Indicação",
+        "value": "Bares, petiscarias e delivery de porções"
+      },
+      {
+        "label": "Pedido mínimo",
+        "value": "50 unidades"
+      }
+    ],
+    "images": [
+      "images/produtos/porcoes-metalizada.webp"
+    ],
+    "image": "images/produtos/porcoes-metalizada.webp",
+    "badge": "",
+    "badgeColor": "",
+    "stars": 5,
+    "active": true,
+    "sold": 0,
+    "stock": 5000,
+    "weight_per_unit": 32,
+    "variants": [
+      {
+        "units": 50,
+        "price": 79.9
+      },
+      {
+        "units": 100,
+        "price": 149.9
+      },
+      {
+        "units": 250,
+        "price": 344.9
+      }
+    ],
+    "option_names": [],
+    "preco_provisorio": true,
+    "created_at": "2026-08-24T14:12:02.741Z",
+    "sort_order": 7
+  }
+]
