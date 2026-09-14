@@ -1952,6 +1952,33 @@ setInterval(() => { try { cleanBlacklist(); releaseExpiredReservations(); } catc
   } catch (e) { console.error('[medidas] erro:', e.message); }
 })();
 
+// ── Faxina dos pedidos de R$ 5 do robo de teste de cartao (14/09) ──
+// Roda sozinho no boot, ou seja: entra no ar junto com o deploy, sem ninguem
+// precisar apertar botao nenhum. Nao apaga de vez — grava tudo antes em
+// data/pedidos-removidos-<data>.json, que e a prova se algum virar chargeback.
+//
+// Pode ficar ligado sem risco: desde o piso de R$ 10 em /api/orders, pedido
+// abaixo disso nem chega a ser criado — entao esta faxina so alcanca as linhas
+// velhas da fraude. Com a lista limpa, ela nao faz mais nada.
+(function faxinaPedidosDeTeste() {
+  try {
+    const orders = readData('orders.json') || [];
+    const alvos  = orders.filter(ehPedidoDeTeste);
+    if (!alvos.length) return;
+
+    const dir = path.join(__dirname, 'data');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const ts      = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const arquivo = path.join(dir, 'pedidos-removidos-' + ts + '.json');
+    fs.writeFileSync(arquivo, JSON.stringify(alvos, null, 2), 'utf8');
+
+    writeData('orders.json', orders.filter(o => !ehPedidoDeTeste(o)));
+    console.log('🧹 Faxina: ' + alvos.length + ' pedido(s) de teste removido(s). ' +
+                'Copia em ' + arquivo + '. Sobraram ' +
+                (orders.length - alvos.length) + ' pedido(s) de verdade.');
+  } catch (e) { console.error('[faxina] erro:', e.message); }
+})();
+
 app.listen(PORT, () => {
   console.log('\n══════════════════════════════════════════════');
   console.log('  🍔 TopFood Embalagens — Servidor');
