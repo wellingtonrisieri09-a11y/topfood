@@ -471,6 +471,14 @@ function viewOrder(id) {
       <p style="font-size:.78rem;color:var(--muted)">Frete: ${o.shipping?.method||'—'} — R$ ${fmt(o.shipping?.price||0)} | Prazo: ${o.shipping?.days||'—'}</p>
     </div>
     <div style="margin-bottom:16px">
+      <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;font-weight:600">Origem do pedido</label>
+      <p style="font-size:.78rem;color:var(--muted);margin-top:4px">
+        IP: <b>${o.ip||'—'}</b> &nbsp;|&nbsp;
+        Campanha: <b>${o.utm?.utm_source||'direto'}${o.utm?.utm_campaign?' / '+o.utm.utm_campaign:''}</b>
+      </p>
+      <p style="font-size:.7rem;color:var(--muted);word-break:break-all">${o.ua||''}</p>
+    </div>
+    <div style="margin-bottom:16px">
       <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;font-weight:600;display:block;margin-bottom:8px">Itens do pedido</label>
       ${o.items.map(i=>`
         <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.83rem">

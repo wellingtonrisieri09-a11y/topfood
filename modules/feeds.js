@@ -1,9 +1,10 @@
 ﻿// modules/feeds.js — Módulo 1: Feeds Google Shopping, Meta Catalog, TikTok, GMB
-const { readData, readSettings } = require("../db");
+const { readData, readSettings, isProdutoInterno } = require("../db");
 
-// A loja (/api/products) não filtra por `active` — o feed espelha o que o site vende.
+// O feed espelha exatamente o que a loja vende: sem produto desativado e sem
+// produto interno de teste (que nunca pode ir parar num anúncio do Google/Meta).
 function feedProducts() {
-  return readData("products.json");
+  return readData("products.json").filter(p => p.active !== false && !isProdutoInterno(p));
 }
 
 // p.images[] já vem com prefixo "images/"; encodeURI cobre nomes com espaço (fotos do WhatsApp).

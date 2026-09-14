@@ -1,3 +1,4 @@
+const { isProdutoInterno } = require('../db');
 // ============================================================
 // SEO — Renderização no servidor (SSR) da home
 // Injeta os produtos no HTML que o servidor entrega, pro Google
@@ -176,7 +177,7 @@ function productSchemas(products) {
 function registerSeoRoutes(app, readData) {
   app.get('/', function (req, res, next) {
     try {
-      const products = (readData('products.json') || []).filter(p => p.active !== false);
+      const products = (readData('products.json') || []).filter(p => p.active !== false && !isProdutoInterno(p));
       let html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
       const anchor = '<div id="products-loading"';

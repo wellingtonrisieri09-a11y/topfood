@@ -1,7 +1,7 @@
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
-const { readData, writeData, readSettings, db, auditLog, blacklistToken, isTokenBlacklisted, releaseExpiredReservations, cleanBlacklist } = require('./db');
+const { readData, writeData, readSettings, db, auditLog, blacklistToken, isTokenBlacklisted, releaseExpiredReservations, cleanBlacklist, isProdutoInterno } = require('./db');
 const { registerSeoRoutes, seoTitle, seoContent } = require('./modules/seo');
 const { registerAuthRoutes, requireAuth, requireOwner, requireAdminPlus, decodeUser } = require('./modules/auth');
 const { registerVendedorRoutes } = require('./modules/vendedor');
@@ -368,7 +368,10 @@ function rateLimit(nome, max, janelaMs) {
 setInterval(() => { const now = Date.now(); for (const [k, b] of rlBuckets) if (now > b.reset) rlBuckets.delete(k); }, 60 * 1000);
 
 // Logins: 10 tentativas/min por IP · cadastro/recuperação: 5/min ·
-// formulários públicos: 15/min · criação de pedido: 30/min
+// formulários públicos: 15/min · criação de pedido: 8/min.
+// Cobrança (cartão/PIX) é o alvo de teste de cartão roubado — o golpista roda
+// muitas tentativas seguidas de valor baixo pra descobrir quais cartões passam.
+// Cartão: 5 por 10 min por IP (dá pra errar o número e repetir, não dá pra varrer).
 app.use('/api/admin/login',              rateLimit('admin-login', 10, 60 * 1000));
 app.use('/custos/login',                 rateLimit('custos-login', 10, 60 * 1000));
 app.use('/api/customer/login',           rateLimit('cliente-login', 10, 60 * 1000));
@@ -376,7 +379,10 @@ app.use('/api/customer/register',        rateLimit('cliente-cad', 5, 60 * 1000))
 app.use('/api/customer/forgot-password', rateLimit('cliente-senha', 5, 60 * 1000));
 app.use('/api/contact',                  rateLimit('contato', 15, 60 * 1000));
 app.use('/api/newsletter',               rateLimit('news', 15, 60 * 1000));
-app.post('/api/orders',                  rateLimit('pedido', 30, 60 * 1000), (req, res, next) => next());
+app.post('/api/orders',                  rateLimit('pedido', 8, 60 * 1000), (req, res, next) => next());
+app.post('/api/asaas/credit-card',       rateLimit('cartao', 5, 10 * 60 * 1000), (req, res, next) => next());
+app.post('/api/pix-charge',              rateLimit('pix-cobranca', 10, 60 * 1000), (req, res, next) => next());
+app.post('/api/checkout',                rateLimit('mp-checkout', 10, 60 * 1000), (req, res, next) => next());
 
 // ============================================================
 // HELPERS PERMISSÃO
@@ -480,8 +486,17 @@ function stripCost(product) {
   return { ...product, variants: (product.variants || []).map(({ cost, ...rest }) => rest) };
 }
 
+// Catalogo publico. Duas coisas ficam de fora:
+//  1. produto desativado no painel (active === false) — antes ele sumia do
+//     admin mas continuava a venda na loja;
+//  2. produto interno (categoria "teste") — o "Produto de Teste — Pagamentos"
+//     de R$ 5 estava listado na loja e virou alvo facil, inclusive para teste
+//     de cartao roubado, que procura justamente item barato em loja com
+//     pagamento ativo.
 app.get('/api/products', (req, res) => {
-  res.json(readData('products.json').map(stripCost));
+  res.json(readData('products.json')
+    .filter(p => p.active !== false && !isProdutoInterno(p))
+    .map(stripCost));
 });
 
 app.get('/api/products/:id', (req, res) => {
@@ -1217,9 +1232,14 @@ app.get('/api/orders/:id/status', (req, res) => {
 app.post('/api/pix-charge', async (req, res) => {
   const { orderId, total, customerName, customerEmail, customerPhone, customerCpf } = req.body;
   try {
+    // Mesmo criterio do cartao: o valor da cobranca sai do pedido salvo.
+    const pedidoPix = readData('orders.json').find(o => o.id === orderId);
+    const valorPix  = pedidoPix
+      ? Math.round((parseFloat(pedidoPix.total) || 0) * 100) / 100
+      : parseFloat(total || 0);
     const result = await createPixCharge({
       id:    orderId,
-      total: parseFloat(total || 0),
+      total: valorPix,
       customer: {
         name:  customerName  || 'Cliente',
         email: customerEmail || '',
@@ -1261,6 +1281,14 @@ function generateOrderId(orders) {
   return 'TF-' + year + '-' + String(maxNum + 1).padStart(3, '0');
 }
 
+// IP real do visitante (o site fica atras de proxy) — usado para investigar
+// pedidos suspeitos (varias compras iguais do mesmo IP em poucos minutos).
+function clientIp(req) {
+  return req.headers['x-real-ip']
+      || String(req.headers['x-forwarded-for'] || '').split(',')[0].trim()
+      || req.socket.remoteAddress || '';
+}
+
 app.post('/api/orders', (req, res) => {
   try {
     const orders = readData('orders.json');
@@ -1269,6 +1297,22 @@ app.post('/api/orders', (req, res) => {
     if (!items || items.length === 0) {
       return res.status(400).json({ error: 'Carrinho vazio' });
     }
+
+    // Produto interno (teste de pagamento) nunca pode entrar num pedido real:
+    // item barato em loja no ar e isca de teste de cartao roubado.
+    const catalogo = readData('products.json');
+    const temInterno = items.some(it => {
+      const pid = String(it.id || it.product_id || '').trim();
+      const prod = catalogo.find(p => String(p.id) === pid);
+      return isProdutoInterno(prod)
+          || (prod && prod.active === false)
+          || /produto de teste/i.test(it.name || '');
+    });
+    if (temInterno) {
+      console.warn('\u26d4 Pedido recusado (produto interno/desativado) | IP ' + clientIp(req));
+      return res.status(400).json({ error: 'Produto indisponivel' });
+    }
+
 
     // Aplica cupom se informado
     if (coupon_code) {
@@ -1293,6 +1337,8 @@ app.post('/api/orders', (req, res) => {
       tracking_code: '',
       notes: notes || '',
       utm: utm || {},
+      ip: clientIp(req),
+      ua: String(req.headers['user-agent'] || '').slice(0, 200),
     };
 
     orders.unshift(newOrder);
@@ -1315,6 +1361,20 @@ app.post('/api/asaas/credit-card', async (req, res) => {
   const { orderId, total, customer, card, billingAddress, installments } = req.body;
   if (!orderId || !total || !customer || !card) {
     return res.status(400).json({ ok: false, error: 'Dados incompletos' });
+  }
+
+  // O valor cobrado vem do pedido salvo, nao do que o navegador mandou.
+  // Sem isso da pra pedir uma cobranca de R$ 5 num pedido de R$ 200 — e e
+  // exatamente esse tipo de cobranca minima que o teste de cartao roubado usa.
+  const pedidoCartao = readData('orders.json').find(o => o.id === orderId);
+  if (!pedidoCartao) {
+    return res.status(404).json({ ok: false, error: 'Pedido nao encontrado' });
+  }
+  const valorReal = Math.round((parseFloat(pedidoCartao.total) || 0) * 100) / 100;
+  if (Math.abs(valorReal - (parseFloat(total) || 0)) > 0.01) {
+    console.warn('\u26d4 Cobranca cartao com valor divergente | pedido ' + orderId +
+                 ' | pedido R$ ' + valorReal + ' | pedido do navegador R$ ' + total +
+                 ' | IP ' + clientIp(req));
   }
   try {
     const axios = require('axios');
@@ -1371,9 +1431,9 @@ app.post('/api/asaas/credit-card', async (req, res) => {
     // divide automaticamente — assim nunca pede "valor da parcela" ao cliente.
     if (nInstall > 1) {
       payload.installmentCount = nInstall;
-      payload.totalValue       = parseFloat(total);
+      payload.totalValue       = valorReal;
     } else {
-      payload.value = parseFloat(total);
+      payload.value = valorReal;
     }
 
     const r = await asaasApi.post('/payments', payload);
@@ -1520,8 +1580,9 @@ app.get('/produto/:slug', function(req, res) {
   const products = readData('products.json');
   const product  = products.find(p => p.id === slug);
 
-  // Sem produto: serve o HTML estático (JS mostrara "Produto nao encontrado")
-  if (!product) return res.sendFile(path.join(__dirname, 'product.html'));
+  // Sem produto (ou produto interno de teste): serve o HTML estático
+  // (JS mostrara "Produto nao encontrado")
+  if (!product || isProdutoInterno(product)) return res.sendFile(path.join(__dirname, 'product.html'));
 
   const baseUrl = process.env.BASE_URL || 'https://topfoodembalagens.com.br';
   const img     = (product.images && product.images[0]) || product.image || '';
@@ -1640,7 +1701,7 @@ app.get('/produto/:slug', function(req, res) {
 //  conforme produtos forem adicionados/removidos
 // ─────────────────────────────────────────────
 app.get('/sitemap.xml', (req, res) => {
-  const products  = readData('products.json').filter(p => p.active !== false);
+  const products  = readData('products.json').filter(p => p.active !== false && !isProdutoInterno(p));
   const settings  = readData('settings.json') || {};
   const baseUrl   = process.env.BASE_URL || 'https://topfoodembalagens.com.br';
   const now       = new Date().toISOString().split('T')[0]; // YYYY-MM-DD

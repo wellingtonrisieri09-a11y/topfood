@@ -308,4 +308,14 @@ function migrateFromJSON() {
 }
 migrateFromJSON();
 
-module.exports = { db, readData, writeData, readSettings, auditLog, reserveStock, releaseExpiredReservations, confirmReservation, blacklistToken, isTokenBlacklisted, cleanBlacklist, getBudgets, updateBudgetSpend, setBudget };
+// Produto interno (nao entra em catalogo publico, feed de anuncio, home ou
+// catalogo PDF). O "Produto de Teste — Pagamentos" de R$5 existe so para o
+// Wellington testar meio de pagamento; exposto na loja ele vira alvo facil,
+// inclusive para teste de cartao roubado (que procura item barato).
+function isProdutoInterno(p) {
+  if (!p) return false;
+  return String(p.category || '').toLowerCase().trim() === 'teste'
+      || /produto de teste/i.test(p.name || '');
+}
+
+module.exports = { db, readData, writeData, readSettings, auditLog, reserveStock, releaseExpiredReservations, confirmReservation, blacklistToken, isTokenBlacklisted, cleanBlacklist, getBudgets, updateBudgetSpend, setBudget, isProdutoInterno };
