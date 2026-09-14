@@ -130,6 +130,10 @@ function applyRoleUI() {
     btn.style.display = STATE.canDelete ? '' : 'none';
   });
 
+  // Limpeza dos pedidos de teste segue a mesma permissão de excluir pedido
+  const btnLimpar = document.getElementById('btn-limpar-teste');
+  if (btnLimpar) btnLimpar.style.display = STATE.canDelete ? '' : 'none';
+
   // Tema por perfil: vendedor=azul · empresa=verde · admin=vermelho (padrão)
   document.body.classList.toggle('theme-vendedor', role === 'vendedor');
   document.body.classList.toggle('theme-empresa',  role === 'empresa');
@@ -685,6 +689,43 @@ async function deleteOrder(id) {
   updateBadges();
   renderOverview();
   toast('🗑️ Pedido ' + id + ' excluído.', 'info');
+}
+
+// Limpa os pedidos de R$ 5 que entraram enquanto o produto de teste ficou
+// exposto na loja. Mostra a lista antes de apagar — e o servidor guarda uma
+// copia em data/pedidos-removidos-<data>.json, caso vire chargeback depois.
+async function limparPedidosTeste(btn) {
+  const original = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Conferindo...'; }
+  try {
+    const prev = await api('/api/admin/orders/teste');
+    if (!prev.count) {
+      toast('Nenhum pedido de teste encontrado — a lista já está limpa.', 'info');
+      return;
+    }
+    const amostra = prev.orders.slice(0, 12)
+      .map(o => `• ${o.id} — R$ ${fmt(o.total)} — ${o.customer || 'sem nome'} — ${fmtDate(o.date)}`)
+      .join('\n');
+    const resto = prev.count > 12 ? `\n… e mais ${prev.count - 12} pedido(s).` : '';
+    const ok = confirm(
+      `🧹 Remover ${prev.count} pedido(s) de teste?\n\n${amostra}${resto}\n\n` +
+      `Os pedidos de venda de verdade continuam na lista.\n` +
+      `Uma cópia dos removidos fica salva no servidor.`
+    );
+    if (!ok) return;
+
+    if (btn) btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Limpando...';
+    const r = await api('/api/admin/orders/teste/limpar', { method: 'POST' });
+    STATE.orders = (await api('/api/admin/orders')) || [];
+    renderOrders();
+    updateBadges();
+    renderOverview();
+    toast(`🧹 ${r.removed} pedido(s) de teste removido(s). Cópia: ${r.arquivo}`, 'success');
+  } catch (e) {
+    toast('Erro ao limpar pedidos de teste: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = original; }
+  }
 }
 
 /* ══════════════════════════════════════════════════════

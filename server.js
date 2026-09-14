@@ -535,6 +535,60 @@ app.delete('/api/admin/orders/:id', requireAuth, requireRole('canDelete'), (req,
   res.json({ ok: true });
 });
 
+// ------------------------------------------------------------
+// Limpeza dos pedidos do produto de teste de R$ 5
+// Enquanto o "Produto de Teste — Pagamentos" ficou exposto na loja, entraram
+// pedidos de R$ 5 que nao sao venda de verdade e sujam faturamento, ticket
+// medio e relatorio. Sao removidos da lista, mas nunca apagados de vez: vao
+// para data/pedidos-removidos-<data>.json, que e a prova se algum deles virar
+// chargeback e a Asaas pedir explicacao.
+// ------------------------------------------------------------
+function ehPedidoDeTeste(o) {
+  const total = parseFloat(o.total) || 0;
+  const temItemInterno = (o.items || []).some(it =>
+    /produto de teste/i.test(it.name || '') || String(it.id || '') === 'teste-pag');
+  // R$ 5 so existe no produto interno — o item mais barato da loja e R$ 30.
+  return temItemInterno || (total > 0 && total <= 5.01);
+}
+
+app.get('/api/admin/orders/teste', requireAuth, requireRole('canDelete'), (req, res) => {
+  const alvos = readData('orders.json').filter(ehPedidoDeTeste);
+  res.json({
+    ok: true,
+    count: alvos.length,
+    orders: alvos.map(o => ({
+      id: o.id, date: o.date, total: o.total,
+      customer: o.customer?.name || '', email: o.customer?.email || '',
+      payment_method: o.payment_method || '', ip: o.ip || '',
+    })),
+  });
+});
+
+app.post('/api/admin/orders/teste/limpar', requireAuth, requireRole('canDelete'), (req, res) => {
+  try {
+    const orders = readData('orders.json');
+    const alvos  = orders.filter(ehPedidoDeTeste);
+    if (!alvos.length) return res.json({ ok: true, removed: 0, arquivo: '' });
+
+    // Copia de seguranca antes de mexer na lista.
+    const dir = path.join(__dirname, 'data');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const ts      = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const arquivo = path.join(dir, 'pedidos-removidos-' + ts + '.json');
+    fs.writeFileSync(arquivo, JSON.stringify(alvos, null, 2), 'utf8');
+
+    writeData('orders.json', orders.filter(o => !ehPedidoDeTeste(o)));
+    auditLog(req.user?.id, req.user?.username, 'orders-limpar-teste', 'orders',
+             '', alvos.map(o => o.id).join(','), req.ip);
+    console.log('\ud83e\uddf9 ' + alvos.length + ' pedido(s) de teste removido(s) por ' +
+                (req.user?.username || '?') + ' — copia em ' + arquivo);
+    res.json({ ok: true, removed: alvos.length, arquivo: path.basename(arquivo) });
+  } catch (e) {
+    console.error('Erro ao limpar pedidos de teste:', e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // ============================================================
 // ADMIN — PRODUCTS
 // ============================================================

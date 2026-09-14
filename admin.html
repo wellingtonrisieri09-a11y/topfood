@@ -457,6 +457,7 @@
           <div><h1>Pedidos</h1><p>Gerencie e acompanhe todos os pedidos</p></div>
           <div style="display:flex;gap:8px">
             <button class="btn btn-secondary" style="background:#FFF159;color:#333;border-color:#E6D84E;font-weight:700" onclick="mlImportarPedidos(this)"><i class="fa fa-cart-arrow-down"></i> Importar do Mercado Livre</button>
+            <button class="btn btn-secondary" id="btn-limpar-teste" style="color:var(--red);border-color:var(--red)" onclick="limparPedidosTeste(this)" title="Remove os pedidos de R$ 5 do produto de teste"><i class="fa fa-broom"></i> Limpar pedidos de teste</button>
             <button class="btn btn-primary" onclick="exportCSV('orders')"><i class="fa fa-download"></i> Exportar</button>
           </div>
         </div>
