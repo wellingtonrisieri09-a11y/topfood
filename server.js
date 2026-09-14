@@ -1367,6 +1367,16 @@ app.post('/api/orders', (req, res) => {
       return res.status(400).json({ error: 'Produto indisponivel' });
     }
 
+    // Piso de valor. O pacote mais barato da loja e R$ 30, entao pedido de
+    // poucos reais nao e venda: e robo de teste de cartao roubado rodando
+    // cobranca minima pra descobrir quais cartoes ainda passam. O piso vale
+    // mesmo se o robo mandar o item direto na API, sem passar pelo carrinho.
+    const totalPedido = parseFloat(total) || 0;
+    if (totalPedido > 0 && totalPedido < 10) {
+      console.warn('\u26d4 Pedido recusado (valor R$ ' + totalPedido + ' abaixo do piso) | IP ' + clientIp(req));
+      return res.status(400).json({ error: 'Valor de pedido invalido' });
+    }
+
 
     // Aplica cupom se informado
     if (coupon_code) {
