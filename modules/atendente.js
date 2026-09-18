@@ -63,7 +63,7 @@ let cfg = loadJSON(CFG_FILE, {
   enabled: false,               // IA responde? (liga/desliga geral)
   autostart: false,             // reconectar sozinho no boot do PM2
   promptExtra: '',              // instruções extras editáveis no admin
-  notifyNumber: '5511988856367',// avisa o Wellington (escalação)
+  notifyNumber: '5511978332442',// avisa o Wellington (escalação)
   pausedChats: {},              // jid -> { until: ts, reason }
   stats: { recebidas: 0, respondidas: 0, escaladas: 0 }
 });
@@ -183,7 +183,7 @@ async function askClaude(jid, userText) {
 
   const system = [
     'Você é a atendente virtual da TopFood Embalagens (embalagens food service: pastel, churros, hambúrguer, batata frita).',
-    `Site e checkout: ${SITE} — WhatsApp humano: (11) 98885-6367.`,
+    `Site e checkout: ${SITE} — WhatsApp humano: (11) 97833-2442.`,
     'Endereço: R. Reinaldo Teixeira, 85 — Alvarenga, São Bernardo do Campo — SP.',
     'Responda SEMPRE em português do Brasil, tom simpático e direto, mensagens curtas (estilo WhatsApp, máx ~5 linhas), pode usar 1 emoji.',
     '',
