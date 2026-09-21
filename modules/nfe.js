@@ -317,6 +317,43 @@ function registerNfeRoutes(app, readData, writeData, requireAuth) {
     } catch (e) { res.status(500).json({ ok: false, erro: e.message }); }
   });
 
+  // livro de notas — toda NF-e ja emitida pelo site, da mais nova pra mais velha.
+  // O registro da nota mora dentro do pedido (order.nfe); aqui ele e juntado numa
+  // lista so, que e o que o contador pede no fim do mes.
+  app.get('/api/eco/nfe/emitidas', requireAuth, (req, res) => {
+    try {
+      const cfg = getFiscalConfig(readData);
+      const notas = (readData('orders.json') || [])
+        .filter(o => o && o.nfe)
+        .map(o => ({
+          pedido:   o.id || o.order_id || '',
+          data:     o.date || o.created_at || '',
+          cliente:  (o.customer && o.customer.name) || '',
+          cpf_cnpj: (o.customer && (o.customer.cpf || o.customer.cnpj)) || '',
+          uf:       (o.shipping && o.shipping.state) || '',
+          total:    parseFloat(o.total) || 0,
+          numero:   o.nfe.numero || '',
+          serie:    o.nfe.serie || '',
+          chave:    o.nfe.chave || '',
+          status:   o.nfe.status || 'processando_autorizacao',
+          erro:     o.nfe.erro || '',
+          ref:      o.nfe.ref || '',
+          tem_danfe: !!o.nfe.caminho_danfe,
+        }))
+        .sort((a, b) => String(b.data).localeCompare(String(a.data)));
+
+      const autorizadas = notas.filter(n => n.status === 'autorizado');
+      res.json({
+        ok: true,
+        ambiente: cfg.ambiente,        // em homologacao as notas sao de teste
+        total: notas.length,
+        autorizadas: autorizadas.length,
+        valor_autorizado: Math.round(autorizadas.reduce((s, n) => s + n.total, 0) * 100) / 100,
+        notas,
+      });
+    } catch (e) { res.status(500).json({ ok: false, erro: e.message }); }
+  });
+
   // emitir NF-e de um pedido (admin)
   app.post('/api/eco/nfe/emitir/:orderId', requireAuth, async (req, res) => {
     try {

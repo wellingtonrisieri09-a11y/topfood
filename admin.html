@@ -1184,6 +1184,27 @@
       <section id="page-nfe" class="page">
         <div class="page-header"><h1><i class="fa fa-file-invoice-dollar"></i> Nota Fiscal (NF-e)</h1></div>
         <div id="nfe-status" style="margin-bottom:16px"></div>
+
+        <!-- ── Livro de notas: tudo que ja foi emitido pelo site ── -->
+        <div class="card" style="margin-bottom:16px;padding:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid var(--border)">
+            <div>
+              <h3 style="margin:0">Notas emitidas</h3>
+              <p id="nfe-resumo" style="font-size:.8rem;color:var(--muted);margin:4px 0 0">Carregando...</p>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-secondary" onclick="loadNotasEmitidas()"><i class="fa fa-rotate"></i> Atualizar</button>
+              <button class="btn btn-primary" onclick="exportNotasCSV()"><i class="fa fa-download"></i> Exportar p/ contador</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nº / Série</th><th>Pedido</th><th>Cliente</th><th>UF</th><th>Valor</th><th>Status</th><th>Chave de acesso</th><th>Data</th><th>DANFE</th></tr></thead>
+              <tbody id="nfe-emitidas-table"><tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted)">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
         <div style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:24px;max-width:780px">
           <p style="color:#6b7280;font-size:.9rem;margin-top:0">Em <strong>homologacao</strong> as notas sao de teste (nao valem fiscalmente). So mude para <strong>producao</strong> apos validar uma nota de teste.</p>
           <h3 style="margin:18px 0 4px">Focus NFe (emissor)</h3>

@@ -2986,7 +2986,79 @@ async function loadNfeConfig(){
     const th=document.getElementById('nfe-token-homologacao'); if(th&&c.tem_token_homologacao) th.placeholder='(token ja salvo — deixe em branco p/ manter)';
     const tp=document.getElementById('nfe-token-producao');   if(tp&&c.tem_token_producao)   tp.placeholder='(token ja salvo — deixe em branco p/ manter)';
   }catch(e){ toast('Erro ao carregar config fiscal','error'); }
+  loadNotasEmitidas();
 }
+
+// Livro de notas — o registro de cada NF-e mora dentro do pedido; aqui eles
+// aparecem numa lista so, que e o que o contador pede.
+let NOTAS_EMITIDAS = [];
+const NFE_LABEL = {
+  autorizado: ['Autorizada', '#15803D', '#DCFCE7'],
+  processando_autorizacao: ['Processando', '#B45309', '#FEF3C7'],
+  erro_autorizacao: ['Rejeitada', '#B91C1C', '#FEE2E2'],
+  cancelado: ['Cancelada', '#6B7280', '#F3F4F6'],
+};
+async function loadNotasEmitidas(){
+  const tb = document.getElementById('nfe-emitidas-table');
+  const rs = document.getElementById('nfe-resumo');
+  if(!tb) return;
+  try{
+    const r = await api('/api/eco/nfe/emitidas');
+    NOTAS_EMITIDAS = r.notas || [];
+
+    if(rs){
+      const aviso = r.ambiente === 'homologacao'
+        ? ' <span style="color:#B45309;font-weight:700">— ambiente de homologacao: estas notas sao de teste e nao valem fiscalmente</span>'
+        : '';
+      rs.innerHTML = r.total
+        ? `${r.total} nota(s) · ${r.autorizadas} autorizada(s) · R$ ${fmt(r.valor_autorizado)} autorizado${aviso}`
+        : 'Nenhuma nota emitida ainda.' + aviso;
+    }
+
+    if(!NOTAS_EMITIDAS.length){
+      tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)">Nenhuma NF-e emitida ainda. Emita pela tela de Pedidos, abrindo o pedido.</td></tr>';
+      return;
+    }
+
+    tb.innerHTML = NOTAS_EMITIDAS.map(n=>{
+      const [txt,cor,bg] = NFE_LABEL[n.status] || [n.status,'#6B7280','#F3F4F6'];
+      return `<tr>
+        <td><b>${n.numero||'—'}</b>${n.serie?' / '+escapeHtml(n.serie):''}</td>
+        <td>${escapeHtml(n.pedido)}</td>
+        <td>${escapeHtml(n.cliente||'—')}</td>
+        <td>${escapeHtml(n.uf||'—')}</td>
+        <td><b>R$ ${fmt(n.total)}</b></td>
+        <td><span style="background:${bg};color:${cor};padding:3px 9px;border-radius:20px;font-size:.72rem;font-weight:700">${txt}</span>
+            ${n.erro?`<div style="font-size:.68rem;color:var(--red);margin-top:3px">${escapeHtml(n.erro)}</div>`:''}</td>
+        <td style="font-size:.66rem;color:var(--muted);word-break:break-all;max-width:220px">${escapeHtml(n.chave||'—')}</td>
+        <td>${n.data?fmtDate(n.data):'—'}</td>
+        <td>${n.status==='autorizado'
+          ? `<button class="btn btn-ghost btn-icon" onclick="baixarDanfe('${n.pedido}')" title="Baixar DANFE"><i class="fa fa-file-pdf" style="color:#2563EB"></i></button>`
+          : `<button class="btn btn-ghost btn-icon" onclick="pollNfe('${n.pedido}')" title="Verificar status"><i class="fa fa-rotate"></i></button>`}</td>
+      </tr>`;
+    }).join('');
+  }catch(e){
+    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--red)">Erro ao carregar: '+escapeHtml(e.message)+'</td></tr>';
+  }
+}
+
+// CSV com a chave de acesso — e por ela que o contador puxa o XML na SEFAZ.
+function exportNotasCSV(){
+  if(!NOTAS_EMITIDAS.length) return toast('Nenhuma nota para exportar','info');
+  const esc = v => '"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const linhas = [['Numero','Serie','Chave de acesso','Status','Pedido','Data','Cliente','CPF/CNPJ','UF','Valor'].join(';')];
+  NOTAS_EMITIDAS.forEach(n=>linhas.push([
+    esc(n.numero), esc(n.serie), esc(n.chave), esc((NFE_LABEL[n.status]||[n.status])[0]),
+    esc(n.pedido), esc(n.data?fmtDate(n.data):''), esc(n.cliente), esc(n.cpf_cnpj),
+    esc(n.uf), esc(String(n.total).replace('.',','))
+  ].join(';')));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿'+linhas.join('\n')],{type:'text/csv;charset=utf-8'}));
+  a.download = 'notas-emitidas-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast('CSV das notas baixado.','success');
+}
+
 async function saveNfeConfig(){
   const body = {
     ambiente: nfeVal('nfe-ambiente'),
