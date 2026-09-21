@@ -409,6 +409,33 @@ function registerNfeRoutes(app, readData, writeData, requireAuth) {
     } catch (e) { res.status(500).send('Erro: ' + e.message); }
   });
 
+  // baixar o XML da nota — este e o documento fiscal de verdade (o DANFE e so a
+  // representacao impressa dele). E o arquivo que o contador guarda e escritura,
+  // e que o cliente tem direito de receber junto com a mercadoria.
+  app.get('/api/eco/nfe/xml/:orderId', requireAuth, async (req, res) => {
+    try {
+      const orders = readData('orders.json') || [];
+      const order = orders.find(o => (o.id || o.order_id) === req.params.orderId);
+      if (!order || !order.nfe) return res.status(404).send('Pedido sem NF-e');
+      const cfg = getFiscalConfig(readData);
+      let caminho = order.nfe.caminho_xml;
+      if (!caminho) {
+        const d = await consultarNFe(order.nfe.ref, cfg);
+        caminho = d && (d.caminho_xml_nota_fiscal || d.caminho_xml);
+      }
+      if (!caminho) return res.status(404).send('XML ainda não disponível (nota em processamento)');
+      const base  = cfg.ambiente === 'producao' ? 'https://api.focusnfe.com.br' : 'https://homologacao.focusnfe.com.br';
+      const token = cfg.ambiente === 'producao' ? cfg.token_producao : cfg.token_homologacao;
+      const xml = await axios.get(base + caminho, { auth: { username: token, password: '' }, responseType: 'arraybuffer', validateStatus: () => true });
+      if (xml.status !== 200) return res.status(502).send('XML indisponível na Focus');
+      // nome do arquivo pela chave de acesso — e assim que o contador espera receber
+      const nome = (order.nfe.chave || req.params.orderId) + '.xml';
+      res.set('Content-Type', 'application/xml');
+      res.set('Content-Disposition', 'attachment; filename="' + nome + '"');
+      res.send(Buffer.from(xml.data));
+    } catch (e) { res.status(500).send('Erro: ' + e.message); }
+  });
+
   console.log('[M11] Rotas de NF-e (Focus NFe) registradas');
 }
 

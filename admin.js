@@ -538,7 +538,8 @@ function nfeBox(o) {
   if (n && n.status === 'autorizado') {
     inner = `<p style="font-size:.78rem;color:#15803D;font-weight:600;margin-bottom:4px">Autorizada - no ${n.numero||''} / serie ${n.serie||'1'}</p>`
       + `<p style="font-size:.64rem;color:var(--muted);word-break:break-all;margin-bottom:8px">${n.chave||''}</p>`
-      + `<button class="btn" style="background:#2563EB;color:#fff;border:none;width:100%;padding:10px;border-radius:8px;font-weight:700;font-size:.85rem" onclick="baixarDanfe('${o.id}')">Baixar DANFE (PDF)</button>`;
+      + `<button class="btn" style="background:#2563EB;color:#fff;border:none;width:100%;padding:10px;border-radius:8px;font-weight:700;font-size:.85rem" onclick="baixarDanfe('${o.id}')">Baixar DANFE (PDF)</button>`
+      + `<button class="btn" style="background:#15803D;color:#fff;border:none;width:100%;padding:10px;border-radius:8px;font-weight:700;font-size:.85rem;margin-top:6px" onclick="baixarXmlNfe('${o.id}')">Baixar XML (documento fiscal)</button>`;
   } else if (n && (n.status === 'processando_autorizacao' || !n.status)) {
     inner = `<p style="font-size:.8rem;color:#B45309;margin-bottom:8px">Processando autorizacao na SEFAZ...</p>`
       + `<button class="btn btn-secondary" style="width:100%" onclick="pollNfe('${o.id}')">Verificar status</button>`;
@@ -631,6 +632,28 @@ async function baixarDanfe(id) {
     setTimeout(() => URL.revokeObjectURL(url), 30000);
     toast('DANFE baixado! Abra o arquivo na pasta de downloads.');
   } catch (e) { toast('Erro ao baixar DANFE: ' + e.message, 'error'); }
+}
+
+// XML da nota — e o documento fiscal em si; o DANFE e so a versao impressa.
+// E este arquivo que o contador escritura e que o cliente tem direito de receber.
+async function baixarXmlNfe(id) {
+  toast('Baixando XML...');
+  try {
+    const res = await fetch('/api/eco/nfe/xml/' + id, { headers: { 'Authorization': 'Bearer ' + token() } });
+    if (!res.ok) { toast('XML indisponivel ainda (nota em processamento)', 'error'); return; }
+    const blob = await res.blob();
+    // o nome vem do servidor (chave de acesso); o fallback cobre o pedido
+    let nome = 'NFe-' + id + '.xml';
+    const cd = res.headers.get('content-disposition') || '';
+    const m = cd.match(/filename="([^"]+)"/);
+    if (m) nome = m[1];
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = nome;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    toast('XML baixado! E este arquivo que vai pro contador.');
+  } catch (e) { toast('Erro ao baixar XML: ' + e.message, 'error'); }
 }
 
 function confirmPix(id) {
@@ -3033,7 +3056,10 @@ async function loadNotasEmitidas(){
         <td style="font-size:.66rem;color:var(--muted);word-break:break-all;max-width:220px">${escapeHtml(n.chave||'—')}</td>
         <td>${n.data?fmtDate(n.data):'—'}</td>
         <td>${n.status==='autorizado'
-          ? `<button class="btn btn-ghost btn-icon" onclick="baixarDanfe('${n.pedido}')" title="Baixar DANFE"><i class="fa fa-file-pdf" style="color:#2563EB"></i></button>`
+          ? `<div style="display:flex;gap:4px">
+               <button class="btn btn-ghost btn-icon" onclick="baixarDanfe('${n.pedido}')" title="Baixar DANFE (PDF)"><i class="fa fa-file-pdf" style="color:#2563EB"></i></button>
+               <button class="btn btn-ghost btn-icon" onclick="baixarXmlNfe('${n.pedido}')" title="Baixar XML (documento fiscal)"><i class="fa fa-file-code" style="color:#15803D"></i></button>
+             </div>`
           : `<button class="btn btn-ghost btn-icon" onclick="pollNfe('${n.pedido}')" title="Verificar status"><i class="fa fa-rotate"></i></button>`}</td>
       </tr>`;
     }).join('');
