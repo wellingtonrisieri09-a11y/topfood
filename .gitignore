@@ -11,3 +11,7 @@ index_backup_*.html
 
 # backups de sessao (nao versionar)
 *.bak_*
+
+# Certificado digital A1 — NUNCA no repositorio, em pasta nenhuma
+*.pfx
+*.p12
