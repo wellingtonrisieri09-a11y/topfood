@@ -5,6 +5,8 @@
 //   node nfe_numeracao.js                      # mostra a situacao
 //   node nfe_numeracao.js --marcar-teste=906,907
 //   node nfe_numeracao.js --producao=2
+//   node nfe_numeracao.js --ambiente=producao --confirmo
+//   node nfe_numeracao.js --ambiente=homologacao
 //
 // Homologacao e producao tem numeracao independente na SEFAZ. O que
 // decide o proximo numero de producao e o MAIOR numero ja usado em
@@ -23,6 +25,7 @@ const arg = n => (process.argv.find(a => a.startsWith('--' + n + '=')) || '').sp
 
 const marcar = String(arg('marcar-teste') || '').split(',').map(x => x.trim()).filter(Boolean);
 const prod   = arg('producao');
+const amb    = arg('ambiente');
 
 const orders = readData('orders.json') || [];
 const comNota = orders.filter(o => o && o.nfe && o.nfe.numero);
@@ -46,6 +49,30 @@ if (prod !== undefined) {
   s.fiscal = Object.assign({}, s.fiscal, { ultimo_numero: n });
   writeData('settings.json', s);
   console.log('\n  Contador de producao gravado: ultima nota = ' + n + '.');
+}
+
+// Virar pra producao e o momento em que as notas passam a valer de verdade.
+// Exigir o --confirmo evita que um dedo escorregado mude isso sem querer;
+// voltar pra homologacao nao precisa, porque so torna tudo mais seguro.
+if (amb !== undefined) {
+  if (amb !== 'producao' && amb !== 'homologacao') {
+    console.log('\n  --ambiente aceita "producao" ou "homologacao".\n');
+    process.exit(1);
+  }
+  if (amb === 'producao' && !process.argv.includes('--confirmo')) {
+    console.log('\n  Virar pra PRODUCAO faz cada nota valer fiscalmente.');
+    console.log('  Errou, so conserta com cancelamento (24h) ou carta de correcao.');
+    console.log('\n  Se e isso mesmo, repita com --confirmo:');
+    console.log('    node nfe_numeracao.js --ambiente=producao --confirmo\n');
+    process.exit(1);
+  }
+  const st = readData('settings.json') || {};
+  st.fiscal = Object.assign({}, st.fiscal, { ambiente: amb });
+  writeData('settings.json', st);
+  // O ambiente e lido na criacao da instancia da lib, que fica em cache.
+  if (typeof nfe.resetWizard === 'function') nfe.resetWizard();
+  console.log('\n  Ambiente alterado para: ' + amb + '.');
+  console.log('  Reinicie o site pra valer no painel:  pm2 restart all');
 }
 
 console.log('\n  ===== numeracao das notas =====\n');
