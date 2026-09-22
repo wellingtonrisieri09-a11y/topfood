@@ -31,6 +31,7 @@ const SEQ = {
   vol: ['qVol','esp','marca','nVol','pesoL','pesoB','lacres'],
   detPag: ['indPag','tPag','xPag','vPag','dPag','CNPJPag','UFPag','card','vTroco','CNPJReceb','idTermPag'],
   infIntermed: ['CNPJ','idCadIntTran'],
+  card: ['tpIntegra','CNPJ','tBand','cAut'],
   infNFe: ['ide','NFref','emit','avulsa','dest','autXML','retirada','entrega','det','total','transp','cobr','pag','infIntermed','infAdic','exporta','compra','cana','infRespTec'],
 };
 
@@ -151,6 +152,17 @@ function conferirRegras(i) {
   if (Math.abs(somaPag - num(tot.vNF)) > 0.01)
     erros.push('pagamento (' + somaPag.toFixed(2) + ') nao soma o total da nota (' + tot.vNF + ')');
 
+  // 391 — cartao (03/04) e PIX (17, desde a NT 2025.001) exigem o grupo card
+  [].concat((i.pag || {}).detPag || []).forEach((d, n) => {
+    const precisa = ['03', '04', '17'].includes(String(d.tPag));
+    if (precisa && !d.card)
+      erros.push('pagamento ' + (n + 1) + ': tPag=' + d.tPag + ' exige o grupo card (tpIntegra)');
+    if (d.card && String(d.card.tpIntegra) === '1' && !d.card.CNPJ)
+      erros.push('pagamento ' + (n + 1) + ': tpIntegra=1 (integrado) exige o CNPJ da instituicao de pagamento');
+    if (d.card && !precisa)
+      erros.push('pagamento ' + (n + 1) + ': tPag=' + d.tPag + ' nao leva grupo card');
+  });
+
   // 822 — meio de pagamento "outros" exige descricao
   [].concat((i.pag || {}).detPag || []).forEach((d, n) => {
     if (String(d.tPag) === '99' && !d.xPag)
@@ -189,6 +201,7 @@ const blocos = {
   ICMSTot: i.total.ICMSTot, transp: i.transp,
   vol: [].concat(i.transp.vol)[0], detPag: [].concat(i.pag.detPag)[0],
   infIntermed: i.infIntermed,
+  card: ([].concat((i.pag || {}).detPag || [])[0] || {}).card,
 };
 
 console.log('\n  ===== ordem dos campos vs schema 4.00 =====\n');

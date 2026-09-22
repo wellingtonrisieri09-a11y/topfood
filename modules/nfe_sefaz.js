@@ -62,6 +62,10 @@ function getFiscal() {
     unidade:     f.unidade || 'UN',
     natureza_operacao: f.natureza_operacao || 'Venda de mercadoria',
     serie:       parseInt(f.serie) || 1,
+    // Grupo card do pagamento: 2 = nao integrado (padrao seguro), 1 = integrado
+    // ao sistema, e ai o CNPJ da instituicao de pagamento e obrigatorio.
+    tp_integra:        String(f.tp_integra || '2'),
+    cnpj_credenciadora: String(f.cnpj_credenciadora || '').replace(/\D/g, ''),
     versaoDF:    f.versao_df || '4.00',
   };
 }
@@ -449,12 +453,21 @@ function montarNFe(order, opcoes) {
         vol: [{ qVol: 1, esp: 'Volume', pesoL: v3(opcoes.pesoKg || 0.1), pesoB: v3(opcoes.pesoKg || 0.1) }],
       },
       // Regra 822: tPag 99 (outros) exige xPag descrevendo o meio de pagamento.
+      // Regra 391: cartao de credito (03), debito (04) e — desde a NT 2025.001,
+      // em vigor em 01/09/2025 — PIX (17) exigem o grupo card.
+      //   tpIntegra 1 = pagamento integrado ao sistema (exige o CNPJ da
+      //                 instituicao de pagamento)
+      //   tpIntegra 2 = nao integrado (PIX por chave, maquininha avulsa)
       pag: {
-        detPag: [Object.assign(
-          { indPag: 0 },
-          T_PAG[o.payment_method] || PAG_PADRAO,
-          { vPag: v2(vNF) }
-        )],
+        detPag: [(() => {
+          const base = Object.assign({ indPag: 0 }, T_PAG[o.payment_method] || PAG_PADRAO, { vPag: v2(vNF) });
+          if (!['03', '04', '17'].includes(String(base.tPag))) return base;
+          const tpIntegra = String(fis.tp_integra || '2');
+          base.card = tpIntegra === '1'
+            ? { tpIntegra: '1', CNPJ: so(fis.cnpj_credenciadora) }
+            : { tpIntegra: '2' };
+          return base;
+        })()],
       },
       // Vem depois de pag e antes de infAdic — essa e a posicao no schema.
       infIntermed: inter ? { CNPJ: inter.cnpj, idCadIntTran: inter.idCad } : undefined,
