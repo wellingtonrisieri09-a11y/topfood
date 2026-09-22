@@ -572,16 +572,39 @@ function nfeBox(o) {
 // A emissao agora e sincrona: quando a resposta chega, a SEFAZ ja autorizou
 // ou ja rejeitou. Nao ha mais o que ficar consultando em seguida.
 async function emitirNF(id) {
+  const ped = STATE.orders.find(x => x.id === id);
+  const cli = (ped && ped.customer) || {};
+  let doc = String(cli.cnpj || cli.cpf || '').replace(/\D/g, '');
+
+  // Pedido sem documento — o caso dos que vem do Mercado Livre — sairia com o
+  // CNPJ da propria TopFood no destinatario. Perguntar antes e melhor do que
+  // emitir uma nota no nome errado e descobrir depois.
+  if (!doc) {
+    const resp = prompt(
+      'O pedido ' + id + ' nao tem CPF nem CNPJ do cliente gravado.\n\n' +
+      'Digite o CPF (11 digitos) ou o CNPJ (14 digitos) do cliente.\n\n' +
+      'Em branco, a nota sai no CNPJ da propria TopFood — isso so serve ' +
+      'pra teste em homologacao, nao vale como nota do cliente.');
+    if (resp === null) return;                 // cancelou
+    doc = String(resp).replace(/\D/g, '');
+    if (doc && doc.length !== 11 && doc.length !== 14) {
+      toast('Documento invalido: CPF tem 11 digitos e CNPJ tem 14.', 'error');
+      return;
+    }
+  }
+
   if (!confirm('Emitir NF-e para o pedido ' + id + '? Isso gera a nota fiscal na SEFAZ.')) return;
   toast('Emitindo NF-e na SEFAZ... aguarde');
   try {
-    const r = await api('/api/eco/nfe/emitir/' + id, { method: 'POST' });
+    const r = await api('/api/eco/nfe/emitir/' + id, { method: 'POST', body: JSON.stringify({ doc }) });
     if (r.ok) {
       const o = STATE.orders.find(x => x.id === id);
       if (o) o.nfe = r.nfe || { status:'autorizado', chave:r.chave, numero:r.numero, serie:r.serie, ambiente:r.ambiente };
       toast('NF-e ' + r.numero + ' autorizada!' +
             (r.ambiente === 'homologacao' ? ' (homologacao — nao vale fiscalmente)' : ''));
-      (r.avisos || []).forEach(a => toast('Atencao: ' + a, 'error'));
+      // Aviso aqui e coisa que saiu na nota diferente do esperado. Toast some
+      // sozinho e passa batido — isso o dono precisa ler.
+      if ((r.avisos || []).length) alert('A nota foi autorizada, mas com ressalvas:\n\n- ' + r.avisos.join('\n- '));
       viewOrder(id);
       if (typeof loadNotasEmitidas === 'function') loadNotasEmitidas();
     } else {

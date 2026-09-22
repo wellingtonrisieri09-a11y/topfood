@@ -382,6 +382,7 @@ function registerNfeRoutes(app, readData, writeData, requireAuth) {
     try {
       const sefaz = require('./nfe_sefaz');
       const out = await sefaz.emitirEGravar(req.params.orderId, {
+        doc: (req.body && req.body.doc) || '',
         ie: (req.body && req.body.ie) || '',
         numero: (req.body && req.body.numero) || 0,
       });

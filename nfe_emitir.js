@@ -23,6 +23,15 @@ const pedidoId = arg('pedido');
 const enviar   = process.argv.includes('--enviar');
 const numeroForcado = parseInt(arg('numero')) || 0;
 // IE do cliente informada na hora: evita ter que editar o pedido so pra isso.
+// CPF/CNPJ do cliente informado na hora: pedido sem documento (Mercado Livre)
+// sairia com o CNPJ da propria TopFood no destinatario.
+const docArg = arg('doc');
+const docInformado = String(docArg || '').replace(/\D/g, '');
+if (docArg !== undefined && docInformado.length !== 11 && docInformado.length !== 14) {
+  console.log('\n  --doc=' + docArg + ' nao e CPF nem CNPJ.');
+  console.log('  CPF tem 11 digitos, CNPJ tem 14.\n');
+  process.exit(1);
+}
 const ieArg = arg('ie');
 const ieInformada = String(ieArg || '').replace(/\D/g, '');
 // Passar --ie=NUMERO (o exemplo literal) resultaria em IE vazia e a nota
@@ -52,6 +61,7 @@ if (ieArg !== undefined && !ieInformada) {
   if (!pedidoId) {
     console.log('\n  Informe o pedido:  node nfe_emitir.js --pedido=ML-2026-001');
     console.log('  Para forcar um numero:  --numero=900');
+    console.log('  Para informar o CPF/CNPJ do cliente:  --doc=33480055826');
     console.log('  Para informar a IE do cliente:  --ie=110042490114\n');
     const comNota = (readData('orders.json') || []).filter(o => !o.nfe).slice(0, 10);
     if (comNota.length) {
@@ -66,6 +76,14 @@ if (ieArg !== undefined && !ieInformada) {
   const idx = orders.findIndex(o => String(o.id) === pedidoId);
   if (idx < 0) { console.log('\n  Pedido ' + pedidoId + ' nao encontrado.\n'); process.exit(1); }
   const pedido = orders[idx];
+  if (docInformado) {
+    pedido.customer = Object.assign({}, pedido.customer);
+    if (docInformado.length === 11) { pedido.customer.cpf = docInformado; delete pedido.customer.cnpj; }
+    else { pedido.customer.cnpj = docInformado; delete pedido.customer.cpf; }
+    orders[idx] = pedido;
+    writeData('orders.json', orders);
+    console.log('  Documento do cliente gravado no pedido: ' + docInformado);
+  }
   if (ieInformada) {
     pedido.customer = Object.assign({}, pedido.customer, { ie: ieInformada });
     orders[idx] = pedido;
@@ -145,7 +163,7 @@ if (ieArg !== undefined && !ieInformada) {
 
   // Daqui pra frente e o mesmo caminho do botao do painel: envio, leitura do
   // retorno, gravacao no pedido e DANFE. Uma regra so pros dois.
-  const out = await nfe.emitirEGravar(pedidoId, { numero, ie: ieInformada });
+  const out = await nfe.emitirEGravar(pedidoId, { numero, ie: ieInformada, doc: docInformado });
 
   if (out.retorno) {
     console.log('  RETORNO DA SEFAZ:');

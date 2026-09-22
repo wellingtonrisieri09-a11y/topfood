@@ -630,11 +630,22 @@ async function emitirEGravar(pedidoId, opcoes) {
   if (idx < 0) return Object.assign({ ok: false, erro: 'Pedido ' + pedidoId + ' nao encontrado' }, base);
   const pedido = orders[idx];
 
-  // IE do cliente informada na hora da emissao: grava no pedido pra nao
-  // precisar redigitar numa segunda tentativa.
-  const ie = String(opcoes.ie || '').replace(/\D/g, '');
-  if (ie) {
-    pedido.customer = Object.assign({}, pedido.customer, { ie });
+  // CPF/CNPJ e IE do cliente informados na hora da emissao: gravam no pedido
+  // pra nao precisar redigitar numa segunda tentativa. O caso comum e o
+  // pedido do Mercado Livre, que chega sem documento nenhum.
+  const ie  = String(opcoes.ie || '').replace(/\D/g, '');
+  const doc = String(opcoes.doc || '').replace(/\D/g, '');
+  if (doc && doc.length !== 11 && doc.length !== 14) {
+    return Object.assign({ ok: false,
+      erro: 'O documento informado tem ' + doc.length + ' digito(s). ' +
+            'CPF tem 11 e CNPJ tem 14.' }, base);
+  }
+  if (ie || doc) {
+    const novo = Object.assign({}, pedido.customer);
+    if (ie) novo.ie = ie;
+    if (doc.length === 11) { novo.cpf = doc; delete novo.cnpj; }
+    if (doc.length === 14) { novo.cnpj = doc; delete novo.cpf; }
+    pedido.customer = novo;
     orders[idx] = pedido;
     writeData('orders.json', orders);
   }
