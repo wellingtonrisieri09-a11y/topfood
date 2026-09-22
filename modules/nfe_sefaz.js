@@ -180,6 +180,23 @@ const T_PAG = {
   boleto: '15', dinheiro: '01', mercadolivre: '99',
 };
 
+// Data-hora de emissao no formato da NF-e, no fuso de Brasilia.
+//
+// O relogio da VPS roda em UTC. Fazer toISOString() e trocar o "Z" por
+// "-03:00" NAO converte nada: rotula a hora UTC como se fosse horario de
+// Brasilia e joga a emissao 3 horas pro futuro — a SEFAZ devolve
+// "Data-Hora de Emissao posterior ao horario de recebimento".
+//
+// O Brasil nao tem mais horario de verao, entao -03:00 e fixo pra SP.
+function dhEmiAgora(quando) {
+  const base = quando ? new Date(quando) : new Date();
+  const brasilia = new Date(base.getTime() - 3 * 60 * 60 * 1000);
+  const p = n => String(n).padStart(2, '0');
+  return brasilia.getUTCFullYear() + '-' + p(brasilia.getUTCMonth() + 1) + '-' + p(brasilia.getUTCDate()) +
+         'T' + p(brasilia.getUTCHours()) + ':' + p(brasilia.getUTCMinutes()) + ':' + p(brasilia.getUTCSeconds()) +
+         '-03:00';
+}
+
 // Campo opcional vazio nao pode ir pro XML: a SEFAZ valida tamanho minimo, e
 // <email></email> e rejeitado com "length of 0 underruns minimum of 1". Isso
 // vale pra qualquer opcional (xCpl, fone, email...), entao limpamos de uma vez
@@ -386,7 +403,7 @@ async function emitirPedido(order, opcoes) {
   const numero = (opcoes && opcoes.numero) || proximoNumero();
   const nota = montarNFe(order, {
     numero,
-    dhEmi: new Date().toISOString().replace(/\.\d{3}Z$/, '-03:00'),
+    dhEmi: dhEmiAgora(),
     tpAmb: AMBIENTE[fis.ambiente],
     pesoKg: (opcoes && opcoes.pesoKg) || 0.1,
     codMunicipioDest: opcoes && opcoes.codMunicipioDest,
@@ -416,5 +433,5 @@ module.exports = {
   CERT_FILE, XML_DIR, AMBIENTE,
   getEmitente, getFiscal, checarConfig,
   getWizard, resetWizard, statusServico,
-  montarNFe, proximoNumero, emitirPedido,
+  montarNFe, proximoNumero, emitirPedido, dhEmiAgora,
 };

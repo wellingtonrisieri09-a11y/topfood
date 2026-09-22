@@ -75,7 +75,7 @@ if (!pedido) {
 }
 
 const i = nfe.montarNFe(pedido, {
-  numero: 1, dhEmi: new Date().toISOString().replace(/\.\d{3}Z$/, '-03:00'),
+  numero: 1, dhEmi: nfe.dhEmiAgora(),
   tpAmb: nfe.AMBIENTE[nfe.getFiscal().ambiente],
 }).infNFe;
 

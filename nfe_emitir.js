@@ -56,7 +56,7 @@ const enviar   = process.argv.includes('--enviar');
   // Sempre mostra o que vai ser enviado. Conferir antes e mais barato
   // que cancelar depois.
   const previa = nfe.montarNFe(pedido, {
-    numero, dhEmi: new Date().toISOString().replace(/\.\d{3}Z$/, '-03:00'),
+    numero, dhEmi: nfe.dhEmiAgora(),
     tpAmb: nfe.AMBIENTE[fis.ambiente], pesoKg: 0.1,
   });
   const i = previa.infNFe;
