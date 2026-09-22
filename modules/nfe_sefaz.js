@@ -45,6 +45,9 @@ function getEmitente() {
     cep:        String(e.cep || '09850720').replace(/\D/g, ''),
     inscricao_estadual: String(f.inscricao_estadual || '').replace(/\D/g, ''),
     regime_tributario:  parseInt(f.regime_tributario) || 1,  // 1 = Simples Nacional
+    // Telefone do emitente: sai impresso no DANFE. Sem ele o PDF mostra
+    // "TEL: undefined". Cai no WhatsApp da loja quando nao ha um fiscal.
+    fone: String(e.fone || s.whatsapp || '').replace(/\D/g, '').replace(/^55/, ''),
   };
 }
 
@@ -407,6 +410,7 @@ function montarNFe(order, opcoes) {
           xBairro: limpa(emit.bairro, 60),
           cMun: parseInt(emit.codMunicipio), xMun: limpa(emit.municipio, 60),
           UF: emit.uf, CEP: emit.cep, cPais: 1058, xPais: 'BRASIL',
+          fone: emit.fone || undefined,
         },
         IE: emit.inscricao_estadual,
         CRT: emit.regime_tributario,               // 1 = Simples Nacional
