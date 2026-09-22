@@ -238,12 +238,16 @@ function montarNFe(order, opcoes) {
         cProd: limpa(it.id || it.product_id || ('ITEM' + (i + 1)), 60),
         // A ordem aqui e a ordem do XML e o schema e rigido: cEANTrib vem
         // depois de vProd, nao junto do cEAN.
-        cEAN: 'SEM',
+        //
+        // Produto sem codigo de barras: o valor aceito e "SEM GTIN", com
+        // espaco (NT 2016/003). O antigo "SEM" e recusado pelo padrao
+        // 'SEM GTIN|[0-9]{0}|[0-9]{8}|[0-9]{12,14}'.
+        cEAN: 'SEM GTIN',
         xProd: limpa(it.name, 120) || 'Embalagem',
         NCM: fis.ncm,
         CFOP: cfop,
         uCom: fis.unidade, qCom: qtd, vUnCom: v4(unit), vProd: v2(total),
-        cEANTrib: 'SEM',
+        cEANTrib: 'SEM GTIN',
         uTrib: fis.unidade, qTrib: qtd, vUnTrib: v4(unit),
         indTot: 1,
       },
