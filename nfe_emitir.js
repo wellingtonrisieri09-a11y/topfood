@@ -21,6 +21,7 @@ const so  = v => String(v == null ? '' : v).replace(/\D/g, '');
 const arg = n => (process.argv.find(a => a.startsWith('--' + n + '=')) || '').split('=')[1];
 const pedidoId = arg('pedido');
 const enviar   = process.argv.includes('--enviar');
+const numeroForcado = parseInt(arg('numero')) || 0;
 
 (async () => {
   console.log('\n  ===== emissao de NF-e =====\n');
@@ -30,7 +31,8 @@ const enviar   = process.argv.includes('--enviar');
   console.log('  Ambiente: ' + fis.ambiente + (producao ? '   *** PRODUCAO — A NOTA VALE FISCALMENTE ***' : '   (teste — nao vale fiscalmente)'));
 
   if (!pedidoId) {
-    console.log('\n  Informe o pedido:  node nfe_emitir.js --pedido=ML-2026-001\n');
+    console.log('\n  Informe o pedido:  node nfe_emitir.js --pedido=ML-2026-001');
+    console.log('  Para forcar um numero:  --numero=900\n');
     const comNota = (readData('orders.json') || []).filter(o => !o.nfe).slice(0, 10);
     if (comNota.length) {
       console.log('  Pedidos sem nota emitida:');
@@ -51,7 +53,7 @@ const enviar   = process.argv.includes('--enviar');
     process.exit(1);
   }
 
-  const numero = nfe.proximoNumero();
+  const numero = numeroForcado || nfe.proximoNumero(fis.ambiente);
   console.log('  Pedido:   ' + pedido.id + '  ·  R$ ' + pedido.total + '  ·  ' + ((pedido.customer || {}).name || ''));
   console.log('  Nota:     n ' + numero + ' / serie ' + fis.serie + '\n');
 
@@ -116,6 +118,15 @@ const enviar   = process.argv.includes('--enviar');
     out = await nfe.emitirPedido(pedido, { numero });
   } catch (e) {
     console.log('  ERRO: ' + e.message + '\n');
+    // Rejeicao 539: ja existe nota com esse numero/serie para o CNPJ. Pode ser
+    // de outro emissor usado antes (a Focus, por exemplo). Avanca o contador
+    // pra proxima tentativa nao insistir no mesmo numero.
+    if (/duplicidade/i.test(e.message)) {
+      nfe.reservarNumero(numero + 1, fis.ambiente);
+      console.log('  O numero ' + numero + ' ja existe na SEFAZ (' + fis.ambiente + ').');
+      console.log('  Pode ser nota emitida por outro sistema antes deste.');
+      console.log('  Contador avancado — rode de novo que ele tenta o ' + (numero + 1) + '.\n');
+    }
     process.exit(1);
   }
 

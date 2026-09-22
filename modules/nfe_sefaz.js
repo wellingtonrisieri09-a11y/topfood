@@ -453,18 +453,47 @@ function montarNFe(order, opcoes) {
   });
 }
 
-// Numero da proxima nota. A SEFAZ recusa numero repetido na mesma serie,
-// entao o controle e nosso: o maior ja usado + 1.
-function proximoNumero() {
-  const orders = readData('orders.json') || [];
-  let maior = 0;
-  orders.forEach(o => {
-    const n = parseInt(o.nfe && o.nfe.numero);
-    if (n > maior) maior = n;
-  });
+// Numeracao das notas.
+//
+// Homologacao e producao tem numeracao INDEPENDENTE na SEFAZ. Manter um
+// contador so faria os testes queimarem numeros de producao — e um numero
+// pulado em producao e coisa que o fisco pergunta depois.
+function chaveContador(ambiente) {
+  return ambiente === 'producao' ? 'ultimo_numero' : 'ultimo_numero_homologacao';
+}
+
+function proximoNumero(ambiente) {
+  const amb = ambiente || getFiscal().ambiente;
   const s = readData('settings.json') || {};
-  const guardado = parseInt((s.fiscal || {}).ultimo_numero) || 0;
+  const guardado = parseInt((s.fiscal || {})[chaveContador(amb)]) || 0;
+
+  // Em producao, as notas ja registradas nos pedidos tambem contam: e de la
+  // que vem o numero 2 emitido pela Focus.
+  let maior = 0;
+  if (amb === 'producao') {
+    (readData('orders.json') || []).forEach(o => {
+      const n = parseInt(o.nfe && o.nfe.numero);
+      if (n > maior) maior = n;
+    });
+  }
   return Math.max(maior, guardado) + 1;
+}
+
+// Reserva o numero ANTES de enviar. Se a SEFAZ rejeitar, o numero esta
+// queimado de qualquer jeito — reaproveitar da duplicidade. Antes isso ficava
+// depois do envio e a excecao da rejeicao pulava a gravacao, fazendo toda
+// tentativa repetir o mesmo numero.
+function reservarNumero(numero, ambiente) {
+  const amb = ambiente || getFiscal().ambiente;
+  const s = readData('settings.json') || {};
+  const f = Object.assign({}, s.fiscal);
+  const atual = parseInt(f[chaveContador(amb)]) || 0;
+  if (numero > atual) {
+    f[chaveContador(amb)] = numero;
+    s.fiscal = f;
+    writeData('settings.json', s);
+  }
+  return numero;
 }
 
 // Emite a nota de um pedido e devolve o retorno da SEFAZ.
@@ -473,7 +502,8 @@ async function emitirPedido(order, opcoes) {
   const faltam = checarConfig();
   if (faltam.length) throw new Error('Configuração incompleta: ' + faltam.join(', '));
 
-  const numero = (opcoes && opcoes.numero) || proximoNumero();
+  const numero = (opcoes && opcoes.numero) || proximoNumero(fis.ambiente);
+  reservarNumero(numero, fis.ambiente);
   const nota = montarNFe(order, {
     numero,
     dhEmi: dhEmiAgora(),
@@ -493,12 +523,6 @@ async function emitirPedido(order, opcoes) {
     NFe: nota,
   });
 
-  // Guarda o numero usado mesmo se a SEFAZ rejeitar: numero queimado nao
-  // volta, e reaproveitar gera duplicidade.
-  const s = readData('settings.json') || {};
-  s.fiscal = Object.assign({}, s.fiscal, { ultimo_numero: numero });
-  writeData('settings.json', s);
-
   return { numero, nota, retorno };
 }
 
@@ -506,5 +530,5 @@ module.exports = {
   CERT_FILE, XML_DIR, AMBIENTE,
   getEmitente, getFiscal, checarConfig,
   getWizard, resetWizard, statusServico,
-  montarNFe, proximoNumero, emitirPedido, dhEmiAgora, codMunicipio,
+  montarNFe, proximoNumero, reservarNumero, emitirPedido, dhEmiAgora, codMunicipio,
 };
