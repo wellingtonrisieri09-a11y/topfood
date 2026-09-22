@@ -53,6 +53,7 @@ function validaIeSP(ie) {
 
 const confirmar = process.argv.includes('--confirm');
 const argIE = (process.argv.find(a => a.startsWith('--ie=')) || '').split('=')[1];
+const argAmb = (process.argv.find(a => a.startsWith('--ambiente=')) || '').split('=')[1];
 const ie = (argIE || '').replace(/\D/g, '') || EMITENTE.inscricao_estadual;
 
 const s = readData('settings.json') || {};
@@ -90,6 +91,8 @@ if (!confirmar) {
 f.emitente = Object.assign({}, f.emitente, EMITENTE);
 if (ie) f.inscricao_estadual = ie;
 if (!f.regime_tributario) f.regime_tributario = 1;       // Simples Nacional (porte ME)
+// --ambiente troca explicitamente; sem ele, so define quando ainda nao existe.
+if (argAmb === 'producao' || argAmb === 'homologacao') f.ambiente = argAmb;
 if (!f.ambiente)          f.ambiente = 'homologacao';     // sempre comeca em teste
 if (!f.serie)             f.serie = 1;
 s.fiscal = f;

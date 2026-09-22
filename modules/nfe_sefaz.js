@@ -262,7 +262,12 @@ function montarNFe(order, opcoes) {
         CRT: emit.regime_tributario,               // 1 = Simples Nacional
       },
       dest: Object.assign({}, destDoc, {
-        xNome: limpa(cli.name, 60) || 'CONSUMIDOR',
+        // Regra da SEFAZ: em homologacao a razao social do destinatario TEM
+        // que ser exatamente esta frase, senao a nota e rejeitada. Serve pra
+        // ninguem confundir nota de teste com nota de verdade.
+        xNome: opcoes.tpAmb === 2
+          ? 'NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL'
+          : (limpa(cli.name, 60) || 'CONSUMIDOR'),
         enderDest: {
           xLgr: limpa(ship.address || ship.logradouro, 60) || 'NAO INFORMADO',
           nro: limpa(ship.number || ship.numero, 60) || 'S/N',
