@@ -145,6 +145,12 @@ function conferirRegras(i) {
   if (Math.abs(somaPag - num(tot.vNF)) > 0.01)
     erros.push('pagamento (' + somaPag.toFixed(2) + ') nao soma o total da nota (' + tot.vNF + ')');
 
+  // 822 — meio de pagamento "outros" exige descricao
+  [].concat((i.pag || {}).detPag || []).forEach((d, n) => {
+    if (String(d.tPag) === '99' && !d.xPag)
+      erros.push('pagamento ' + (n + 1) + ': tPag=99 (outros) exige xPag com a descricao');
+  });
+
   // Destinatario sem documento e recusado
   if (!dest.CNPJCPF && !dest.CNPJ && !dest.CPF && !dest.idEstrangeiro)
     erros.push('destinatario sem CPF/CNPJ');

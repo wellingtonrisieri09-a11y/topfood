@@ -174,11 +174,24 @@ const UF_IBGE = {
   RS:43, RO:11, RR:14, SC:42, SP:35, SE:28, TO:17,
 };
 
-// Forma de pagamento do site -> codigo da NF-e (tPag)
+// Forma de pagamento do site -> codigo da NF-e (tPag) e, quando o codigo e
+// 99 (outros), a descricao obrigatoria (xPag).
+//
+// As chaves sao os valores que o sistema realmente grava em payment_method —
+// conferidos no codigo, nao supostos. "mercado_livre" vem com underscore; sem
+// isso caia no 99 sem descricao e a SEFAZ recusava.
 const T_PAG = {
-  pix: '17', credit_card: '03', mercadopago: '99', whatsapp: '99',
-  boleto: '15', dinheiro: '01', mercadolivre: '99',
+  pix:           { tPag: '17' },                                  // PIX
+  credit_card:   { tPag: '03' },                                  // cartao de credito
+  boleto:        { tPag: '15' },                                  // boleto bancario
+  dinheiro:      { tPag: '01' },
+  mercadopago:   { tPag: '99', xPag: 'Mercado Pago' },
+  mercado_livre: { tPag: '99', xPag: 'Mercado Pago (Mercado Livre)' },
+  shopee:        { tPag: '99', xPag: 'Shopee Pay' },
+  amazon:        { tPag: '99', xPag: 'Amazon Pay' },
+  whatsapp:      { tPag: '99', xPag: 'A combinar pelo WhatsApp' },
 };
+const PAG_PADRAO = { tPag: '99', xPag: 'Outros' };
 
 // Codigo IBGE do municipio (7 digitos), obrigatorio no endereco da NF-e.
 // A tabela dos 5571 municipios vem embutida (data_municipios.json): resolver
@@ -423,8 +436,13 @@ function montarNFe(order, opcoes) {
         modFrete: vFrete > 0 ? 0 : 9,
         vol: [{ qVol: 1, esp: 'Volume', pesoL: v3(opcoes.pesoKg || 0.1), pesoB: v3(opcoes.pesoKg || 0.1) }],
       },
+      // Regra 822: tPag 99 (outros) exige xPag descrevendo o meio de pagamento.
       pag: {
-        detPag: [{ indPag: 0, tPag: T_PAG[o.payment_method] || '99', vPag: v2(vNF) }],
+        detPag: [Object.assign(
+          { indPag: 0 },
+          T_PAG[o.payment_method] || PAG_PADRAO,
+          { vPag: v2(vNF) }
+        )],
       },
       // Vem depois de pag e antes de infAdic — essa e a posicao no schema.
       infIntermed: inter ? { CNPJ: inter.cnpj, idCadIntTran: inter.idCad } : undefined,
