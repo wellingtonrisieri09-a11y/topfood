@@ -22,6 +22,8 @@ const arg = n => (process.argv.find(a => a.startsWith('--' + n + '=')) || '').sp
 const pedidoId = arg('pedido');
 const enviar   = process.argv.includes('--enviar');
 const numeroForcado = parseInt(arg('numero')) || 0;
+// IE do cliente informada na hora: evita ter que editar o pedido so pra isso.
+const ieInformada = String(arg('ie') || '').replace(/\D/g, '');
 
 (async () => {
   console.log('\n  ===== emissao de NF-e =====\n');
@@ -40,7 +42,8 @@ const numeroForcado = parseInt(arg('numero')) || 0;
 
   if (!pedidoId) {
     console.log('\n  Informe o pedido:  node nfe_emitir.js --pedido=ML-2026-001');
-    console.log('  Para forcar um numero:  --numero=900\n');
+    console.log('  Para forcar um numero:  --numero=900');
+    console.log('  Para informar a IE do cliente:  --ie=123456789012\n');
     const comNota = (readData('orders.json') || []).filter(o => !o.nfe).slice(0, 10);
     if (comNota.length) {
       console.log('  Pedidos sem nota emitida:');
@@ -54,6 +57,12 @@ const numeroForcado = parseInt(arg('numero')) || 0;
   const idx = orders.findIndex(o => String(o.id) === pedidoId);
   if (idx < 0) { console.log('\n  Pedido ' + pedidoId + ' nao encontrado.\n'); process.exit(1); }
   const pedido = orders[idx];
+  if (ieInformada) {
+    pedido.customer = Object.assign({}, pedido.customer, { ie: ieInformada });
+    orders[idx] = pedido;
+    writeData('orders.json', orders);
+    console.log('  IE do cliente informada e gravada no pedido: ' + ieInformada);
+  }
 
   if (pedido.nfe && pedido.nfe.status === 'autorizado') {
     console.log('\n  Esse pedido JA tem nota autorizada (n ' + pedido.nfe.numero + ', chave ' + pedido.nfe.chave + ').');
