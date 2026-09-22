@@ -180,6 +180,32 @@ const T_PAG = {
   boleto: '15', dinheiro: '01', mercadolivre: '99',
 };
 
+// Marketplaces conhecidos. Venda pela internet em site de terceiro exige
+// declarar quem intermediou (NT 2020.006) — sem isso a SEFAZ rejeita com
+// "NF-e sem indicativo do intermediador".
+const INTERMEDIADORES = {
+  mercado_livre: { cnpj: '03361252000134', nome: 'Mercado Livre' },
+  shopee:        { cnpj: '35635824000112', nome: 'Shopee' },
+};
+
+// Descobre se o pedido veio de marketplace e qual.
+function intermediadorDoPedido(o) {
+  const canal = String((o && o.channel) || '').toLowerCase();
+  const id    = String((o && o.id) || '');
+  if (canal === 'mercado_livre' || /^ML-/i.test(id)) {
+    return {
+      chave: 'mercado_livre',
+      cnpj: INTERMEDIADORES.mercado_livre.cnpj,
+      // identificacao do vendedor no site do intermediador
+      idCad: String((o && o.ml_account_nickname) || (o && o.ml_account) || 'TOPFOOD').slice(0, 60),
+    };
+  }
+  if (canal === 'shopee' || /^SP-/i.test(id)) {
+    return { chave: 'shopee', cnpj: INTERMEDIADORES.shopee.cnpj, idCad: 'TOPFOOD' };
+  }
+  return null;   // venda no site proprio: sem intermediador
+}
+
 // Data-hora de emissao no formato da NF-e, no fuso de Brasilia.
 //
 // O relogio da VPS roda em UTC. Fazer toISOString() e trocar o "Z" por
@@ -227,6 +253,7 @@ function montarNFe(order, opcoes) {
   const ship = o.shipping || {};
   const cli  = o.customer || {};
 
+  const inter  = intermediadorDoPedido(o);
   const ufDest = String(ship.state || ship.uf || emit.uf).toUpperCase().slice(0, 2);
   const dentroDoEstado = ufDest === emit.uf;
   const cfop = parseInt(dentroDoEstado ? fis.cfop_dentro : fis.cfop_fora);
@@ -317,6 +344,8 @@ function montarNFe(order, opcoes) {
         finNFe: 1,                                 // nota normal
         indFinal: doc.length === 11 ? 1 : 0,       // consumidor final se pessoa fisica
         indPres: 2,                                // operacao pela internet
+        // 0 = sem intermediador (loja propria) · 1 = site de terceiro
+        indIntermed: inter ? 1 : 0,
         procEmi: 0, verProc: 'TopFood/1.0',
       },
       emit: {
@@ -373,6 +402,8 @@ function montarNFe(order, opcoes) {
       pag: {
         detPag: [{ indPag: 0, tPag: T_PAG[o.payment_method] || '99', vPag: v2(vNF) }],
       },
+      // Vem depois de pag e antes de infAdic — essa e a posicao no schema.
+      infIntermed: inter ? { CNPJ: inter.cnpj, idCadIntTran: inter.idCad } : undefined,
       infAdic: {
         infCpl: limpa('Pedido ' + (o.id || '') + '. Documento emitido por ME optante pelo Simples Nacional.', 500),
       },

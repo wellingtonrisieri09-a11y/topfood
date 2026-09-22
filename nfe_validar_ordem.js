@@ -28,6 +28,7 @@ const SEQ = {
   transp: ['modFrete','transporta','retTransp','veicTransp','reboque','vagao','balsa','vol'],
   vol: ['qVol','esp','marca','nVol','pesoL','pesoB','lacres'],
   detPag: ['indPag','tPag','xPag','vPag','dPag','CNPJPag','UFPag','card','vTroco','CNPJReceb','idTermPag'],
+  infIntermed: ['CNPJ','idCadIntTran'],
   infNFe: ['ide','NFref','emit','avulsa','dest','autXML','retirada','entrega','det','total','transp','cobr','pag','infIntermed','infAdic','exporta','compra','cana','infRespTec'],
 };
 
@@ -85,6 +86,7 @@ const blocos = {
   prod: i.det[0].prod, imposto: i.det[0].imposto,
   ICMSTot: i.total.ICMSTot, transp: i.transp,
   vol: [].concat(i.transp.vol)[0], detPag: [].concat(i.pag.detPag)[0],
+  infIntermed: i.infIntermed,
 };
 
 console.log('\n  ===== ordem dos campos vs schema 4.00 =====\n');
@@ -95,9 +97,9 @@ for (const [nome, obj] of Object.entries(blocos)) {
   const fora = ks.filter(k => !seq.includes(k));
   const pos  = ks.filter(k => seq.includes(k)).map(k => seq.indexOf(k));
   const ordemOk = pos.every((v, x) => x === 0 || v > pos[x - 1]);
-  if (ordemOk && !fora.length) { console.log('  ' + nome.padEnd(11) + 'ok'); continue; }
+  if (ordemOk && !fora.length) { console.log("  " + nome.padEnd(13) + "ok"); continue; }
   falhas++;
-  console.log('  ' + nome.padEnd(11) + 'PROBLEMA');
+  console.log('  ' + nome.padEnd(13) + 'PROBLEMA');
   if (!ordemOk) {
     console.log('      atual:    ' + ks.join(' > '));
     console.log('      esperado: ' + seq.filter(k => ks.includes(k)).join(' > '));
