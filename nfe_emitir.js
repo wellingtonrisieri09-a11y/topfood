@@ -184,6 +184,37 @@ if (ieArg !== undefined && !ieInformada) {
     };
     writeData('orders.json', orders);
     console.log('\n  AUTORIZADA. Registrada no pedido ' + pedido.id + '.');
+
+    // Gera o DANFE na hora. Esperar alguem lembrar de gerar depois e como
+    // nao ter o PDF: quando precisa, precisa agora.
+    if (mChave) {
+      try {
+        const fsL = require('fs'), pathL = require('path');
+        const dir = pathL.join(nfe.XML_DIR, 'danfe');
+        if (!fsL.existsSync(dir)) fsL.mkdirSync(dir, { recursive: true });
+        const pdf = pathL.join(dir, 'DANFE-' + mChave[1] + '.pdf');
+        const achaXml = () => {
+          for (const sub of ['autorizacao', 'retorno']) {
+            const d = pathL.join(nfe.XML_DIR, sub);
+            if (!fsL.existsSync(d)) continue;
+            const f = fsL.readdirSync(d).filter(x => x.includes(mChave[1]) && x.endsWith('.xml'));
+            if (f.length) return pathL.join(d, f[f.length - 1]);
+          }
+          return null;
+        };
+        const xmlFile = achaXml();
+        if (xmlFile) {
+          const { gerarDanfe } = require('./modules/danfe_topfood');
+          await gerarDanfe({ xml: fsL.readFileSync(xmlFile, 'utf8'), chave: mChave[1], arquivo: pdf });
+          console.log('  DANFE: ' + pdf);
+        } else {
+          console.log('  (XML ainda nao apareceu em disco — gere o DANFE depois com nfe_danfe.js)');
+        }
+      } catch (e) {
+        console.log('  (nao consegui gerar o DANFE agora: ' + e.message + ')');
+        console.log('  Use: node nfe_danfe.js --pedido=' + pedido.id);
+      }
+    }
     console.log('  Chave: ' + (mChave ? mChave[1] : '(ver retorno acima)'));
     if (!producao) console.log('\n  Lembre: homologacao. Esta nota NAO vale fiscalmente.');
     console.log('');

@@ -3045,8 +3045,12 @@ async function loadNotasEmitidas(){
     NOTAS_EMITIDAS = r.notas || [];
 
     if(rs){
-      const aviso = r.ambiente === 'homologacao'
-        ? ' <span style="color:#B45309;font-weight:700">— ambiente de homologacao: estas notas sao de teste e nao valem fiscalmente</span>'
+      // O aviso segue as notas, nao a configuracao de agora: depois de virar
+      // producao as notas de teste continuam existindo na lista e precisam
+      // continuar avisando que nao valem fiscalmente.
+      const temTeste = NOTAS_EMITIDAS.some(n => (n.ambiente || r.ambiente) === 'homologacao');
+      const aviso = temTeste
+        ? ' <span style="color:#B45309;font-weight:700">— ha notas de homologacao nesta lista: as marcadas como TESTE nao valem fiscalmente</span>'
         : '';
       rs.innerHTML = r.total
         ? `${r.total} nota(s) · ${r.autorizadas} autorizada(s) · R$ ${fmt(r.valor_autorizado)} autorizado${aviso}`
@@ -3061,7 +3065,8 @@ async function loadNotasEmitidas(){
     tb.innerHTML = NOTAS_EMITIDAS.map(n=>{
       const [txt,cor,bg] = NFE_LABEL[n.status] || [n.status,'#6B7280','#F3F4F6'];
       return `<tr>
-        <td><b>${n.numero||'—'}</b>${n.serie?' / '+escapeHtml(n.serie):''}</td>
+        <td><b>${n.numero||'—'}</b>${n.serie?' / '+escapeHtml(n.serie):''}
+            ${n.ambiente==='homologacao'?'<div style="font-size:.6rem;font-weight:700;color:#B45309">TESTE</div>':''}</td>
         <td>${escapeHtml(n.pedido)}</td>
         <td>${escapeHtml(n.cliente||'—')}</td>
         <td>${escapeHtml(n.uf||'—')}</td>
@@ -3087,9 +3092,10 @@ async function loadNotasEmitidas(){
 function exportNotasCSV(){
   if(!NOTAS_EMITIDAS.length) return toast('Nenhuma nota para exportar','info');
   const esc = v => '"'+String(v==null?'':v).replace(/"/g,'""')+'"';
-  const linhas = [['Numero','Serie','Chave de acesso','Status','Pedido','Data','Cliente','CPF/CNPJ','UF','Valor'].join(';')];
+  const linhas = [['Numero','Serie','Chave de acesso','Status','Ambiente','Pedido','Data','Cliente','CPF/CNPJ','UF','Valor'].join(';')];
   NOTAS_EMITIDAS.forEach(n=>linhas.push([
     esc(n.numero), esc(n.serie), esc(n.chave), esc((NFE_LABEL[n.status]||[n.status])[0]),
+    esc(n.ambiente==='homologacao'?'TESTE (homologacao)':'Producao'),
     esc(n.pedido), esc(n.data?fmtDate(n.data):''), esc(n.cliente), esc(n.cpf_cnpj),
     esc(n.uf), esc(String(n.total).replace('.',','))
   ].join(';')));

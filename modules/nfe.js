@@ -320,6 +320,17 @@ function registerNfeRoutes(app, readData, writeData, requireAuth) {
   // livro de notas — toda NF-e ja emitida pelo site, da mais nova pra mais velha.
   // O registro da nota mora dentro do pedido (order.nfe); aqui ele e juntado numa
   // lista so, que e o que o contador pede no fim do mes.
+  // O DANFE do emissor proprio e um arquivo em disco, sem caminho_danfe da
+  // Focus — sem isto toda nota nossa aparecia como se nao tivesse PDF.
+  function temDanfeLocal(n) {
+    const chave = String((n && n.chave) || '').replace(/\D/g, '');
+    if (chave.length !== 44) return false;
+    try {
+      return require('fs').existsSync(
+        require('path').join(__dirname, '..', 'data', 'nfe', 'danfe', 'DANFE-' + chave + '.pdf'));
+    } catch (e) { return false; }
+  }
+
   app.get('/api/eco/nfe/emitidas', requireAuth, (req, res) => {
     try {
       const cfg = getFiscalConfig(readData);
@@ -327,7 +338,7 @@ function registerNfeRoutes(app, readData, writeData, requireAuth) {
         .filter(o => o && o.nfe)
         .map(o => ({
           pedido:   o.id || o.order_id || '',
-          data:     o.date || o.created_at || '',
+          data:     o.nfe.emitida_em || o.date || o.created_at || '',
           cliente:  (o.customer && o.customer.name) || '',
           cpf_cnpj: (o.customer && (o.customer.cpf || o.customer.cnpj)) || '',
           uf:       (o.shipping && o.shipping.state) || '',
@@ -338,7 +349,11 @@ function registerNfeRoutes(app, readData, writeData, requireAuth) {
           status:   o.nfe.status || 'processando_autorizacao',
           erro:     o.nfe.erro || '',
           ref:      o.nfe.ref || '',
-          tem_danfe: !!o.nfe.caminho_danfe,
+          // O ambiente fica gravado na propria nota: depois que a loja virar
+          // producao as notas velhas de homologacao continuam marcadas como
+          // teste, em vez de herdarem o ambiente atual e parecerem validas.
+          ambiente: o.nfe.ambiente || cfg.ambiente,
+          tem_danfe: temDanfeLocal(o.nfe) || !!o.nfe.caminho_danfe,
         }))
         .sort((a, b) => String(b.data).localeCompare(String(a.data)));
 

@@ -72,17 +72,12 @@ let chave = String(arg('chave') || '').replace(/\D/g, '');
 
   console.log('  Gerando o PDF...\n');
   try {
-    const { NFE_GerarDanfe } = require('@nfewizard/danfe');
-    const r = await NFE_GerarDanfe({ data: xml, chave, outputPath: arquivoPdf });
+    const { gerarDanfe } = require('./modules/danfe_topfood');
+    const r = await gerarDanfe({ xml, chave, arquivo: arquivoPdf });
     console.log('  ' + (r && r.message ? r.message : 'DANFE gerado.'));
   } catch (e) {
     console.log('  ERRO ao gerar o DANFE: ' + e.message + '\n');
     process.exit(1);
-  }
-
-  // O PDF e escrito por stream: esperamos o arquivo aparecer com tamanho.
-  for (let i = 0; i < 40 && !(fs.existsSync(arquivoPdf) && fs.statSync(arquivoPdf).size > 1000); i++) {
-    await new Promise(r => setTimeout(r, 250));
   }
 
   // O gerador pode criar subpasta, entao a busca desce um nivel e ignora

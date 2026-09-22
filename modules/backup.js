@@ -27,8 +27,32 @@ function runBackup() {
       try { fs.unlinkSync(path.join(BACKUP_DIR, f.name)); } catch(e){}
     });
 
-    console.log(`[backup] OK: ${dest} (${files.length} backup(s) após limpeza)`);
-    return { ok: true, file: dest };
+    // Os XMLs e DANFEs das notas NAO estao no banco: sao arquivos em
+    // data/nfe. Guardar XML de nota autorizada por 5 anos e obrigacao legal,
+    // entao eles entram no backup tambem — copiando so o que ainda nao foi
+    // copiado, pra nao repetir arquivo todo dia.
+    let fiscaisNovos = 0;
+    try {
+      const origem  = path.join(__dirname, "../data/nfe");
+      const destino = path.join(BACKUP_DIR, "fiscal");
+      for (const sub of ["autorizacao", "danfe", "retorno"]) {
+        const dirOrigem = path.join(origem, sub);
+        if (!fs.existsSync(dirOrigem)) continue;
+        const dirDestino = path.join(destino, sub);
+        if (!fs.existsSync(dirDestino)) fs.mkdirSync(dirDestino, { recursive: true });
+        for (const nome of fs.readdirSync(dirOrigem)) {
+          const de = path.join(dirOrigem, nome), para = path.join(dirDestino, nome);
+          if (fs.existsSync(para)) continue;
+          if (!fs.statSync(de).isFile()) continue;
+          fs.copyFileSync(de, para);
+          fiscaisNovos++;
+        }
+      }
+    } catch (e) { console.error("[backup] arquivos fiscais:", e.message); }
+
+    console.log(`[backup] OK: ${dest} (${files.length} backup(s) após limpeza)` +
+                (fiscaisNovos ? ` + ${fiscaisNovos} arquivo(s) fiscal(is)` : ""));
+    return { ok: true, file: dest, fiscais: fiscaisNovos };
   } catch(e) {
     console.error("[backup] ERRO:", e.message);
     return { ok: false, error: e.message };
