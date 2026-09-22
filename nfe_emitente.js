@@ -100,7 +100,7 @@ let doPadrao = 0;
 console.log('');
 CAMPOS.forEach(([flag, caminho, rotulo]) => {
   const noCadastro = pegar(f2, caminho);
-  const origem = noCadastro ? '' : '   <-- PADRAO do TopFood, nao do cadastro';
+  const origem = noCadastro ? '' : '   <-- VEM DO CODIGO, nao do cadastro deste site';
   if (!noCadastro) doPadrao++;
   console.log('    ' + rotulo.padEnd(20) + String(valores[flag] || '(vazio)').padEnd(34) + origem);
 });
@@ -115,14 +115,15 @@ const faltam = nfe.checarConfig();
 console.log('\n  Falta pra emitir: ' + (faltam.length ? faltam.join(', ') : 'nada — esta pronto.'));
 
 if (doPadrao) {
-  console.log('\n  ATENCAO: ' + doPadrao + ' campo(s) vindo(s) do padrao do TopFood.');
-  console.log('  Se este site NAO e o TopFood, a nota sairia com os dados da outra');
-  console.log('  empresa. Preencha cada um, por exemplo:');
-  console.log('    node nfe_emitente.js --cnpj=05788238000147 --nome="Forpack Embalagens Ltda" \\');
-  console.log('      --fantasia="Forpack Embalagens" --ie=111222333444 \\');
+  console.log('\n  ATENCAO: ' + doPadrao + ' campo(s) nao estao no cadastro deste site.');
+  console.log('  Eles vem de valores embutidos no codigo, que sao os da empresa de');
+  console.log('  onde este site foi copiado. Confira o CNPJ acima: se nao for o desta');
+  console.log('  empresa, a nota sairia no nome de outra. Preencha cada campo:');
+  console.log('    node nfe_emitente.js --cnpj=00000000000000 --nome="Razao Social Ltda" \\');
+  console.log('      --fantasia="Nome Fantasia" --ie=111222333444 \\');
   console.log('      --logradouro="Rua Exemplo" --numero=100 --bairro=Centro \\');
   console.log('      --municipio="Santo Andre" --uf=SP --cep=09120410 --fone=11978332442');
-  console.log('\n  Se este site E o TopFood, fixe os valores atuais no cadastro:');
+  console.log('\n  Se o CNPJ acima E o desta empresa, fixe os valores no cadastro:');
   console.log('    node nfe_emitente.js --gravar');
 }
 console.log('');
