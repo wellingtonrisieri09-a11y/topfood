@@ -1,4 +1,6 @@
-require('dotenv').config();
+// Carrega o .env pelo caminho do proprio script: assim o comando funciona
+// de qualquer diretorio, nao so de dentro de /var/www/topfood.
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
 const { readData, writeData, readSettings, db, auditLog, blacklistToken, isTokenBlacklisted, releaseExpiredReservations, cleanBlacklist, isProdutoInterno } = require('./db');

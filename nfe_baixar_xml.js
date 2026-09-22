@@ -15,7 +15,9 @@
 // regrava os dados da nota nele, pra ela voltar a aparecer em
 // "Notas emitidas" no painel.
 // ============================================================
-require('dotenv').config();
+// Carrega o .env pelo caminho do proprio script: assim o comando funciona
+// de qualquer diretorio, nao so de dentro de /var/www/topfood.
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const fs   = require('fs');
 const path = require('path');
 const { readData, writeData } = require('./db');

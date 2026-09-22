@@ -10,7 +10,9 @@
 //
 // Nao emite nada. So pergunta "voces estao no ar?".
 // ============================================================
-require('dotenv').config();
+// Carrega o .env pelo caminho do proprio script: assim o comando funciona
+// de qualquer diretorio, nao so de dentro de /var/www/topfood.
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const fs = require('fs');
 const nfe = require('./modules/nfe_sefaz');
 

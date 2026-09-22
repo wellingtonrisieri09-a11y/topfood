@@ -9,7 +9,9 @@
 // em producao exige carta de correcao ou cancelamento, e
 // cancelamento tem prazo de 24 horas.
 // ============================================================
-require('dotenv').config();
+// Carrega o .env pelo caminho do proprio script: assim o comando funciona
+// de qualquer diretorio, nao so de dentro de /var/www/topfood.
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const { readData, writeData } = require('./db');
 const nfe = require('./modules/nfe_sefaz');
 
