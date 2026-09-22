@@ -189,8 +189,14 @@ function montarNFe(order, opcoes) {
   const cfop = parseInt(dentroDoEstado ? fis.cfop_dentro : fis.cfop_fora);
 
   // CPF ou CNPJ do destinatario — o que vier preenchido.
-  const doc = so(cli.cnpj || cli.cpf || '');
-  const destDoc = doc.length === 14 ? { CNPJ: doc } : (doc.length === 11 ? { CPF: doc } : {});
+  let doc = so(cli.cnpj || cli.cpf || cli.documento || '');
+  // A SEFAZ (e a lib) exigem documento do destinatario. Em homologacao, quando
+  // o pedido nao tem CPF — caso dos pedidos importados do Mercado Livre —,
+  // usamos o CNPJ da propria TopFood: documento real, sem envolver terceiro,
+  // e a nota nao vale fiscalmente mesmo. Em producao isso nao acontece: o
+  // nfe_emitir.js recusa o pedido antes de chegar aqui.
+  if (!doc && opcoes.tpAmb === 2) doc = emit.cnpj;
+  const destDoc = doc ? { CNPJCPF: doc } : {};
 
   // Itens. O pedido guarda nome e preco do momento da compra; o NCM e a
   // unidade vem da config fiscal, iguais pra toda a linha de embalagens.
@@ -249,12 +255,14 @@ function montarNFe(order, opcoes) {
         tpImp: 1, tpEmis: 1,
         tpAmb: opcoes.tpAmb,                       // 1 producao, 2 homologacao
         finNFe: 1,                                 // nota normal
-        indFinal: doc.length === 11 ? 1 : 0,       // consumidor final se PF
+        indFinal: doc.length === 11 ? 1 : 0,       // consumidor final se pessoa fisica
         indPres: 2,                                // operacao pela internet
         procEmi: 0, verProc: 'TopFood/1.0',
       },
       emit: {
-        CNPJ: emit.cnpj,
+        // A lib espera CNPJCPF e ela mesma renomeia pra CNPJ ou CPF depois
+        // de validar. Mandar "CNPJ" direto da "Documento do emitente ausente".
+        CNPJCPF: emit.cnpj,
         xNome: limpa(emit.nome, 60),
         xFant: limpa(emit.fantasia, 60),
         enderEmit: {

@@ -13,6 +13,9 @@ require('dotenv').config();
 const { readData, writeData } = require('./db');
 const nfe = require('./modules/nfe_sefaz');
 
+const cli = p => (p && p.customer) || {};
+const so  = v => String(v == null ? '' : v).replace(/\D/g, '');
+
 const arg = n => (process.argv.find(a => a.startsWith('--' + n + '=')) || '').split('=')[1];
 const pedidoId = arg('pedido');
 const enviar   = process.argv.includes('--enviar');
@@ -59,7 +62,9 @@ const enviar   = process.argv.includes('--enviar');
   const i = previa.infNFe;
   console.log('  Natureza: ' + i.ide.natOp);
   console.log('  Emitente: ' + i.emit.xNome + '  IE ' + i.emit.IE);
-  console.log('  Destino:  ' + i.dest.xNome + '  ' + (i.dest.CPF ? 'CPF ' + i.dest.CPF : i.dest.CNPJ ? 'CNPJ ' + i.dest.CNPJ : '(sem documento)'));
+  const docDest = i.dest.CNPJCPF || i.dest.CNPJ || i.dest.CPF || '';
+  console.log('  Destino:  ' + i.dest.xNome + '  ' +
+    (docDest ? (docDest.length === 14 ? 'CNPJ ' : 'CPF ') + docDest : '(sem documento)'));
   console.log('            ' + i.dest.enderDest.xMun + '/' + i.dest.enderDest.UF + '  CEP ' + i.dest.enderDest.CEP);
   console.log('  Itens:');
   [].concat(i.det).forEach(d => console.log('    ' + d.prod.qCom + ' x ' + d.prod.xProd +
@@ -72,7 +77,7 @@ const enviar   = process.argv.includes('--enviar');
   // objetivo ali e exercitar o fluxo); em producao paramos, porque nota com
   // dado errado custa cancelamento em 24h ou carta de correcao.
   const problemas = [];
-  if (!i.dest.CPF && !i.dest.CNPJ) problemas.push('pedido sem CPF/CNPJ do cliente');
+  if (!so(cli(pedido).cnpj || cli(pedido).cpf)) problemas.push('pedido sem CPF/CNPJ do cliente');
   if (parseFloat(i.total.ICMSTot.vNF) <= 0) problemas.push('valor total zerado');
   const semEndereco = !((pedido.shipping || {}).address || (pedido.shipping || {}).logradouro);
   if (semEndereco) problemas.push('pedido sem endereco de entrega — a nota sairia com o endereco da propria TopFood no destinatario');
