@@ -399,6 +399,7 @@ app.use('/api/newsletter',               rateLimit('news', 15, 60 * 1000));
 app.post('/api/orders',                  rateLimit('pedido', 8, 60 * 1000), (req, res, next) => next());
 app.post('/api/asaas/credit-card',       rateLimit('cartao', 5, 10 * 60 * 1000), (req, res, next) => next());
 app.post('/api/pix-charge',              rateLimit('pix-cobranca', 10, 60 * 1000), (req, res, next) => next());
+app.post('/api/admin/abandoned',         rateLimit('carrinho', 10, 60 * 1000), (req, res, next) => next());
 app.post('/api/checkout',                rateLimit('mp-checkout', 10, 60 * 1000), (req, res, next) => next());
 
 // ============================================================
@@ -720,13 +721,42 @@ app.put('/api/admin/settings', requireAuth, requireRole('canSettings'), (req, re
 app.get('/api/admin/abandoned', requireAuth, (req, res) => {
   res.json(readData('abandoned.json'));
 });
+// Rota publica (a loja chama sozinha quando o visitante larga o carrinho),
+// entao trata tudo que chega como texto de estranho:
+//  - campo por campo, nada de espalhar req.body — antes dava pra sobrescrever
+//    o proprio id e a data do registro, ou gravar qualquer campo inventado;
+//  - mesmo piso de R$ 10 do pedido: depois que /api/orders passou a recusar
+//    valor baixo, o robo de cartao passou a deixar carrinho de R$ 5 no lugar;
+//  - guarda o IP, pra dar pra ver de onde vem quando repetir.
 app.post('/api/admin/abandoned', (req, res) => {
-  // Called by the store when a user abandons a cart
+  const b     = req.body || {};
+  const texto = (v, max) => String(v == null ? '' : v).slice(0, max);
+  const total = Math.round((parseFloat(b.total) || 0) * 100) / 100;
+
+  if (total > 0 && total < 10) {
+    console.warn('⛔ Carrinho abandonado recusado (R$ ' + total + ' abaixo do piso) | IP ' + clientIp(req));
+    return res.status(400).json({ ok: false, error: 'Valor invalido' });
+  }
+
+  const itens = (Array.isArray(b.items) ? b.items : []).slice(0, 30).map(i => ({
+    id:    texto(i && i.id, 80),
+    name:  texto(i && i.name, 160),
+    qty:   parseInt(i && i.qty) || 0,
+    price: Math.round((parseFloat(i && i.price) || 0) * 100) / 100,
+  }));
+
   const list = readData('abandoned.json');
   const entry = {
-    id: 'AB-' + String(Date.now()).slice(-6),
-    date: new Date().toISOString(),
-    ...req.body,
+    id:    'AB-' + String(Date.now()).slice(-6),
+    date:  new Date().toISOString(),
+    name:  texto(b.name, 120),
+    email: texto(b.email, 160),
+    phone: texto(b.phone, 40),
+    cep:   texto(b.cep, 20),
+    items: itens,
+    total,
+    ip:    clientIp(req),
+    ua:    texto(req.headers['user-agent'], 200),
     recovered: false,
   };
   list.unshift(entry);
@@ -1994,6 +2024,30 @@ setInterval(() => { try { cleanBlacklist(); releaseExpiredReservations(); } catc
                 'Copia em ' + arquivo + '. Sobraram ' +
                 (orders.length - alvos.length) + ' pedido(s) de verdade.');
   } catch (e) { console.error('[faxina] erro:', e.message); }
+})();
+
+// ── Faxina dos carrinhos abandonados de R$ 5 do mesmo robo ──
+// Depois que o pedido passou a ser recusado abaixo de R$ 10, o robo passou a
+// deixar carrinho abandonado de R$ 5 no lugar. Sujam a lista de recuperacao e
+// fazem o Wellington perseguir cliente que nao existe. Mesma logica da faxina
+// dos pedidos: guarda antes, so alcanca as linhas velhas (o piso ja barra os
+// novos), e quando a lista estiver limpa nao faz mais nada.
+(function faxinaCarrinhosDeTeste() {
+  try {
+    const lista = readData('abandoned.json') || [];
+    const alvos = lista.filter(c => { const v = parseFloat(c.total) || 0; return v > 0 && v < 10; });
+    if (!alvos.length) return;
+
+    const dir = path.join(__dirname, 'data');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const ts      = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const arquivo = path.join(dir, 'carrinhos-removidos-' + ts + '.json');
+    fs.writeFileSync(arquivo, JSON.stringify(alvos, null, 2), 'utf8');
+
+    writeData('abandoned.json', lista.filter(c => { const v = parseFloat(c.total) || 0; return !(v > 0 && v < 10); }));
+    console.log('🧹 Faxina: ' + alvos.length + ' carrinho(s) de teste removido(s). ' +
+                'Copia em ' + arquivo + '. Sobraram ' + (lista.length - alvos.length) + '.');
+  } catch (e) { console.error('[faxina-carrinho] erro:', e.message); }
 })();
 
 // ── Telefone novo da TopFood: (11) 97833-2442 (18/09) ──
