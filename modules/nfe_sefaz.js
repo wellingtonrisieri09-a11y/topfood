@@ -508,6 +508,31 @@ function reservarNumero(numero, ambiente) {
   return numero;
 }
 
+// Pergunta pra SEFAZ se um CNPJ e contribuinte de ICMS e qual a IE dele.
+//
+// Sem isso so restaria adivinhar: chutar "nao contribuinte" pra quem tem IE
+// da rejeicao, e chutar "contribuinte" sem ter a IE tambem. A propria SEFAZ
+// responde — e a resposta dela e a que vale.
+//
+// Devolve { contribuinte, ie, nome, situacao } ou null se nao conseguir
+// consultar (a nota segue pelo caminho normal, sem travar a venda).
+async function consultarCadastro(cnpj, uf) {
+  const doc = String(cnpj || '').replace(/\D/g, '');
+  if (doc.length !== 14) return null;
+  try {
+    const w = await getWizard();
+    const r = await w.NFE_ConsultaCadastro({ uf: uf || getEmitente().uf, cnpj: doc });
+    const txt = JSON.stringify(r || {});
+    // cStat 111 = consulta com uma ocorrencia · 112 = com mais de uma
+    const ie   = (txt.match(/"IE"\s*:\s*"?(\d{2,14})/) || [])[1] || '';
+    const nome = (txt.match(/"xNome"\s*:\s*"([^"]+)/) || [])[1] || '';
+    const sit  = (txt.match(/"cSit"\s*:\s*"?(\d)/) || [])[1] || '';
+    return { contribuinte: !!ie && sit === '1', ie, nome, situacao: sit, bruto: r };
+  } catch (e) {
+    return { erro: e.message };
+  }
+}
+
 // Emite a nota de um pedido e devolve o retorno da SEFAZ.
 async function emitirPedido(order, opcoes) {
   const fis = getFiscal();
@@ -543,4 +568,5 @@ module.exports = {
   getEmitente, getFiscal, checarConfig,
   getWizard, resetWizard, statusServico,
   montarNFe, proximoNumero, reservarNumero, emitirPedido, dhEmiAgora, codMunicipio,
+  consultarCadastro,
 };
