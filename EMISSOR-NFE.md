@@ -24,6 +24,7 @@ cadastro.
 | `modules/nfe_sefaz.js` | O emissor. Monta o XML no layout 4.00, assina, envia, lê o retorno, grava a nota no pedido e gera o DANFE |
 | `modules/danfe_topfood.js` | O DANFE em PDF, com o logo do site e a tipografia ajustada |
 | `data_municipios.json` | Os 5.571 códigos IBGE de município (a SEFAZ recusa se o código não bater com a UF) |
+| `instalar_nfe.js` | Instala o emissor neste site: pergunta os dados da empresa, grava, zera a numeração e diz o que falta |
 | `nfe_emitente.js` | Mostra e preenche quem assina a nota neste site |
 | `nfe_numeracao.js` | Numeração das notas e troca de ambiente (teste ↔ produção) |
 | `nfe_emitir.js` | Emitir pela linha de comando (prévia, `--enviar`) |
@@ -46,6 +47,20 @@ Emitir NF-e**, e a aba **Notas Fiscais** com o histórico, o PDF e o XML.
 O que **não** precisa: conta em provedor, token de API, mensalidade.
 
 ---
+
+## Instalar num site novo — o caminho curto
+
+Depois de levar os arquivos (passo 1 abaixo), um comando só faz os passos 3 a 5
+e ainda escreve o bilhete do certificado:
+
+```
+node /var/www/SEUSITE/instalar_nfe.js
+```
+
+Ele pergunta cada dado da empresa, resolve o código IBGE, deixa o ambiente em
+teste, zera a numeração e recusa rodar num site que já está em produção. Os
+passos abaixo são o mesmo caminho na mão, para quando você quiser controlar
+cada etapa.
 
 ## Instalar num site novo — passo a passo
 

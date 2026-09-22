@@ -15,3 +15,6 @@ index_backup_*.html
 # Certificado digital A1 — NUNCA no repositorio, em pasta nenhuma
 *.pfx
 *.p12
+
+# Bilhete gerado pelo instalador do emissor de NF-e, por site
+FALTA-CERTIFICADO.md
