@@ -238,9 +238,14 @@ function montarNFe(order, opcoes) {
   const vDesc  = parseFloat(o.discount || 0) || 0;
   const vNF    = Math.round((vProd + vFrete - vDesc) * 100) / 100;
 
+  // Sem "versao" e sem "Id" aqui: a lib monta infNFe como
+  // { $: { versao, Id }, ...este objeto } — mandar versao junto faz virar um
+  // elemento <versao> dentro do infNFe, e o schema espera <ide> primeiro.
+  //
+  // A ordem das chaves abaixo E a ordem do XML, e o schema exige exatamente
+  // esta sequencia: ide, emit, dest, det, total, transp, pag, infAdic.
   return {
     infNFe: {
-      versao: '4.00',
       ide: {
         cUF: UF_IBGE[emit.uf] || 35,
         cNF: String(Math.floor(Math.random() * 99999999)).padStart(8, '0'),
