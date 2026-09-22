@@ -85,6 +85,12 @@ function conferirRegras(i) {
   if (dest.indIEDest === 9 && ide.indFinal !== 1)
     erros.push('indIEDest=9 (nao contribuinte) exige indFinal=1, esta ' + ide.indFinal);
 
+  // 785 — destinatario declarado contribuinte precisa da IE
+  if (dest.indIEDest === 1 && !dest.IE)
+    erros.push('indIEDest=1 (contribuinte) exige a IE do destinatario');
+  if (dest.indIEDest === 9 && dest.IE)
+    erros.push('indIEDest=9 (nao contribuinte) nao pode levar IE');
+
   // NT 2020.006 — venda pela internet declara intermediador
   if (ide.indPres === 2 && ide.indIntermed === undefined)
     erros.push('indPres=2 (internet) exige indIntermed (0 = loja propria, 1 = marketplace)');

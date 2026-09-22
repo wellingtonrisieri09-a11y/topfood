@@ -297,6 +297,19 @@ function montarNFe(order, opcoes) {
   if (!doc && opcoes.tpAmb === 2) doc = emit.cnpj;
   const destDoc = doc ? { CNPJCPF: doc } : {};
 
+  // Indicador de IE do destinatario:
+  //   1 = contribuinte de ICMS (exige a IE)
+  //   9 = nao contribuinte (consumidor final)
+  //
+  // Quando o destinatario e o proprio CNPJ da TopFood — o caso do teste em
+  // homologacao —, dizer "nao contribuinte" contradiz o cadastro da SEFAZ,
+  // que sabe que esse CNPJ tem IE ativa. Entao vai como contribuinte, com a
+  // IE de verdade.
+  const ieCliente = so(cli.ie || cli.inscricao_estadual || '');
+  const destEhAEmpresa = doc === emit.cnpj;
+  const contribuinte = destEhAEmpresa || !!ieCliente;
+  const ieDest = destEhAEmpresa ? emit.inscricao_estadual : ieCliente;
+
   // Itens. O pedido guarda nome e preco do momento da compra; o NCM e a
   // unidade vem da config fiscal, iguais pra toda a linha de embalagens.
   const itens = (o.items || []).map((it, i) => {
@@ -372,9 +385,8 @@ function montarNFe(order, opcoes) {
         tpAmb: opcoes.tpAmb,                       // 1 producao, 2 homologacao
         finNFe: 1,                                 // nota normal
         // Regra 811: destinatario nao contribuinte (indIEDest = 9) obriga
-        // indFinal = 1. Como a loja vende pra consumidor final e nao coleta
-        // IE de cliente, os dois andam juntos: 9 e 1.
-        indFinal: 1,
+        // indFinal = 1. Contribuinte comprando pra revenda vai com 0.
+        indFinal: contribuinte ? 0 : 1,
         indPres: 2,                                // operacao pela internet
         // 0 = sem intermediador (loja propria) · 1 = site de terceiro
         indIntermed: inter ? 1 : 0,
@@ -416,8 +428,8 @@ function montarNFe(order, opcoes) {
           UF: ufDest, CEP: so(ship.cep) || emit.cep,
           cPais: 1058, xPais: 'BRASIL',
         },
-        // 9 = nao contribuinte. Venda pra consumidor final e sempre 9.
-        indIEDest: 9,
+        indIEDest: contribuinte ? 1 : 9,
+        IE: contribuinte ? ieDest : undefined,
         email: limpa(cli.email, 60) || undefined,
       }),
       det: itens,
