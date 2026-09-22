@@ -177,6 +177,29 @@ const T_PAG = {
   boleto: '15', dinheiro: '01', mercadolivre: '99',
 };
 
+// Campo opcional vazio nao pode ir pro XML: a SEFAZ valida tamanho minimo, e
+// <email></email> e rejeitado com "length of 0 underruns minimum of 1". Isso
+// vale pra qualquer opcional (xCpl, fone, email...), entao limpamos de uma vez
+// em vez de caçar um por um.
+//
+// So tira undefined, null e string vazia. Zero e "0.00" ficam: sao valores
+// legitimos em nota fiscal.
+function limparVazios(v) {
+  if (Array.isArray(v)) return v.map(limparVazios);
+  if (v && typeof v === 'object') {
+    const saida = {};
+    for (const [k, val] of Object.entries(v)) {
+      if (val === undefined || val === null) continue;
+      if (typeof val === 'string' && val.trim() === '') continue;
+      const limpo = limparVazios(val);
+      if (limpo && typeof limpo === 'object' && !Array.isArray(limpo) && !Object.keys(limpo).length) continue;
+      saida[k] = limpo;
+    }
+    return saida;
+  }
+  return v;
+}
+
 function montarNFe(order, opcoes) {
   const emit = getEmitente();
   const fis  = getFiscal();
@@ -247,7 +270,7 @@ function montarNFe(order, opcoes) {
   //
   // A ordem das chaves abaixo E a ordem do XML, e o schema exige exatamente
   // esta sequencia: ide, emit, dest, det, total, transp, pag, infAdic.
-  return {
+  return limparVazios({
     infNFe: {
       ide: {
         cUF: UF_IBGE[emit.uf] || 35,
@@ -330,7 +353,7 @@ function montarNFe(order, opcoes) {
         infCpl: limpa('Pedido ' + (o.id || '') + '. Documento emitido por ME optante pelo Simples Nacional.', 500),
       },
     },
-  };
+  });
 }
 
 // Numero da proxima nota. A SEFAZ recusa numero repetido na mesma serie,
