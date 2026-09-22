@@ -23,7 +23,16 @@ const pedidoId = arg('pedido');
 const enviar   = process.argv.includes('--enviar');
 const numeroForcado = parseInt(arg('numero')) || 0;
 // IE do cliente informada na hora: evita ter que editar o pedido so pra isso.
-const ieInformada = String(arg('ie') || '').replace(/\D/g, '');
+const ieArg = arg('ie');
+const ieInformada = String(ieArg || '').replace(/\D/g, '');
+// Passar --ie=NUMERO (o exemplo literal) resultaria em IE vazia e a nota
+// seguiria como nao contribuinte, silenciosamente. Melhor parar e dizer.
+if (ieArg !== undefined && !ieInformada) {
+  console.log('\n  --ie=' + ieArg + ' nao tem digito nenhum.');
+  console.log('  Informe a Inscricao Estadual de verdade, por exemplo:');
+  console.log('    --ie=110042490114\n');
+  process.exit(1);
+}
 
 (async () => {
   console.log('\n  ===== emissao de NF-e =====\n');
@@ -43,7 +52,7 @@ const ieInformada = String(arg('ie') || '').replace(/\D/g, '');
   if (!pedidoId) {
     console.log('\n  Informe o pedido:  node nfe_emitir.js --pedido=ML-2026-001');
     console.log('  Para forcar um numero:  --numero=900');
-    console.log('  Para informar a IE do cliente:  --ie=123456789012\n');
+    console.log('  Para informar a IE do cliente:  --ie=110042490114\n');
     const comNota = (readData('orders.json') || []).filter(o => !o.nfe).slice(0, 10);
     if (comNota.length) {
       console.log('  Pedidos sem nota emitida:');

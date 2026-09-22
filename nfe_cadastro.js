@@ -45,9 +45,17 @@ const pedidoId = arg('pedido');
     bruto = await w.NFE_ConsultaCadastro({ uf, cnpj });
   } catch (e) {
     console.log('  ERRO: ' + e.message + '\n');
-    console.log('  Nem toda UF oferece esse servico. Se SP recusar, peca a IE');
-    console.log('  ao cliente e informe direto:');
-    console.log('    node nfe_emitir.js --pedido=ID --ie=NUMERO\n');
+    if (/SOAP|nao encontrado|não encontrado/i.test(e.message)) {
+      console.log('  A biblioteca nao traz o endereco desse servico configurado,');
+      console.log('  entao a consulta automatica nao esta disponivel.');
+    }
+    console.log('');
+    console.log('  Onde conseguir a Inscricao Estadual:');
+    console.log('    1. Perguntar ao cliente (ele sabe, esta na nota dele)');
+    console.log('    2. CADESP: cadesp.fazenda.sp.gov.br — consulta por CNPJ, de graca');
+    console.log('');
+    console.log('  Com a IE em maos:');
+    console.log('    node nfe_emitir.js --pedido=ID --ie=110042490114 --enviar\n');
     process.exit(1);
   }
 
