@@ -195,13 +195,18 @@ function montarNFe(order, opcoes) {
   // Itens. O pedido guarda nome e preco do momento da compra; o NCM e a
   // unidade vem da config fiscal, iguais pra toda a linha de embalagens.
   const itens = (o.items || []).map((it, i) => {
-    const qtd   = parseFloat(it.qty) || 1;
-    const unit  = parseFloat(it.price) || 0;
+    const qtd = parseFloat(it.qty) || 1;
+    // Pedido da loja grava "price"; pedido importado do Mercado Livre grava
+    // "unit_price". Sem esse fallback a nota sai com valor zero.
+    let unit = parseFloat(it.price);
+    if (!unit) unit = parseFloat(it.unit_price);
+    if (!unit && it.total) unit = (parseFloat(it.total) || 0) / qtd;
+    unit = unit || 0;
     const total = Math.round(qtd * unit * 100) / 100;
     return {
       $: { nItem: i + 1 },
       prod: {
-        cProd: limpa(it.id || ('ITEM' + (i + 1)), 60),
+        cProd: limpa(it.id || it.product_id || ('ITEM' + (i + 1)), 60),
         cEAN: 'SEM', cEANTrib: 'SEM',
         xProd: limpa(it.name, 120) || 'Embalagem',
         NCM: fis.ncm,
@@ -336,8 +341,10 @@ async function emitirPedido(order, opcoes) {
     codMunicipioDest: opcoes && opcoes.codMunicipioDest,
   });
 
+  // A lib le o envelope como { NFe: ... } (aceita uma nota ou um array).
+  // Passar { infNFe } direto faz ela destruturar undefined.
   const w = await getWizard();
-  const retorno = await w.NFE_Autorizacao(nota);
+  const retorno = await w.NFE_Autorizacao({ NFe: nota });
 
   // Guarda o numero usado mesmo se a SEFAZ rejeitar: numero queimado nao
   // volta, e reaproveitar gera duplicidade.

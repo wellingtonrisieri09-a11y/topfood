@@ -46,14 +46,6 @@ const enviar   = process.argv.includes('--enviar');
     process.exit(1);
   }
 
-  const faltam = nfe.checarConfig();
-  if (faltam.length) {
-    console.log('\n  FALTA PREENCHER:');
-    faltam.forEach(f => console.log('    - ' + f));
-    console.log('');
-    process.exit(1);
-  }
-
   const numero = nfe.proximoNumero();
   console.log('  Pedido:   ' + pedido.id + '  ·  R$ ' + pedido.total + '  ·  ' + ((pedido.customer || {}).name || ''));
   console.log('  Nota:     n ' + numero + ' / serie ' + fis.serie + '\n');
@@ -76,15 +68,39 @@ const enviar   = process.argv.includes('--enviar');
   console.log('  Total:    R$ ' + i.total.ICMSTot.vNF + '  (frete R$ ' + i.total.ICMSTot.vFrete + ')');
   console.log('');
 
-  if (!i.dest.CPF && !i.dest.CNPJ) {
-    console.log('  ATENCAO: pedido sem CPF/CNPJ do cliente. A SEFAZ aceita nota');
-    console.log('           sem documento so em casos especificos — o normal e rejeitar.\n');
+  // Problemas que fazem a nota nascer errada. Em homologacao so avisamos (o
+  // objetivo ali e exercitar o fluxo); em producao paramos, porque nota com
+  // dado errado custa cancelamento em 24h ou carta de correcao.
+  const problemas = [];
+  if (!i.dest.CPF && !i.dest.CNPJ) problemas.push('pedido sem CPF/CNPJ do cliente');
+  if (parseFloat(i.total.ICMSTot.vNF) <= 0) problemas.push('valor total zerado');
+  const semEndereco = !((pedido.shipping || {}).address || (pedido.shipping || {}).logradouro);
+  if (semEndereco) problemas.push('pedido sem endereco de entrega — a nota sairia com o endereco da propria TopFood no destinatario');
+
+  if (problemas.length) {
+    console.log('  PROBLEMAS NOS DADOS:');
+    problemas.forEach(p => console.log('    - ' + p));
+    console.log('');
+    if (producao) {
+      console.log('  PAREI. Em producao a nota vale fiscalmente e corrigir depois');
+      console.log('  exige cancelamento (prazo de 24h) ou carta de correcao.\n');
+      process.exit(1);
+    }
+    console.log('  Como e homologacao, da pra seguir so pra testar o fluxo.\n');
   }
 
   if (!enviar) {
     console.log('  Previa — NADA foi enviado. Para emitir de verdade:');
     console.log('    node nfe_emitir.js --pedido=' + pedidoId + ' --enviar\n');
     process.exit(0);
+  }
+
+  const faltam = nfe.checarConfig();
+  if (faltam.length) {
+    console.log('  FALTA PREENCHER PRA ENVIAR:');
+    faltam.forEach(f => console.log('    - ' + f));
+    console.log('');
+    process.exit(1);
   }
 
   console.log('  Enviando para a SEFAZ...\n');
