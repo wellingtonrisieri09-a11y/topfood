@@ -395,6 +395,21 @@ function registerNfeRoutes(app, readData, writeData, requireAuth) {
       const orders = readData('orders.json') || [];
       const order = orders.find(o => (o.id || o.order_id) === req.params.orderId);
       if (!order || !order.nfe) return res.status(404).send('Pedido sem NF-e');
+
+      // Nota emitida pelo emissor proprio: o PDF esta em disco, gerado pelo
+      // nfe_danfe.js. Entregar o arquivo local evita depender da Focus — que
+      // esta suspensa — e faz o botao do painel voltar a funcionar.
+      const chaveLocal = String(order.nfe.chave || '').replace(/\D/g, '');
+      if (chaveLocal.length === 44) {
+        const fsL = require('fs'), pathL = require('path');
+        const pdf = pathL.join(__dirname, '..', 'data', 'nfe', 'danfe', 'DANFE-' + chaveLocal + '.pdf');
+        if (fsL.existsSync(pdf)) {
+          res.set('Content-Type', 'application/pdf');
+          res.set('Content-Disposition', 'inline; filename="DANFE-' + req.params.orderId + '.pdf"');
+          return res.send(fsL.readFileSync(pdf));
+        }
+      }
+
       const cfg = getFiscalConfig(readData);
       let caminho = order.nfe.caminho_danfe;
       if (!caminho) { const d = await consultarNFe(order.nfe.ref, cfg); caminho = d && d.caminho_danfe; }
@@ -417,6 +432,25 @@ function registerNfeRoutes(app, readData, writeData, requireAuth) {
       const orders = readData('orders.json') || [];
       const order = orders.find(o => (o.id || o.order_id) === req.params.orderId);
       if (!order || !order.nfe) return res.status(404).send('Pedido sem NF-e');
+
+      // Mesma logica do DANFE: XML autorizado pelo emissor proprio fica em
+      // disco, e e esse arquivo que vai pro contador.
+      const chaveX = String(order.nfe.chave || '').replace(/\D/g, '');
+      if (chaveX.length === 44) {
+        const fsL = require('fs'), pathL = require('path');
+        const base = pathL.join(__dirname, '..', 'data', 'nfe');
+        for (const sub of ['autorizacao', 'retorno', 'distribuicao']) {
+          const dir = pathL.join(base, sub);
+          if (!fsL.existsSync(dir)) continue;
+          const achou = fsL.readdirSync(dir).filter(f => f.includes(chaveX) && f.endsWith('.xml'));
+          if (achou.length) {
+            res.set('Content-Type', 'application/xml');
+            res.set('Content-Disposition', 'attachment; filename="' + chaveX + '.xml"');
+            return res.send(fsL.readFileSync(pathL.join(dir, achou[achou.length - 1])));
+          }
+        }
+      }
+
       const cfg = getFiscalConfig(readData);
       let caminho = order.nfe.caminho_xml;
       if (!caminho) {
