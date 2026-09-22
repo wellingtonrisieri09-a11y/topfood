@@ -160,6 +160,20 @@ function applyRoleUI() {
    API
 ══════════════════════════════════════════════════════ */
 function token() { return sessionStorage.getItem('admin-token')||''; }
+
+// Mostra no rodape da barra lateral qual versao do codigo o servidor esta
+// rodando. Se o numero nao mudar depois de um deploy, o pm2 nao reiniciou —
+// evita ficar procurando botao que ainda nao subiu.
+async function mostrarVersao() {
+  const el = document.getElementById('sb-versao');
+  if (!el) return;
+  try {
+    const r = await fetch('/api/versao');
+    const v = await r.json();
+    el.textContent = 'versão ' + v.commit + ' · ' + v.data;
+    el.title = v.titulo;
+  } catch (_) { el.textContent = ''; }
+}
 function escapeHtml(str) {
   return String(str==null?'':str)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -189,6 +203,7 @@ async function initApp() {
   await loadAll();
   applyRoleUI();
   startOnlineCounter();
+  mostrarVersao();
 
   // Navega para primeira página permitida
   const perms = ROLE_PERMISSIONS[STATE.role] || ROLE_PERMISSIONS.designer;

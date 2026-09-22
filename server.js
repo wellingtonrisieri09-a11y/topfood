@@ -311,6 +311,23 @@ app.get('/vendedor', (req, res) => res.redirect(302, '/admin.html?perfil=vendedo
 app.get('/empresa',  (req, res) => res.redirect(302, '/admin.html?perfil=empresa'));  // futuro Portal da Empresa (tema verde)
 app.get('/product.html', function(req, res, next) { var id = req.query.id; if (id) { return res.redirect(301, '/produto/' + encodeURIComponent(id)); } next(); });
 registerSeoRoutes(app, readData);
+
+// Versao do codigo rodando. Lida uma vez no boot — se mudou no disco mas nao
+// mudou aqui, o pm2 nao foi reiniciado. E a resposta pra "o deploy entrou?"
+// sem precisar abrir o terminal.
+const VERSAO = (() => {
+  try {
+    const { execSync } = require('child_process');
+    const commit = execSync('git log -1 --format=%h', { cwd: __dirname }).toString().trim();
+    const data   = execSync('git log -1 --format=%cd --date="format:%d/%m %H:%M"', { cwd: __dirname }).toString().trim();
+    const titulo = execSync('git log -1 --format=%s', { cwd: __dirname }).toString().trim();
+    return { commit, data, titulo, subiu_em: new Date().toISOString() };
+  } catch (_) {
+    return { commit: '?', data: '?', titulo: '(git indisponivel)', subiu_em: new Date().toISOString() };
+  }
+})();
+app.get('/api/versao', (req, res) => res.json(VERSAO));
+
 app.use(express.static(path.join(__dirname), {
   setHeaders(res, filePath) {
     // js/css/html sempre revalidam (ETag) — celular nunca fica preso num admin.js/app.js velho
