@@ -31,7 +31,8 @@ const PEDIDO = {
   },
   shipping: {
     address:  arg('rua')    || 'AV VALENTIM MAGALHAES',
-    number:   arg('numero') || '1196',
+    number:     arg('numero') || '1196',
+    complement: arg('complemento') || '',
     district: arg('bairro') || 'Cond Maracana',
     city:     arg('cidade') || 'Santo Andre',
     state:    (arg('uf')    || 'SP').toUpperCase(),
@@ -57,6 +58,7 @@ PEDIDO.subtotal = PEDIDO.total = PEDIDO.items[0].total;
   console.log('  Cliente:  ' + PEDIDO.customer.name);
   console.log('  CNPJ:     ' + PEDIDO.customer.cnpj);
   console.log('  Endereco: ' + PEDIDO.shipping.address + ', ' + PEDIDO.shipping.number +
+              (PEDIDO.shipping.complement ? ' - ' + PEDIDO.shipping.complement : '') +
               ' - ' + PEDIDO.shipping.district);
   console.log('            ' + PEDIDO.shipping.city + '/' + PEDIDO.shipping.state +
               '  CEP ' + PEDIDO.shipping.cep);

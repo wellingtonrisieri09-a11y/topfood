@@ -425,6 +425,9 @@ function montarNFe(order, opcoes) {
         enderDest: {
           xLgr: limpa(ship.address || ship.logradouro, 60) || 'NAO INFORMADO',
           nro: limpa(ship.number || ship.numero, 60) || 'S/N',
+          // Complemento (apartamento, bloco, sala) vai entre nro e xBairro,
+          // que e a posicao dele no schema. Vazio nao vai: o limparVazios tira.
+          xCpl: limpa(ship.complement || ship.complemento, 60) || undefined,
           xBairro: limpa(ship.district || ship.bairro, 60) || 'CENTRO',
           // Sem o codigo certo, o municipio nao pertence a UF e a SEFAZ recusa.
           // So cai no municipio do emitente quando nao ha cidade no pedido —
