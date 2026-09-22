@@ -26,28 +26,33 @@ const XML_DIR   = path.join(DATA_DIR, 'nfe');
 // Ambiente da SEFAZ: 1 = producao (vale fiscal) · 2 = homologacao (teste)
 const AMBIENTE = { producao: 1, homologacao: 2 };
 
-// Dados do emitente. Vem de settings pra mesma base servir os dois sites;
-// os valores abaixo sao so o que ja estava no cadastro da TopFood.
+// Quem assina a nota. Vem TODO do cadastro do proprio site (settings), pra
+// mesma base servir varias empresas.
+//
+// Aqui nao existe valor padrao de empresa nenhuma, de proposito. Um padrao
+// "pra facilitar" e o que faz um site copiado de outro emitir nota com o CNPJ
+// da empresa de origem — erro que ninguem percebe, porque a razao social vem
+// certa e so o numero esta errado. Campo vazio tem que travar a emissao, e o
+// checarConfig() abaixo e quem trava. Preencher: node nfe_emitente.js
 function getEmitente() {
   const s = readData('settings.json') || {};
   const f = s.fiscal || {};
   const e = f.emitente || {};
   return {
-    cnpj:       String(e.cnpj       || '67038607000131').replace(/\D/g, ''),
-    nome:       e.nome       || s.store_name || 'TopFood Embalagens Ltda',
-    fantasia:   e.fantasia   || s.store_name || 'TopFood Embalagens',
-    logradouro: e.logradouro || 'R. Reinaldo Teixeira',
-    numero:     String(e.numero || '85'),
-    bairro:     e.bairro     || 'Alvarenga',
-    municipio:  e.municipio  || 'São Bernardo do Campo',
-    codMunicipio: String(e.cod_municipio || '3548708'),   // IBGE de SBC
-    uf:         e.uf         || 'SP',
-    cep:        String(e.cep || '09850720').replace(/\D/g, ''),
+    cnpj:       String(e.cnpj || '').replace(/\D/g, ''),
+    nome:       e.nome     || '',
+    fantasia:   e.fantasia || e.nome || '',
+    logradouro: e.logradouro || '',
+    numero:     String(e.numero || ''),
+    bairro:     e.bairro    || '',
+    municipio:  e.municipio || '',
+    codMunicipio: String(e.cod_municipio || ''),
+    uf:         String(e.uf || '').toUpperCase(),
+    cep:        String(e.cep || '').replace(/\D/g, ''),
     inscricao_estadual: String(f.inscricao_estadual || '').replace(/\D/g, ''),
     regime_tributario:  parseInt(f.regime_tributario) || 1,  // 1 = Simples Nacional
-    // Telefone do emitente: sai impresso no DANFE. Sem ele o PDF mostra
-    // "TEL: undefined". Cai no WhatsApp da loja quando nao ha um fiscal.
-    fone: String(e.fone || s.whatsapp || '').replace(/\D/g, '').replace(/^55/, ''),
+    // Telefone do emitente sai impresso no DANFE. Sem ele a linha some.
+    fone: String(e.fone || '').replace(/\D/g, '').replace(/^55/, ''),
   };
 }
 
@@ -82,6 +87,17 @@ function checarConfig() {
   if (!process.env.NFE_CERT_SENHA)     faltam.push('NFE_CERT_SENHA no .env');
   if (!emit.inscricao_estadual)        faltam.push('Inscrição Estadual');
   if (!emit.cnpj || emit.cnpj.length !== 14) faltam.push('CNPJ do emitente');
+  // Endereco do emitente sai na nota e na DANFE. Faltando qualquer pedaco a
+  // SEFAZ recusa — e pior que recusar seria completar com dado de outra
+  // empresa, que e o que acontecia quando isto tinha valor padrao.
+  if (!emit.nome)       faltam.push('Razão social do emitente');
+  if (!emit.logradouro) faltam.push('Logradouro do emitente');
+  if (!emit.numero)     faltam.push('Número do endereço do emitente');
+  if (!emit.bairro)     faltam.push('Bairro do emitente');
+  if (!emit.municipio)  faltam.push('Município do emitente');
+  if (!emit.uf || emit.uf.length !== 2) faltam.push('UF do emitente');
+  if (!emit.codMunicipio) faltam.push('Código IBGE do município do emitente');
+  if (!emit.cep || emit.cep.length !== 8) faltam.push('CEP do emitente (8 dígitos)');
   if (!fis.ncm || fis.ncm.length !== 8) faltam.push('NCM dos produtos (8 dígitos)');
   return faltam;
 }

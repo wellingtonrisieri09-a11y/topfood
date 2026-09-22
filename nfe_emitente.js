@@ -3,17 +3,14 @@
 // nfe_emitente.js — quem assina a nota fiscal deste site
 //
 //   node nfe_emitente.js            # mostra os dados em uso
-//   node nfe_emitente.js --gravar   # fixa os dados atuais em settings
-//   node nfe_emitente.js --cnpj=05788238000147 --nome="Forpack Embalagens Ltda" ...
+//   node nfe_emitente.js --cnpj=00000000000000 --nome="Razao Social Ltda" ...
+//   node nfe_emitente.js --gravar   # fixa no cadastro o que ja esta valendo
 //
-// O emissor de NF-e nao tem nada de empresa escrito no codigo: tudo vem
-// de settings, pra mesma base servir TopFood e Forpack. O que existe sao
-// VALORES PADRAO do TopFood, usados quando o campo esta vazio.
+// O emissor nao tem empresa nenhuma escrita no codigo: cada site preenche
+// o seu aqui, e campo vazio trava a emissao em vez de completar sozinho.
 //
-// E ai mora o perigo num clone: o Forpack nasce com uma copia do banco do
-// TopFood. Campo de emitente vazio no Forpack = nota saindo com o CNPJ do
-// TopFood. Este comando existe pra isso nao acontecer calado — ele mostra,
-// campo a campo, o que veio do cadastro e o que veio do padrao.
+// E este comando que se usa pra plugar o emissor num site novo. O passo a
+// passo completo esta no EMISSOR-NFE.md.
 // ============================================================
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const fs   = require('fs');
