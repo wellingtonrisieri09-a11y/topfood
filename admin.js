@@ -569,17 +569,26 @@ function nfeBox(o) {
     + `<div style="font-size:.75rem;font-weight:700;color:#1D4ED8;margin-bottom:8px">Nota Fiscal eletronica</div>${inner}</div>`;
 }
 
+// A emissao agora e sincrona: quando a resposta chega, a SEFAZ ja autorizou
+// ou ja rejeitou. Nao ha mais o que ficar consultando em seguida.
 async function emitirNF(id) {
   if (!confirm('Emitir NF-e para o pedido ' + id + '? Isso gera a nota fiscal na SEFAZ.')) return;
-  toast('Emitindo NF-e... aguarde');
+  toast('Emitindo NF-e na SEFAZ... aguarde');
   try {
     const r = await api('/api/eco/nfe/emitir/' + id, { method: 'POST' });
     if (r.ok) {
-      toast('NF-e enviada! Aguardando autorizacao...');
       const o = STATE.orders.find(x => x.id === id);
-      if (o) o.nfe = { ref: r.ref, status: r.status };
-      setTimeout(() => pollNfe(id), 4000);
-    } else { toast('Erro: ' + (r.erro || 'falha na emissao'), 'error'); }
+      if (o) o.nfe = r.nfe || { status:'autorizado', chave:r.chave, numero:r.numero, serie:r.serie, ambiente:r.ambiente };
+      toast('NF-e ' + r.numero + ' autorizada!' +
+            (r.ambiente === 'homologacao' ? ' (homologacao — nao vale fiscalmente)' : ''));
+      (r.avisos || []).forEach(a => toast('Atencao: ' + a, 'error'));
+      viewOrder(id);
+      if (typeof loadNotasEmitidas === 'function') loadNotasEmitidas();
+    } else {
+      // Rejeicao da SEFAZ vem com o motivo escrito: mostrar inteiro, porque e
+      // ele que diz o que corrigir no pedido antes de tentar de novo.
+      toast('Nota nao emitida: ' + (r.erro || 'falha na emissao'), 'error');
+    }
   } catch (e) { toast('Erro ao emitir: ' + e.message, 'error'); }
 }
 
@@ -589,9 +598,10 @@ async function pollNfe(id) {
     const d = r.nfe || {};
     const st = d.status;
     const o = STATE.orders.find(x => x.id === id);
-    if (o) o.nfe = Object.assign(o.nfe || {}, { status: st, chave: d.chave_nfe, numero: d.numero, serie: d.serie, caminho_danfe: d.caminho_danfe, erro: d.mensagem_sefaz || d.mensagem });
+    // d vem no formato da Focus (nota antiga) ou no nosso (chave/erro).
+    if (o) o.nfe = Object.assign(o.nfe || {}, { status: st, chave: d.chave_nfe || d.chave, numero: d.numero, serie: d.serie, caminho_danfe: d.caminho_danfe, erro: d.mensagem_sefaz || d.mensagem || d.erro });
     if (st === 'autorizado') { toast('NF-e autorizada!'); viewOrder(id); }
-    else if (st === 'erro_autorizacao' || st === 'cancelado') { toast('NF-e ' + (st==='cancelado'?'cancelada':'rejeitada') + ': ' + (d.mensagem_sefaz||''), 'error'); viewOrder(id); }
+    else if (st === 'erro_autorizacao' || st === 'cancelado') { toast('NF-e ' + (st==='cancelado'?'cancelada':'rejeitada') + ': ' + (d.mensagem_sefaz||d.erro||''), 'error'); viewOrder(id); }
     else { toast('Ainda processando... aguarde'); setTimeout(() => pollNfe(id), 6000); }
   } catch (e) { toast('Erro ao consultar NF-e: ' + e.message, 'error'); }
 }

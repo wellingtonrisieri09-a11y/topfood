@@ -583,10 +583,146 @@ async function emitirPedido(order, opcoes) {
   return { numero, nota, retorno };
 }
 
+// Acha o XML autorizado em disco e gera o DANFE dele. O PDF fica com o
+// nome da chave, que e como as rotas do painel procuram.
+async function gerarDanfeDaNota(chave) {
+  const ch = String(chave || '').replace(/\D/g, '');
+  if (ch.length !== 44) return null;
+  let xmlFile = null;
+  for (const sub of ['autorizacao', 'retorno']) {
+    const d = path.join(XML_DIR, sub);
+    if (!fs.existsSync(d)) continue;
+    const f = fs.readdirSync(d).filter(x => x.includes(ch) && x.endsWith('.xml'));
+    if (f.length) { xmlFile = path.join(d, f[f.length - 1]); break; }
+  }
+  if (!xmlFile) return null;
+  const dir = path.join(XML_DIR, 'danfe');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const arquivo = path.join(dir, 'DANFE-' + ch + '.pdf');
+  const { gerarDanfe } = require('./danfe_topfood');
+  await gerarDanfe({ xml: fs.readFileSync(xmlFile, 'utf8'), chave: ch, arquivo });
+  return arquivo;
+}
+
+// Dados que fazem a nota nascer errada. Em producao isso barra a emissao:
+// nota errada so se conserta com cancelamento (24h) ou carta de correcao.
+function conferirPedido(order, nota) {
+  const c = (order && order.customer) || {};
+  const problemas = [];
+  if (!String(c.cnpj || c.cpf || '').replace(/\D/g, '')) problemas.push('pedido sem CPF/CNPJ do cliente');
+  if (parseFloat(nota.infNFe.total.ICMSTot.vNF) <= 0) problemas.push('valor total zerado');
+  if (!((order.shipping || {}).address || (order.shipping || {}).logradouro))
+    problemas.push('pedido sem endereco de entrega — a nota sairia com o endereco da propria TopFood no destinatario');
+  return problemas;
+}
+
+// Caminho unico da emissao: o botao do painel e o nfe_emitir.js passam os dois
+// por aqui, pra nao existirem duas regras diferentes pra mesma nota.
+// Nunca lanca — devolve sempre um objeto dizendo o que aconteceu.
+async function emitirEGravar(pedidoId, opcoes) {
+  opcoes = opcoes || {};
+  const fis = getFiscal();
+  const producao = fis.ambiente === 'producao';
+  const base = { ambiente: fis.ambiente, serie: String(fis.serie) };
+
+  const orders = readData('orders.json') || [];
+  const idx = orders.findIndex(o => String(o.id || o.order_id) === String(pedidoId));
+  if (idx < 0) return Object.assign({ ok: false, erro: 'Pedido ' + pedidoId + ' nao encontrado' }, base);
+  const pedido = orders[idx];
+
+  // IE do cliente informada na hora da emissao: grava no pedido pra nao
+  // precisar redigitar numa segunda tentativa.
+  const ie = String(opcoes.ie || '').replace(/\D/g, '');
+  if (ie) {
+    pedido.customer = Object.assign({}, pedido.customer, { ie });
+    orders[idx] = pedido;
+    writeData('orders.json', orders);
+  }
+
+  if (pedido.nfe && pedido.nfe.status === 'autorizado') {
+    return Object.assign({ ok: false, jaEmitida: true, nfe: pedido.nfe,
+      erro: 'Esse pedido ja tem nota autorizada (n ' + pedido.nfe.numero +
+            '). Emitir de novo criaria nota em duplicidade.' }, base);
+  }
+
+  const faltam = checarConfig();
+  if (faltam.length) {
+    return Object.assign({ ok: false, erro: 'Configuracao fiscal incompleta: ' + faltam.join(', ') }, base);
+  }
+
+  const numero = parseInt(opcoes.numero) || proximoNumero(fis.ambiente);
+  let previa;
+  try {
+    previa = montarNFe(pedido, {
+      numero, dhEmi: dhEmiAgora(), tpAmb: AMBIENTE[fis.ambiente],
+      pesoKg: opcoes.pesoKg || 0.1, codMunicipioDest: opcoes.codMunicipioDest,
+    });
+  } catch (e) {
+    return Object.assign({ ok: false, numero, erro: 'Nao consegui montar a nota: ' + e.message }, base);
+  }
+
+  const problemas = conferirPedido(pedido, previa);
+  if (problemas.length && producao) {
+    return Object.assign({ ok: false, numero, problemas,
+      erro: 'Dados do pedido impedem a emissao: ' + problemas.join('; ') }, base);
+  }
+
+  let out;
+  try {
+    out = await emitirPedido(pedido, { numero, pesoKg: opcoes.pesoKg, codMunicipioDest: opcoes.codMunicipioDest });
+  } catch (e) {
+    // Rejeicao 539: ja existe nota com esse numero/serie pra este CNPJ (pode
+    // ser de um emissor usado antes). Avanca o contador pra proxima tentativa
+    // nao insistir no mesmo numero.
+    if (/duplicidade/i.test(e.message)) {
+      reservarNumero(numero + 1, fis.ambiente);
+      return Object.assign({ ok: false, numero, problemas,
+        erro: 'O numero ' + numero + ' ja existe na SEFAZ. Contador avancado — ' +
+              'tente de novo que ele usa o ' + (numero + 1) + '.' }, base);
+    }
+    return Object.assign({ ok: false, numero, problemas, erro: e.message }, base);
+  }
+
+  // A lib devolve formatos um pouco diferentes conforme o caminho; procuramos
+  // a chave e o status onde quer que venham.
+  const txt    = JSON.stringify(out.retorno || {});
+  const mChave = txt.match(/"chNFe"\s*:\s*"?(\d{44})/) || txt.match(/(\d{44})/);
+  const cStat  = (txt.match(/"cStat"\s*:\s*"?(\d+)/) || [])[1] || '';
+  const motivo = (txt.match(/"xMotivo"\s*:\s*"([^"]+)/) || [])[1] || '';
+  const chave  = mChave ? mChave[1] : '';
+
+  if (cStat !== '100') {
+    return Object.assign({ ok: false, numero: out.numero, cStat, motivo, problemas,
+      status: 'erro_autorizacao', retorno: out.retorno,
+      erro: 'SEFAZ rejeitou (' + (cStat || 'sem codigo') + '): ' + (motivo || 'motivo nao informado') +
+            '. O numero ' + out.numero + ' foi queimado; a proxima tentativa usa o seguinte.' }, base);
+  }
+
+  orders[idx].nfe = {
+    chave, numero: String(out.numero), serie: String(fis.serie),
+    status: 'autorizado', ambiente: fis.ambiente,
+    emitida_em: new Date().toISOString(),
+  };
+  writeData('orders.json', orders);
+
+  // O DANFE sai junto com a autorizacao. Deixar pra gerar depois e o mesmo
+  // que nao ter o PDF: quando precisa, precisa agora.
+  let danfe = null, avisoDanfe = '';
+  try { danfe = await gerarDanfeDaNota(chave); }
+  catch (e) { avisoDanfe = 'nota autorizada, mas o DANFE nao foi gerado agora: ' + e.message; }
+
+  return Object.assign({
+    ok: true, status: 'autorizado', cStat, motivo, chave,
+    numero: String(out.numero), danfe, problemas, retorno: out.retorno,
+    avisos: [].concat(problemas, avisoDanfe || []),
+    nfe: orders[idx].nfe,
+  }, base);
+}
+
 module.exports = {
   CERT_FILE, XML_DIR, AMBIENTE,
   getEmitente, getFiscal, checarConfig,
   getWizard, resetWizard, statusServico,
   montarNFe, proximoNumero, reservarNumero, emitirPedido, dhEmiAgora, codMunicipio,
-  consultarCadastro,
+  consultarCadastro, conferirPedido, gerarDanfeDaNota, emitirEGravar,
 };

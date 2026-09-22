@@ -142,84 +142,27 @@ if (ieArg !== undefined && !ieInformada) {
   }
 
   console.log('  Enviando para a SEFAZ...\n');
-  let out;
-  try {
-    out = await nfe.emitirPedido(pedido, { numero });
-  } catch (e) {
-    console.log('  ERRO: ' + e.message + '\n');
-    // Rejeicao 539: ja existe nota com esse numero/serie para o CNPJ. Pode ser
-    // de outro emissor usado antes (a Focus, por exemplo). Avanca o contador
-    // pra proxima tentativa nao insistir no mesmo numero.
-    if (/duplicidade/i.test(e.message)) {
-      nfe.reservarNumero(numero + 1, fis.ambiente);
-      console.log('  O numero ' + numero + ' ja existe na SEFAZ (' + fis.ambiente + ').');
-      console.log('  Pode ser nota emitida por outro sistema antes deste.');
-      console.log('  Contador avancado — rode de novo que ele tenta o ' + (numero + 1) + '.\n');
-    }
+
+  // Daqui pra frente e o mesmo caminho do botao do painel: envio, leitura do
+  // retorno, gravacao no pedido e DANFE. Uma regra so pros dois.
+  const out = await nfe.emitirEGravar(pedidoId, { numero, ie: ieInformada });
+
+  if (out.retorno) {
+    console.log('  RETORNO DA SEFAZ:');
+    console.log(JSON.stringify(out.retorno, null, 2).split('\n').slice(0, 50).map(l => '    ' + l).join('\n'));
+    console.log('');
+  }
+
+  if (!out.ok) {
+    console.log('  NAO EMITIDA: ' + out.erro + '\n');
     process.exit(1);
   }
 
-  const r = out.retorno || {};
-  console.log('  RETORNO DA SEFAZ:');
-  console.log(JSON.stringify(r, null, 2).split('\n').slice(0, 50).map(l => '    ' + l).join('\n'));
+  console.log('  Status: ' + out.cStat + (out.motivo ? '  ' + out.motivo : ''));
+  console.log('\n  AUTORIZADA. Registrada no pedido ' + pedidoId + '.');
+  if (out.danfe) console.log('  DANFE: ' + out.danfe);
+  else console.log('  (DANFE nao saiu agora — gere com: node nfe_danfe.js --pedido=' + pedidoId + ')');
+  console.log('  Chave: ' + (out.chave || '(ver retorno acima)'));
+  if (!producao) console.log('\n  Lembre: homologacao. Esta nota NAO vale fiscalmente.');
   console.log('');
-
-  // A lib devolve formatos um pouco diferentes conforme o caminho; procuramos
-  // a chave e o status onde quer que venham.
-  const txt = JSON.stringify(r);
-  const mChave = txt.match(/"chNFe"\s*:\s*"?(\d{44})/) || txt.match(/(\d{44})/);
-  const mStat  = txt.match(/"cStat"\s*:\s*"?(\d+)/);
-  const mMotivo= txt.match(/"xMotivo"\s*:\s*"([^"]+)/);
-  const cStat  = mStat ? mStat[1] : '';
-  const motivo = mMotivo ? mMotivo[1] : '';
-
-  console.log('  Status: ' + (cStat || '?') + (motivo ? '  ' + motivo : ''));
-
-  if (cStat === '100') {
-    orders[idx].nfe = {
-      chave: mChave ? mChave[1] : '',
-      numero: String(out.numero), serie: String(fis.serie),
-      status: 'autorizado', ambiente: fis.ambiente,
-      emitida_em: new Date().toISOString(),
-    };
-    writeData('orders.json', orders);
-    console.log('\n  AUTORIZADA. Registrada no pedido ' + pedido.id + '.');
-
-    // Gera o DANFE na hora. Esperar alguem lembrar de gerar depois e como
-    // nao ter o PDF: quando precisa, precisa agora.
-    if (mChave) {
-      try {
-        const fsL = require('fs'), pathL = require('path');
-        const dir = pathL.join(nfe.XML_DIR, 'danfe');
-        if (!fsL.existsSync(dir)) fsL.mkdirSync(dir, { recursive: true });
-        const pdf = pathL.join(dir, 'DANFE-' + mChave[1] + '.pdf');
-        const achaXml = () => {
-          for (const sub of ['autorizacao', 'retorno']) {
-            const d = pathL.join(nfe.XML_DIR, sub);
-            if (!fsL.existsSync(d)) continue;
-            const f = fsL.readdirSync(d).filter(x => x.includes(mChave[1]) && x.endsWith('.xml'));
-            if (f.length) return pathL.join(d, f[f.length - 1]);
-          }
-          return null;
-        };
-        const xmlFile = achaXml();
-        if (xmlFile) {
-          const { gerarDanfe } = require('./modules/danfe_topfood');
-          await gerarDanfe({ xml: fsL.readFileSync(xmlFile, 'utf8'), chave: mChave[1], arquivo: pdf });
-          console.log('  DANFE: ' + pdf);
-        } else {
-          console.log('  (XML ainda nao apareceu em disco — gere o DANFE depois com nfe_danfe.js)');
-        }
-      } catch (e) {
-        console.log('  (nao consegui gerar o DANFE agora: ' + e.message + ')');
-        console.log('  Use: node nfe_danfe.js --pedido=' + pedido.id);
-      }
-    }
-    console.log('  Chave: ' + (mChave ? mChave[1] : '(ver retorno acima)'));
-    if (!producao) console.log('\n  Lembre: homologacao. Esta nota NAO vale fiscalmente.');
-    console.log('');
-  } else {
-    console.log('\n  Nao autorizada. O numero ' + out.numero + ' foi queimado —');
-    console.log('  a proxima tentativa usa o seguinte, sem duplicar.\n');
-  }
 })();

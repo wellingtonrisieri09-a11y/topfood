@@ -370,12 +370,21 @@ function registerNfeRoutes(app, readData, writeData, requireAuth) {
   });
 
   // emitir NF-e de um pedido (admin)
+  //
+  // O botao do painel passa pelo nosso emissor proprio (certificado A1 falando
+  // direto com a SEFAZ), o mesmo caminho do nfe_emitir.js. A Focus era um
+  // intermediario pago e esta suspensa; o codigo dela continua aqui so pra
+  // servir DANFE/XML das notas antigas que foram emitidas por ela.
+  //
+  // A emissao e sincrona (indSinc=1): quando esta resposta chega, a SEFAZ ja
+  // autorizou ou ja rejeitou — nao ha o que ficar consultando depois.
   app.post('/api/eco/nfe/emitir/:orderId', requireAuth, async (req, res) => {
     try {
-      const orders = readData('orders.json') || [];
-      const order = orders.find(o => (o.id || o.order_id) === req.params.orderId);
-      if (!order) return res.status(404).json({ ok: false, erro: 'Pedido não encontrado' });
-      const out = await emitirNFe(order, readData, writeData);
+      const sefaz = require('./nfe_sefaz');
+      const out = await sefaz.emitirEGravar(req.params.orderId, {
+        ie: (req.body && req.body.ie) || '',
+        numero: (req.body && req.body.numero) || 0,
+      });
       res.json(out);
     } catch (e) { res.status(500).json({ ok: false, erro: e.message }); }
   });
@@ -386,6 +395,12 @@ function registerNfeRoutes(app, readData, writeData, requireAuth) {
       const orders = readData('orders.json') || [];
       const idx = orders.findIndex(o => (o.id || o.order_id) === req.params.orderId);
       if (idx < 0 || !orders[idx].nfe) return res.status(404).json({ ok: false, erro: 'Pedido sem NF-e emitida' });
+
+      // Nota do emissor proprio: nao tem "ref" da Focus e nao tem o que
+      // consultar — o resultado ja veio no momento da emissao. Devolver o que
+      // esta gravado evita uma chamada a uma API que nao e mais nossa.
+      if (!orders[idx].nfe.ref) return res.json({ ok: true, nfe: orders[idx].nfe });
+
       const data = await consultarNFe(orders[idx].nfe.ref, getFiscalConfig(readData));
       if (data && data.status) {
         orders[idx].nfe.status = data.status;
