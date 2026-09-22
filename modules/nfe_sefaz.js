@@ -213,11 +213,14 @@ function montarNFe(order, opcoes) {
       $: { nItem: i + 1 },
       prod: {
         cProd: limpa(it.id || it.product_id || ('ITEM' + (i + 1)), 60),
-        cEAN: 'SEM', cEANTrib: 'SEM',
+        // A ordem aqui e a ordem do XML e o schema e rigido: cEANTrib vem
+        // depois de vProd, nao junto do cEAN.
+        cEAN: 'SEM',
         xProd: limpa(it.name, 120) || 'Embalagem',
         NCM: fis.ncm,
         CFOP: cfop,
         uCom: fis.unidade, qCom: qtd, vUnCom: v4(unit), vProd: v2(total),
+        cEANTrib: 'SEM',
         uTrib: fis.unidade, qTrib: qtd, vUnTrib: v4(unit),
         indTot: 1,
       },
@@ -258,6 +261,11 @@ function montarNFe(order, opcoes) {
         idDest: dentroDoEstado ? 1 : 2,            // 1 = mesma UF, 2 = outra UF
         cMunFG: parseInt(emit.codMunicipio),
         tpImp: 1, tpEmis: 1,
+        // cDV precisa existir AQUI, entre tpEmis e tpAmb, que e a posicao dele
+        // no schema. A lib calcula e sobrescreve o valor; se a chave nao
+        // existisse antes, ela seria criada no fim do objeto — e no XML o
+        // cDV apareceria depois do verProc, fora de ordem.
+        cDV: 0,
         tpAmb: opcoes.tpAmb,                       // 1 producao, 2 homologacao
         finNFe: 1,                                 // nota normal
         indFinal: doc.length === 11 ? 1 : 0,       // consumidor final se pessoa fisica
