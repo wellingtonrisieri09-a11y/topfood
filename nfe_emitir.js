@@ -26,6 +26,14 @@ const numeroForcado = parseInt(arg('numero')) || 0;
 (async () => {
   console.log('\n  ===== emissao de NF-e =====\n');
 
+  // Versao do codigo em execucao. Sem isso nao da pra distinguir "a correcao
+  // nao funcionou" de "a correcao ainda nao subiu".
+  try {
+    const { execSync } = require('child_process');
+    const v = execSync('git log -1 --format="%h %s"', { cwd: __dirname }).toString().trim();
+    console.log('  Versao:   ' + v.slice(0, 70));
+  } catch (_) {}
+
   const fis = nfe.getFiscal();
   const producao = fis.ambiente === 'producao';
   console.log('  Ambiente: ' + fis.ambiente + (producao ? '   *** PRODUCAO — A NOTA VALE FISCALMENTE ***' : '   (teste — nao vale fiscalmente)'));
@@ -70,6 +78,9 @@ const numeroForcado = parseInt(arg('numero')) || 0;
   console.log('  Destino:  ' + i.dest.xNome + '  ' +
     (docDest ? (docDest.length === 14 ? 'CNPJ ' : 'CPF ') + docDest : '(sem documento)'));
   console.log('            ' + i.dest.enderDest.xMun + '/' + i.dest.enderDest.UF + '  CEP ' + i.dest.enderDest.CEP);
+  console.log('            ' + (i.dest.indIEDest === 1
+    ? 'contribuinte de ICMS · IE ' + (i.dest.IE || '(faltando)')
+    : 'nao contribuinte · consumidor final'));
   console.log('  Itens:');
   [].concat(i.det).forEach(d => console.log('    ' + d.prod.qCom + ' x ' + d.prod.xProd +
     '   NCM ' + d.prod.NCM + '  CFOP ' + d.prod.CFOP + '  CSOSN ' + d.imposto.ICMS.ICMSSN102.CSOSN +
