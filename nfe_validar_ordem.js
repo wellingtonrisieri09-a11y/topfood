@@ -66,6 +66,94 @@ function conferirFormatos(obj, caminho, achados) {
   return achados;
 }
 
+
+// ── Regras cruzadas da SEFAZ ────────────────────────────────────────────
+// Campo isolado pode estar certo e a nota ser recusada porque dois campos se
+// contradizem. Estas sao as regras que ja nos morderam, mais as vizinhas
+// delas — conferir aqui custa um segundo; descobrir pela rejeicao custa uma
+// ida e volta.
+function conferirRegras(i) {
+  const erros = [];
+  const num = v => parseFloat(v) || 0;
+  const ide = i.ide || {}, dest = i.dest || {}, emit = i.emit || {};
+  const itens = [].concat(i.det || []);
+  const tot = (i.total || {}).ICMSTot || {};
+
+  // 811 — nao contribuinte obriga consumidor final
+  if (dest.indIEDest === 9 && ide.indFinal !== 1)
+    erros.push('indIEDest=9 (nao contribuinte) exige indFinal=1, esta ' + ide.indFinal);
+
+  // NT 2020.006 — venda pela internet declara intermediador
+  if (ide.indPres === 2 && ide.indIntermed === undefined)
+    erros.push('indPres=2 (internet) exige indIntermed (0 = loja propria, 1 = marketplace)');
+  if (ide.indIntermed === 1 && !(i.infIntermed && i.infIntermed.CNPJ && i.infIntermed.idCadIntTran))
+    erros.push('indIntermed=1 exige infIntermed com CNPJ e idCadIntTran');
+  if (ide.indIntermed === 0 && i.infIntermed)
+    erros.push('indIntermed=0 nao pode vir com o grupo infIntermed');
+
+  // CFOP tem que casar com o destino: 5xxx dentro do estado, 6xxx fora
+  itens.forEach((d, n) => {
+    const cfop = String((d.prod || {}).CFOP || '');
+    if (ide.idDest === 1 && !cfop.startsWith('5'))
+      erros.push('item ' + (n + 1) + ': venda dentro do estado (idDest=1) pede CFOP 5xxx, esta ' + cfop);
+    if (ide.idDest === 2 && !cfop.startsWith('6'))
+      erros.push('item ' + (n + 1) + ': venda para outro estado (idDest=2) pede CFOP 6xxx, esta ' + cfop);
+  });
+
+  // UF do destinatario tem que bater com o idDest
+  const mesmaUF = (dest.enderDest || {}).UF === (emit.enderEmit || {}).UF;
+  if (mesmaUF && ide.idDest !== 1) erros.push('destinatario na mesma UF do emitente, mas idDest=' + ide.idDest);
+  if (!mesmaUF && ide.idDest !== 2) erros.push('destinatario em outra UF, mas idDest=' + ide.idDest);
+
+  // Codigo IBGE do municipio comeca com o codigo da UF
+  const UF_COD = {AC:12,AL:27,AP:16,AM:13,BA:29,CE:23,DF:53,ES:32,GO:52,MA:21,MT:51,MS:50,MG:31,PA:15,PB:25,PR:41,PE:26,PI:22,RJ:33,RN:24,RS:43,RO:11,RR:14,SC:42,SP:35,SE:28,TO:17};
+  [['emitente', emit.enderEmit], ['destinatario', dest.enderDest]].forEach(([quem, end]) => {
+    if (!end) return;
+    const esperado = UF_COD[end.UF];
+    if (esperado && String(end.cMun).slice(0, 2) !== String(esperado))
+      erros.push(quem + ': municipio ' + end.cMun + ' nao pertence a ' + end.UF + ' (deveria comecar com ' + esperado + ')');
+  });
+
+  // Simples Nacional usa CSOSN, nao CST
+  itens.forEach((d, n) => {
+    const icms = ((d.imposto || {}).ICMS) || {};
+    const temCSOSN = Object.keys(icms).some(k => k.startsWith('ICMSSN'));
+    if (emit.CRT === 1 && !temCSOSN)
+      erros.push('item ' + (n + 1) + ': emitente no Simples (CRT=1) precisa de CSOSN (ICMSSN...), nao CST');
+  });
+
+  // Totais tem que fechar com os itens
+  const somaItens = itens.reduce((a, d) => a + num((d.prod || {}).vProd), 0);
+  if (Math.abs(somaItens - num(tot.vProd)) > 0.01)
+    erros.push('vProd do total (' + tot.vProd + ') nao bate com a soma dos itens (' + somaItens.toFixed(2) + ')');
+  const esperadoNF = num(tot.vProd) + num(tot.vFrete) + num(tot.vSeg) + num(tot.vOutro) - num(tot.vDesc);
+  if (Math.abs(esperadoNF - num(tot.vNF)) > 0.01)
+    erros.push('vNF (' + tot.vNF + ') nao bate com produtos + frete - desconto (' + esperadoNF.toFixed(2) + ')');
+
+  // Cada item: quantidade x unitario = total do item
+  itens.forEach((d, n) => {
+    const p = d.prod || {};
+    const calc = Math.round(num(p.qCom) * num(p.vUnCom) * 100) / 100;
+    if (Math.abs(calc - num(p.vProd)) > 0.01)
+      erros.push('item ' + (n + 1) + ': ' + p.qCom + ' x ' + p.vUnCom + ' = ' + calc.toFixed(2) + ', mas vProd esta ' + p.vProd);
+  });
+
+  // Pagamento tem que somar o total da nota
+  const somaPag = [].concat((i.pag || {}).detPag || []).reduce((a, d) => a + num(d.vPag), 0);
+  if (Math.abs(somaPag - num(tot.vNF)) > 0.01)
+    erros.push('pagamento (' + somaPag.toFixed(2) + ') nao soma o total da nota (' + tot.vNF + ')');
+
+  // Destinatario sem documento e recusado
+  if (!dest.CNPJCPF && !dest.CNPJ && !dest.CPF && !dest.idEstrangeiro)
+    erros.push('destinatario sem CPF/CNPJ');
+
+  // Homologacao exige a razao social fixa
+  if (ide.tpAmb === 2 && dest.xNome !== 'NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL')
+    erros.push('em homologacao o xNome do destinatario tem que ser a frase padrao da SEFAZ');
+
+  return erros;
+}
+
 const pedidoId = (process.argv.find(a => a.startsWith('--pedido=')) || '').split('=')[1];
 const orders = readData('orders.json') || [];
 const pedido = pedidoId ? orders.find(o => String(o.id) === pedidoId) : orders[0];
@@ -117,6 +205,15 @@ if (formatos.length) {
   console.log('  Formatos numericos ok.\n');
 }
 
-const total = falhas + formatos.length;
-console.log(total ? '  ' + total + ' problema(s).\n' : '  Tudo certo — ordem e formatos.\n');
+const regras = conferirRegras(i);
+if (regras.length) {
+  console.log('  REGRAS CRUZADAS DA SEFAZ:');
+  regras.forEach(r => console.log('    - ' + r));
+  console.log('');
+} else {
+  console.log('  Regras cruzadas ok.\n');
+}
+
+const total = falhas + formatos.length + regras.length;
+console.log(total ? '  ' + total + ' problema(s).\n' : '  Tudo certo — ordem, formatos e regras.\n');
 process.exit(total ? 1 : 0);

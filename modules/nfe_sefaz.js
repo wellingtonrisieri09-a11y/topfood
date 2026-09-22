@@ -180,6 +180,22 @@ const T_PAG = {
   boleto: '15', dinheiro: '01', mercadolivre: '99',
 };
 
+// Codigo IBGE do municipio (7 digitos), obrigatorio no endereco da NF-e.
+// A tabela dos 5571 municipios vem embutida (data_municipios.json): resolver
+// isso por API na hora da emissao seria transformar cada nota numa aposta na
+// rede. A lib so oferece o codigo da UF, que nao basta.
+let _municipios = null;
+function codMunicipio(uf, cidade) {
+  if (!uf || !cidade) return null;
+  if (!_municipios) {
+    try { _municipios = require('../data_municipios.json'); }
+    catch (_) { _municipios = {}; }
+  }
+  const norm = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return _municipios[String(uf).toUpperCase() + ':' + norm(cidade)] || null;
+}
+
 // Marketplaces conhecidos. Venda pela internet em site de terceiro exige
 // declarar quem intermediou (NT 2020.006) — sem isso a SEFAZ rejeita com
 // "NF-e sem indicativo do intermediador".
@@ -342,7 +358,10 @@ function montarNFe(order, opcoes) {
         cDV: 0,
         tpAmb: opcoes.tpAmb,                       // 1 producao, 2 homologacao
         finNFe: 1,                                 // nota normal
-        indFinal: doc.length === 11 ? 1 : 0,       // consumidor final se pessoa fisica
+        // Regra 811: destinatario nao contribuinte (indIEDest = 9) obriga
+        // indFinal = 1. Como a loja vende pra consumidor final e nao coleta
+        // IE de cliente, os dois andam juntos: 9 e 1.
+        indFinal: 1,
         indPres: 2,                                // operacao pela internet
         // 0 = sem intermediador (loja propria) · 1 = site de terceiro
         indIntermed: inter ? 1 : 0,
@@ -374,7 +393,12 @@ function montarNFe(order, opcoes) {
           xLgr: limpa(ship.address || ship.logradouro, 60) || 'NAO INFORMADO',
           nro: limpa(ship.number || ship.numero, 60) || 'S/N',
           xBairro: limpa(ship.district || ship.bairro, 60) || 'CENTRO',
-          cMun: parseInt(ship.cod_municipio || opcoes.codMunicipioDest || 0) || parseInt(emit.codMunicipio),
+          // Sem o codigo certo, o municipio nao pertence a UF e a SEFAZ recusa.
+          // So cai no municipio do emitente quando nao ha cidade no pedido —
+          // e nesse caso a UF tambem e a do emitente, entao fica coerente.
+          cMun: parseInt(ship.cod_municipio || opcoes.codMunicipioDest || 0)
+                || codMunicipio(ufDest, ship.city || ship.municipio)
+                || parseInt(emit.codMunicipio),
           xMun: limpa(ship.city || ship.municipio, 60) || limpa(emit.municipio, 60),
           UF: ufDest, CEP: so(ship.cep) || emit.cep,
           cPais: 1058, xPais: 'BRASIL',
@@ -464,5 +488,5 @@ module.exports = {
   CERT_FILE, XML_DIR, AMBIENTE,
   getEmitente, getFiscal, checarConfig,
   getWizard, resetWizard, statusServico,
-  montarNFe, proximoNumero, emitirPedido, dhEmiAgora,
+  montarNFe, proximoNumero, emitirPedido, dhEmiAgora, codMunicipio,
 };
