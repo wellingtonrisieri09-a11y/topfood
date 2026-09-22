@@ -486,8 +486,9 @@ function viewOrder(id) {
     </div>
     <div style="margin-bottom:16px">
       <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;font-weight:600">Endereço de entrega</label>
-      <p style="font-size:.85rem;margin-top:4px">${o.shipping?.address||'—'}, ${o.shipping?.city||''} — ${o.shipping?.state||''} | CEP ${o.shipping?.cep||''}</p>
-      <p style="font-size:.78rem;color:var(--muted)">Frete: ${o.shipping?.method||'—'} — R$ ${fmt(o.shipping?.price||0)} | Prazo: ${o.shipping?.days||'—'}</p>
+      <p style="font-size:.85rem;margin-top:4px">${escapeHtml(o.shipping?.address||'—')}${o.shipping?.number?', '+escapeHtml(o.shipping.number):''}${o.shipping?.complement?' — '+escapeHtml(o.shipping.complement):''}</p>
+      <p style="font-size:.85rem">${escapeHtml(o.shipping?.district||'')}${o.shipping?.district?' · ':''}${escapeHtml(o.shipping?.city||'')} — ${escapeHtml(o.shipping?.state||'')} | CEP ${escapeHtml(o.shipping?.cep||'')}</p>
+      <p style="font-size:.78rem;color:var(--muted)">Frete: ${escapeHtml(o.shipping?.method||'—')} — R$ ${fmt(o.shipping?.price||0)} | Prazo: ${escapeHtml(o.shipping?.days||'—')}</p>
     </div>
     <div style="margin-bottom:16px">
       <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;font-weight:600">Origem do pedido</label>
@@ -1230,11 +1231,13 @@ function buildLabelOverlay(id) {
     <!-- DESTINATÁRIO -->
     <div class="addr-box">
       <div class="addr-label">📍 Destinatário</div>
-      <div class="addr-name">${cust.name || '—'}</div>
-      ${ship.address ? `<div class="addr-line">${ship.address}</div>` : ''}
-      ${ship.city ? `<div class="addr-line">${ship.city}${ship.state ? ' — ' + ship.state : ''}</div>` : ''}
-      <div class="addr-cep">CEP: ${ship.cep || '___________'}</div>
-      ${cust.phone ? `<div class="addr-line" style="margin-top:4px">📱 ${cust.phone}</div>` : ''}
+      <div class="addr-name">${escapeHtml(cust.name || '—')}</div>
+      ${ship.address ? `<div class="addr-line">${escapeHtml(ship.address)}${ship.number ? ', ' + escapeHtml(ship.number) : ''}</div>` : ''}
+      ${ship.complement ? `<div class="addr-line">${escapeHtml(ship.complement)}</div>` : ''}
+      ${ship.district ? `<div class="addr-line">${escapeHtml(ship.district)}</div>` : ''}
+      ${ship.city ? `<div class="addr-line">${escapeHtml(ship.city)}${ship.state ? ' — ' + escapeHtml(ship.state) : ''}</div>` : ''}
+      <div class="addr-cep">CEP: ${escapeHtml(ship.cep || '___________')}</div>
+      ${cust.phone ? `<div class="addr-line" style="margin-top:4px">📱 ${escapeHtml(cust.phone)}</div>` : ''}
     </div>
 
   </div>
@@ -2271,7 +2274,7 @@ function viewCustomer(email) {
             <b style="color:var(--red)">Total: R$ ${fmt(o.total)}</b>
             <span style="font-size:.72rem;color:var(--muted);margin-left:8px">${payLabel(o.payment_method)}</span>
           </div>
-          ${o.shipping?.address ? `<span style="font-size:.72rem;color:var(--muted)">🚚 ${o.shipping.address}, ${o.shipping.city||''} — ${o.shipping.state||''} | CEP ${o.shipping.cep||''}</span>` : ''}
+          ${o.shipping?.address ? `<span style="font-size:.72rem;color:var(--muted)">🚚 ${escapeHtml(o.shipping.address)}${o.shipping.number?', '+escapeHtml(o.shipping.number):''}${o.shipping.complement?' — '+escapeHtml(o.shipping.complement):''}, ${escapeHtml(o.shipping.city||'')} — ${escapeHtml(o.shipping.state||'')} | CEP ${escapeHtml(o.shipping.cep||'')}</span>` : ''}
           ${o.tracking_code ? `<span style="background:#dcfce7;color:#15803d;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:20px">📍 ${o.tracking_code}</span>` : ''}
         </div>
       </div>`).join('')

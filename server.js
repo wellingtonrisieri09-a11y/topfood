@@ -826,7 +826,8 @@ function customerAuth(req, res, next) {
 // POST /api/customer/register
 // ============================================================
 app.post('/api/customer/register', (req, res) => {
-  const { name, email, phone, password, cep, state, city, address, marketing_opt_in } = req.body;
+  const { name, email, phone, password, cep, state, city, address,
+          number, complement, district, marketing_opt_in } = req.body;
   if (!name || !email || !password) return res.status(400).json({ error: 'Dados obrigatórios ausentes' });
 
   const customers = readData('customers.json');
@@ -842,6 +843,11 @@ app.post('/api/customer/register', (req, res) => {
     phone: phone || '',
     password_hash: hashPass(password),
     cep: cep || '', state: state || '', city: city || '', address: address || '',
+    // Numero, complemento e bairro em campos proprios: endereco inteiro num
+    // campo so nao serve pra etiqueta nem pra nota fiscal.
+    number: String(number || '').slice(0, 20),
+    complement: String(complement || '').slice(0, 60),
+    district: String(district || '').slice(0, 60),
     marketing_opt_in: !!marketing_opt_in,
     token,
     registered_at: new Date().toISOString(),

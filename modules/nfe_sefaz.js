@@ -501,10 +501,18 @@ function proximoNumero(ambiente) {
 
   // Em producao, as notas ja registradas nos pedidos tambem contam: e de la
   // que vem o numero 2 emitido pela Focus.
+  //
+  // Nota de homologacao NAO entra nessa conta. As de teste ja passaram de 900,
+  // e contá-las jogaria a primeira nota real de producao pra 909 — um buraco de
+  // centenas de numeros que o fisco cobra explicacao (inutilizacao). Nota
+  // antiga da Focus nao tem o campo ambiente e e de producao mesmo, entao so
+  // excluimos o que esta explicitamente marcado como homologacao.
   let maior = 0;
   if (amb === 'producao') {
     (readData('orders.json') || []).forEach(o => {
-      const n = parseInt(o.nfe && o.nfe.numero);
+      const nf = o && o.nfe;
+      if (!nf || nf.ambiente === 'homologacao') return;
+      const n = parseInt(nf.numero);
       if (n > maior) maior = n;
     });
   }

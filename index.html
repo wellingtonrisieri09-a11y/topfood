@@ -2120,7 +2120,9 @@
       <div class="acc-row">
         <div class="acc-field">
           <label>CEP</label>
-          <input type="text" id="reg-cep" placeholder="00000-000" oninput="maskCepField(this)" onblur="fillAccAddress()" maxlength="9" />
+          <input type="text" id="reg-cep" placeholder="00000-000" maxlength="9"
+            oninput="maskCepField(this); if(this.value.replace(/\D/g,'').length===8) fillAccAddress()"
+            onblur="fillAccAddress()" />
         </div>
         <div class="acc-field">
           <label>Estado</label>
@@ -2132,8 +2134,22 @@
         <input type="text" id="reg-city" placeholder="Sua cidade" />
       </div>
       <div class="acc-field">
-        <label>Endereço</label>
-        <input type="text" id="reg-address" placeholder="Rua, número, bairro" />
+        <label>Rua / Avenida</label>
+        <input type="text" id="reg-address" placeholder="Preenche sozinho pelo CEP" />
+      </div>
+      <div class="acc-row">
+        <div class="acc-field">
+          <label>Número</label>
+          <input type="text" id="reg-number" placeholder="Ex: 123" />
+        </div>
+        <div class="acc-field">
+          <label>Complemento</label>
+          <input type="text" id="reg-complement" placeholder="Apto 134 B, bloco 2…" />
+        </div>
+      </div>
+      <div class="acc-field">
+        <label>Bairro</label>
+        <input type="text" id="reg-district" placeholder="Preenche pelo CEP" />
       </div>
       <div class="acc-check">
         <input type="checkbox" id="reg-marketing" checked />
@@ -2291,7 +2307,7 @@
 </div>
 <!-- FIM EXIT INTENT BANNER -->
 
-<script src="/app.js?v=20260713" defer></script>
+<script src="/app.js?v=20260922" defer></script>
 
 <script id="copa-js">
 (function() {

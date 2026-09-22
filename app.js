@@ -610,7 +610,47 @@
     el.value = v;
   }
 
-  async function calcularFrete(ctx) {
+  // O cliente digita 8 numeros e o endereco vem pronto. Digitar rua, bairro e
+  // cidade a mao e onde mais aparece erro — e endereco errado faz a mercadoria
+  // voltar e ainda sai impresso na nota fiscal.
+  async function buscarCep() {
+    const el  = document.getElementById('ckCepInput');
+    const msg = document.getElementById('ckCepMsg');
+    if (!el) return;
+    const cep = el.value.replace(/\D/g, '');
+    const diz = (txt, cor) => { if (msg) { msg.textContent = txt; msg.style.color = cor || 'var(--gray)'; } };
+    if (cep.length !== 8) { diz('Digite os 8 números do CEP.', 'var(--red)'); return; }
+    diz('Buscando endereço…');
+    let d = null;
+    try {
+      d = await (await fetch(`https://viacep.com.br/ws/${cep}/json/`)).json();
+    } catch (_) {
+      diz('Não consegui buscar o CEP agora. Você pode preencher o endereço à mão.', 'var(--red)');
+      return;
+    }
+    if (!d || d.erro) { diz('CEP não encontrado. Confira os números.', 'var(--red)'); return; }
+
+    const põe = (id, v) => { const e = document.getElementById(id); if (e && v) e.value = v; };
+    põe('ckRua', d.logradouro);
+    põe('ckBairro', d.bairro);
+    põe('ckCidade', d.localidade);
+    põe('ckUf', (d.uf || '').toUpperCase());
+    checkoutData.cep    = cep;
+    checkoutData.rua    = d.logradouro || checkoutData.rua || '';
+    checkoutData.bairro = d.bairro     || checkoutData.bairro || '';
+    checkoutData.cidade = d.localidade || '';
+    checkoutData.uf     = (d.uf || '').toUpperCase();
+    diz('📍 ' + (d.localidade || '') + (d.uf ? ' — ' + d.uf : ''), '#15803D');
+
+    // CEP geral de cidade vem sem logradouro; nesse caso o cliente digita a rua.
+    const campoRua = document.getElementById('ckRua');
+    const alvo = (!d.logradouro && campoRua) ? campoRua : document.getElementById('ckAddrNum');
+    if (alvo) alvo.focus();
+
+    calcularFrete('checkout', d);
+  }
+
+  async function calcularFrete(ctx, dadosCep) {
     const isCart     = ctx === 'cart';
     const isCheckout = ctx === 'checkout';
     const isMain     = !isCart && !isCheckout;
@@ -629,8 +669,9 @@
       if (btn) { btn.textContent = 'Calculando…'; btn.disabled = true; }
     }
     try {
-      const res  = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      const data = await res.json();
+      // Quando o buscarCep() ja consultou o ViaCEP, reaproveitamos a resposta
+      // em vez de pedir a mesma coisa de novo.
+      const data = dadosCep || await (await fetch(`https://viacep.com.br/ws/${cep}/json/`)).json();
       if (data.erro) { showFreteErr(ctx, 'CEP não encontrado.'); return; }
       checkoutData.cep = cep; // armazena para saveOrderToServer
       const baseOpcoes = FRETE_TABLE[data.uf] || [{nome:'📦 PAC',dias:'Consultar prazo',preco:69.90},{nome:'✈️ SEDEX',dias:'Consultar prazo',preco:99.90}];
@@ -652,7 +693,7 @@
       }
       if (isCheckout) {
         const btn = document.getElementById('ckFreteBtn');
-        if (btn) { btn.textContent = 'Calcular'; btn.disabled = false; }
+        if (btn) { btn.textContent = 'Buscar'; btn.disabled = false; }
       }
     }
   }
@@ -810,10 +851,23 @@
             id: i.id, name: i.name, qty: i.qty, pack: i.pack, pack_label: i.packLabel || undefined,
             unit_price: i.price, total: i.total
           })),
-          shipping: selectedShipping
-            ? { method: selectedShipping.nome, price: selectedShipping.preco,
-                days: selectedShipping.dias, cep }
-            : { cep },
+          // Endereco completo no pedido. Antes ia so o CEP, e quem precisava
+          // despachar (ou emitir a nota) nao tinha rua, bairro nem cidade.
+          // Os nomes dos campos sao os que o emissor de NF-e ja le.
+          shipping: Object.assign(
+            {
+              cep,
+              address:    checkoutData.rua         || '',
+              number:     checkoutData.addrNum     || '',
+              complement: checkoutData.complemento || '',
+              district:   checkoutData.bairro      || '',
+              city:       checkoutData.cidade      || '',
+              state:      checkoutData.uf          || '',
+            },
+            selectedShipping
+              ? { method: selectedShipping.nome, price: selectedShipping.preco, days: selectedShipping.dias }
+              : {}
+          ),
           subtotal, discount,
           coupon_code: appliedCoupon?.code || '',
           total,
@@ -904,6 +958,9 @@
     const state    = document.getElementById('reg-state').value.trim().toUpperCase();
     const city     = document.getElementById('reg-city').value.trim();
     const address  = document.getElementById('reg-address').value.trim();
+    const number     = document.getElementById('reg-number')?.value.trim() || '';
+    const complement = document.getElementById('reg-complement')?.value.trim() || '';
+    const district   = document.getElementById('reg-district')?.value.trim() || '';
     const marketing = document.getElementById('reg-marketing').checked;
 
     alert.className = 'acc-alert'; alert.style.display = 'none';
@@ -917,7 +974,8 @@
 
     btn.disabled = true; btn.textContent = 'Cadastrando...';
 
-    const payload = { name, email, phone, password, cep, state, city, address, marketing_opt_in: marketing };
+    const payload = { name, email, phone, password, cep, state, city, address,
+                      number, complement, district, marketing_opt_in: marketing };
 
     try {
       const res = await fetch('/api/customer/register', {
@@ -1103,9 +1161,14 @@
       const res = await fetch(`https://viacep.com.br/ws/${raw}/json/`);
       const d = await res.json();
       if (d.erro) return;
-      if (d.logradouro) document.getElementById('reg-address').value = d.logradouro;
-      if (d.localidade)  document.getElementById('reg-city').value = d.localidade;
-      if (d.uf)          document.getElementById('reg-state').value = d.uf.toUpperCase();
+      const põe = (id, v) => { const e = document.getElementById(id); if (e && v) e.value = v; };
+      põe('reg-address', d.logradouro);
+      põe('reg-district', d.bairro);
+      põe('reg-city', d.localidade);
+      põe('reg-state', (d.uf || '').toUpperCase());
+      // Depois do CEP o que falta e o numero: leva o cursor pra la.
+      const num = document.getElementById('reg-number');
+      if (num && !num.value) num.focus();
     } catch(e) {}
   }
 
@@ -1263,11 +1326,19 @@
     try { if (typeof gtag==='function') gtag('event','begin_checkout'); } catch(e){}
     if (cart.length === 0) { showToast('❌ Carrinho vazio!'); return; }
     const cust = getLoggedCustomer();
+    // Cliente com conta ja deu o endereco no cadastro: trazer tudo pronto e o
+    // ponto de nao ficar digitando de novo a cada compra.
     checkoutData = {
-      cep:   '',
+      cep:   cust ? String(cust.cep || '').replace(/\D/g, '') : '',
       nome:  cust ? cust.name  : '',
       email: cust ? cust.email : '',
       phone: cust ? (cust.phone || '') : '',
+      rua:         cust ? (cust.address || '')    : '',
+      addrNum:     cust ? (cust.number || '')     : '',
+      complemento: cust ? (cust.complement || '') : '',
+      bairro:      cust ? (cust.district || '')   : '',
+      cidade:      cust ? (cust.city || '')       : '',
+      uf:          cust ? String(cust.state || '').toUpperCase() : '',
       notes: '',
     };
     selectedShipping = null;
@@ -1475,18 +1546,11 @@
               value="${escHtml(checkoutData.phone || '')}" maxlength="15" oninput="maskPhone(this)" />
           </div>
         </div>
-        <div class="ck-row">
-          <div class="ck-form-group">
-            <label>CPF <span class="req">*</span></label>
-            <input class="ck-input" id="ckCpf" type="text" placeholder="000.000.000-00"
-              maxlength="14" oninput="fmtCpf(this)"
-              value="${escHtml(checkoutData.cpf || '')}" />
-          </div>
-          <div class="ck-form-group">
-            <label>Número do endereço <span class="req">*</span></label>
-            <input class="ck-input" id="ckAddrNum" type="text" placeholder="Ex: 123"
-              value="${escHtml(checkoutData.addrNum || '')}" />
-          </div>
+        <div class="ck-form-group">
+          <label>CPF <span class="req">*</span></label>
+          <input class="ck-input" id="ckCpf" type="text" placeholder="000.000.000-00"
+            maxlength="14" oninput="fmtCpf(this)"
+            value="${escHtml(checkoutData.cpf || '')}" />
         </div>
       </div>
       <div class="ck-section">
@@ -1496,13 +1560,49 @@
           <div class="ck-cep-row">
             <input class="ck-input" id="ckCepInput" type="text" placeholder="00000-000" maxlength="9"
               value="${escHtml(cepVal)}"
-              oninput="maskCep(this)" onkeydown="if(event.key==='Enter')calcularFrete('checkout')" />
-            <button id="ckFreteBtn" onclick="calcularFrete('checkout')">Calcular</button>
+              oninput="maskCep(this); if(this.value.replace(/\\D/g,'').length===8) buscarCep()"
+              onkeydown="if(event.key==='Enter')buscarCep()" />
+            <button id="ckFreteBtn" onclick="buscarCep()">Buscar</button>
           </div>
+          <div id="ckCepMsg" style="font-size:.72rem;color:var(--gray);margin-top:5px"></div>
           <a href="https://buscacepinter.correios.com.br/" target="_blank" rel="noopener"
             style="font-size:.72rem;color:var(--red);text-decoration:underline;margin-top:4px;display:inline-block">
             Não sei meu CEP →
           </a>
+        </div>
+        <div class="ck-form-group">
+          <label>Rua / Avenida <span class="req">*</span></label>
+          <input class="ck-input" id="ckRua" type="text" placeholder="Preenche sozinho pelo CEP"
+            value="${escHtml(checkoutData.rua || '')}" />
+        </div>
+        <div class="ck-row">
+          <div class="ck-form-group">
+            <label>Número <span class="req">*</span></label>
+            <input class="ck-input" id="ckAddrNum" type="text" placeholder="Ex: 123"
+              value="${escHtml(checkoutData.addrNum || '')}" />
+          </div>
+          <div class="ck-form-group">
+            <label>Complemento</label>
+            <input class="ck-input" id="ckCompl" type="text" placeholder="Apto 134 B, bloco 2, fundos…"
+              value="${escHtml(checkoutData.complemento || '')}" />
+          </div>
+        </div>
+        <div class="ck-row">
+          <div class="ck-form-group">
+            <label>Bairro</label>
+            <input class="ck-input" id="ckBairro" type="text" placeholder="Preenche pelo CEP"
+              value="${escHtml(checkoutData.bairro || '')}" />
+          </div>
+          <div class="ck-form-group">
+            <label>Cidade / UF</label>
+            <div style="display:flex;gap:6px">
+              <input class="ck-input" id="ckCidade" type="text" placeholder="Cidade" style="flex:1"
+                value="${escHtml(checkoutData.cidade || '')}" />
+              <input class="ck-input" id="ckUf" type="text" placeholder="UF" maxlength="2"
+                style="width:58px;text-transform:uppercase"
+                value="${escHtml(checkoutData.uf || '')}" />
+            </div>
+          </div>
         </div>
         <div id="ckFreteOptions">${freteOpts}</div>
       </div>
@@ -1510,7 +1610,7 @@
         <div class="ck-form-group">
           <label>Observações (opcional)</label>
           <textarea class="ck-input" id="ckNotes" rows="2"
-            placeholder="Número do apartamento, ponto de referência..."
+            placeholder="Ponto de referência, recado para a entrega..."
             style="resize:none;min-height:62px">${escHtml(checkoutData.notes || '')}</textarea>
         </div>
       </div>`;
@@ -1561,6 +1661,14 @@
     checkoutData.addrNum = document.getElementById('ckAddrNum')?.value.trim()    || checkoutData.addrNum;
     checkoutData.notes   = document.getElementById('ckNotes')?.value.trim()      || '';
     checkoutData.cep     = document.getElementById('ckCepInput')?.value.replace(/\D/g,'') || checkoutData.cep;
+    // Endereco completo: o CEP preenche, o cliente confere e completa.
+    // Sem isso o pedido chegava so com CEP e numero, e a nota fiscal saia
+    // com "NAO INFORMADO" no lugar da rua.
+    checkoutData.rua         = document.getElementById('ckRua')?.value.trim()    ?? checkoutData.rua;
+    checkoutData.complemento = document.getElementById('ckCompl')?.value.trim()  ?? checkoutData.complemento;
+    checkoutData.bairro      = document.getElementById('ckBairro')?.value.trim() ?? checkoutData.bairro;
+    checkoutData.cidade      = document.getElementById('ckCidade')?.value.trim() ?? checkoutData.cidade;
+    checkoutData.uf          = (document.getElementById('ckUf')?.value.trim() || checkoutData.uf || '').toUpperCase();
 
     if (!checkoutData.nome)  { showToast('⚠️ Informe seu nome completo'); return; }
     if (!checkoutData.email || !checkoutData.email.includes('@')) {
@@ -1578,8 +1686,9 @@
       showToast('⚠️ CPF inválido — confira os números digitados'); return;
     }
     if (!cartAllNoFrete()) {
+      if (!checkoutData.cep)     { showToast('⚠️ Informe o CEP para buscar o endereço'); return; }
+      if (!checkoutData.rua)     { showToast('⚠️ Informe a rua (o CEP preenche sozinho)'); return; }
       if (!checkoutData.addrNum) { showToast('⚠️ Informe o número do endereço'); return; }
-      if (!checkoutData.cep)     { showToast('⚠️ Informe o CEP para calcular o frete'); return; }
       if (!selectedShipping)     { showToast('⚠️ Selecione uma opção de frete'); return; }
     }
     captureAbandonedCart();
