@@ -152,6 +152,9 @@ async function statusServico() {
 // Dinheiro na NF-e vai como string com 2 casas; quantidade com 4.
 const v2 = n => (Math.round((parseFloat(n) || 0) * 100) / 100).toFixed(2);
 const v4 = n => (Math.round((parseFloat(n) || 0) * 10000) / 10000).toFixed(4);
+// Peso na NF-e usa 3 casas — o padrao do schema e '0|0\.[0-9]{3}|...', entao
+// "0.10" e recusado e "0.100" passa.
+const v3 = n => (Math.round((parseFloat(n) || 0) * 1000) / 1000).toFixed(3);
 const so = s => String(s == null ? '' : s).replace(/\D/g, '');
 
 // Acentuacao quebra a validacao do schema em alguns campos; a SEFAZ
@@ -348,7 +351,7 @@ function montarNFe(order, opcoes) {
       // 0 = por conta do emitente.
       transp: {
         modFrete: vFrete > 0 ? 0 : 9,
-        vol: [{ qVol: 1, esp: 'Volume', pesoL: v2(opcoes.pesoKg || 0.1), pesoB: v2(opcoes.pesoKg || 0.1) }],
+        vol: [{ qVol: 1, esp: 'Volume', pesoL: v3(opcoes.pesoKg || 0.1), pesoB: v3(opcoes.pesoKg || 0.1) }],
       },
       pag: {
         detPag: [{ indPag: 0, tPag: T_PAG[o.payment_method] || '99', vPag: v2(vNF) }],

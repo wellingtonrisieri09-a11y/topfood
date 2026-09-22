@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ============================================================
-// nfe_validar_ordem.js — confere a ordem dos campos da NF-e
-// contra a sequencia do schema 4.00, sem sair da maquina.
+// nfe_validar_ordem.js — confere a ordem dos campos da NF-e e o
+// formato dos numeros contra o schema 4.00, sem sair da maquina.
 //
 //   node nfe_validar_ordem.js --pedido=ML-2026-001
 //
@@ -30,6 +30,40 @@ const SEQ = {
   detPag: ['indPag','tPag','xPag','vPag','dPag','CNPJPag','UFPag','card','vTroco','CNPJReceb','idTermPag'],
   infNFe: ['ide','NFref','emit','avulsa','dest','autXML','retirada','entrega','det','total','transp','cobr','pag','infIntermed','infAdic','exporta','compra','cana','infRespTec'],
 };
+
+
+// Padroes numericos do schema. Cada casa decimal a mais ou a menos e uma
+// rejeicao: peso usa 3 casas, dinheiro 2, valor unitario ate 10.
+const PADRAO = {
+  pesoL:    /^(0|0\.[0-9]{3}|[1-9][0-9]{0,11}(\.[0-9]{3})?)$/,
+  pesoB:    /^(0|0\.[0-9]{3}|[1-9][0-9]{0,11}(\.[0-9]{3})?)$/,
+  vUnCom:   /^(0|0\.[0-9]{2,10}|[1-9][0-9]{0,11}(\.[0-9]{2,10})?)$/,
+  vUnTrib:  /^(0|0\.[0-9]{2,10}|[1-9][0-9]{0,11}(\.[0-9]{2,10})?)$/,
+  vProd:    /^(0|0\.[0-9]{2}|[1-9][0-9]{0,12}(\.[0-9]{2})?)$/,
+  vNF:      /^(0|0\.[0-9]{2}|[1-9][0-9]{0,12}(\.[0-9]{2})?)$/,
+  vPag:     /^(0|0\.[0-9]{2}|[1-9][0-9]{0,12}(\.[0-9]{2})?)$/,
+  cEAN:     /^(SEM GTIN|[0-9]{8}|[0-9]{12,14})?$/,
+  cEANTrib: /^(SEM GTIN|[0-9]{8}|[0-9]{12,14})?$/,
+  CEP:      /^[0-9]{8}$/,
+  NCM:      /^([0-9]{2}|[0-9]{8})$/,
+  CNPJ:     /^[0-9]{14}$/,
+  CPF:      /^[0-9]{11}$/,
+};
+
+// Varre a nota inteira procurando valor que nao bate com o padrao do campo.
+function conferirFormatos(obj, caminho, achados) {
+  if (Array.isArray(obj)) { obj.forEach((v, i) => conferirFormatos(v, caminho + '[' + i + ']', achados)); return achados; }
+  if (obj && typeof obj === 'object') {
+    for (const [k, v] of Object.entries(obj)) {
+      const cam = caminho ? caminho + '.' + k : k;
+      if (PADRAO[k] && (typeof v === 'string' || typeof v === 'number')) {
+        if (!PADRAO[k].test(String(v))) achados.push({ campo: cam, valor: String(v) });
+      }
+      conferirFormatos(v, cam, achados);
+    }
+  }
+  return achados;
+}
 
 const pedidoId = (process.argv.find(a => a.startsWith('--pedido=')) || '').split('=')[1];
 const orders = readData('orders.json') || [];
@@ -71,5 +105,16 @@ for (const [nome, obj] of Object.entries(blocos)) {
   if (fora.length) console.log('      campo(s) fora do schema: ' + fora.join(', '));
 }
 console.log('');
-console.log(falhas ? '  ' + falhas + ' bloco(s) com problema.\n' : '  Todos os blocos na ordem certa.\n');
-process.exit(falhas ? 1 : 0);
+
+const formatos = conferirFormatos(i, '', []);
+if (formatos.length) {
+  console.log('  FORMATO DE NUMERO FORA DO PADRAO:');
+  formatos.forEach(f => console.log('    ' + f.campo + ' = "' + f.valor + '"'));
+  console.log('');
+} else {
+  console.log('  Formatos numericos ok.\n');
+}
+
+const total = falhas + formatos.length;
+console.log(total ? '  ' + total + ' problema(s).\n' : '  Tudo certo — ordem e formatos.\n');
+process.exit(total ? 1 : 0);
