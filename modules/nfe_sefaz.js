@@ -349,10 +349,16 @@ async function emitirPedido(order, opcoes) {
     codMunicipioDest: opcoes && opcoes.codMunicipioDest,
   });
 
-  // A lib le o envelope como { NFe: ... } (aceita uma nota ou um array).
-  // Passar { infNFe } direto faz ela destruturar undefined.
+  // Envelope do envio em lote (enviNFe). Alem da nota, a SEFAZ exige:
+  //   idLote  — identificador do lote, 1 a 15 digitos (usamos o numero da nota)
+  //   indSinc — 1 pede processamento sincrono, ou seja, a resposta ja vem no
+  //             retorno, sem precisar consultar recibo depois
   const w = await getWizard();
-  const retorno = await w.NFE_Autorizacao({ NFe: nota });
+  const retorno = await w.NFE_Autorizacao({
+    idLote: numero,
+    indSinc: 1,
+    NFe: nota,
+  });
 
   // Guarda o numero usado mesmo se a SEFAZ rejeitar: numero queimado nao
   // volta, e reaproveitar gera duplicidade.
