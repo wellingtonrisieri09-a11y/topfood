@@ -1335,7 +1335,7 @@ function renderProducts() {
             <button class="btn btn-secondary" onclick="gerarVideo('${p.id}','quadrado',this)" style="font-size:.75rem;padding:6px 10px" title="Gerar vídeo quadrado (Shopee/feed)"><i class="fa fa-film"></i> ▢</button>
             <button class="btn btn-secondary" onclick="gerarVideo('${p.id}','vertical',this)" style="font-size:.75rem;padding:6px 10px" title="Gerar vídeo vertical (Reels/TikTok)"><i class="fa fa-film"></i> ▯</button>
             <button class="btn btn-secondary" onclick="editProduct('${p.id}')" style="font-size:.75rem;padding:6px 12px"><i class="fa fa-pen"></i> Editar</button>
-            <button class="btn btn-secondary" onclick="deleteProduct('${p.id}')" style="font-size:.75rem;padding:6px 10px;color:var(--red);border-color:var(--red)" title="Excluir produto"><i class="fa fa-trash"></i></button>
+            <button class="btn btn-secondary" onclick="deleteProduct('${p.id}')" style="font-size:.75rem;padding:6px 12px;color:var(--red);border-color:var(--red)" title="Excluir produto"><i class="fa fa-trash"></i> Excluir</button>
           </div>
         </div>
       </div>

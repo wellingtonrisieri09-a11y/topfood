@@ -191,7 +191,11 @@
     .product-card-prices{display:flex;flex-direction:column;gap:3px;margin-bottom:12px}
     .product-card-price{font-size:.78rem;color:var(--muted)}
     .product-card-price b{color:var(--text)}
-    .product-card-footer{display:flex;align-items:center;justify-content:space-between}
+    /* flex-wrap e essencial: sao 5 controles (Ativo + 2 videos + editar +
+       excluir) num card estreito. Sem quebrar linha eles transbordam, e o
+       overflow:hidden do .product-card corta o ultimo — era por isso que o
+       botao de excluir produto nao aparecia. */
+    .product-card-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
     .product-toggle{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)}
     .toggle{width:34px;height:18px;border-radius:9px;background:var(--border);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
     .toggle.on{background:var(--green)}
