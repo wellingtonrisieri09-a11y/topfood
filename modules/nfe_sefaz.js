@@ -83,6 +83,15 @@ function checarConfig() {
   const faltam = [];
   const emit = getEmitente();
   const fis  = getFiscal();
+  // A biblioteca que fala com a SEFAZ precisa estar instalada. Ela depende de
+  // Java no servidor (o xsd-schema-validator compila um auxiliar na instalacao),
+  // entao um servidor sem Java instala pela metade e o erro so aparecia quando
+  // alguem clicava em Emitir — depois de este diagnostico dizer que estava tudo
+  // pronto.
+  try { require.resolve('nfewizard-io'); }
+  catch (_) { faltam.push('Biblioteca nfewizard-io (precisa de Java: apt-get install default-jdk-headless)'); }
+  try { require.resolve('@nfewizard/danfe'); }
+  catch (_) { faltam.push('Biblioteca @nfewizard/danfe (o DANFE em PDF depende dela)'); }
   if (!fs.existsSync(CERT_FILE))       faltam.push('Certificado A1 em data/certificado.pfx');
   if (!process.env.NFE_CERT_SENHA)     faltam.push('NFE_CERT_SENHA no .env');
   if (!emit.inscricao_estadual)        faltam.push('Inscrição Estadual');

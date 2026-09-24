@@ -44,6 +44,14 @@ Emitir NF-e**, e a aba **Notas Fiscais** com o histórico, o PDF e o XML.
 4. **CFOP e NCM** dos produtos, confirmados com o contador da empresa.
 5. Estar habilitada a emitir NF-e na SEFAZ do estado.
 
+E no servidor: **Java instalado**. A biblioteca que assina e envia depende do
+`xsd-schema-validator`, que compila um auxiliar em Java na instalação. Sem ele o
+`npm install` falha no meio e o site sobe sem o emissor:
+
+```
+apt-get update && apt-get install -y default-jdk-headless
+```
+
 O que **não** precisa: conta em provedor, token de API, mensalidade.
 
 ---
