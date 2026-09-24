@@ -370,6 +370,11 @@ function montarNFe(order, opcoes) {
         uCom: fis.unidade, qCom: qtd, vUnCom: v4(unit), vProd: v2(total),
         cEANTrib: 'SEM GTIN',
         uTrib: fis.unidade, qTrib: qtd, vUnTrib: v4(unit),
+        // Frete e desconto do item: preenchidos no rateio logo abaixo. As
+        // chaves nascem aqui, vazias, porque a posicao delas no XML e esta —
+        // entre vUnTrib e indTot. Criadas depois, iriam parar no fim do
+        // objeto e o schema recusaria. Vazias, o limparVazios tira.
+        vFrete: undefined, vDesc: undefined,
         indTot: 1,
       },
       imposto: {
@@ -388,6 +393,28 @@ function montarNFe(order, opcoes) {
   const vFrete = parseFloat(ship.price || ship.preco || 0) || 0;
   const vDesc  = parseFloat(o.discount || 0) || 0;
   const vNF    = Math.round((vProd + vFrete - vDesc) * 100) / 100;
+
+  // Frete e desconto tambem vao item a item, e a SEFAZ confere centavo a
+  // centavo: a soma dos vFrete dos itens tem que dar exatamente o vFrete do
+  // total (rejeicao "Total do Frete difere do somatorio dos itens"), e o
+  // mesmo vale pro desconto. Rateamos proporcional ao valor de cada item e
+  // jogamos a sobra do arredondamento no ultimo — sem isso, um pedido de
+  // tres itens fecha com um centavo a mais ou a menos e a nota e recusada.
+  const ratear = (valor) => {
+    if (!(valor > 0) || !(vProd > 0)) return itens.map(() => 0);
+    const partes = itens.map(d =>
+      Math.round(valor * (parseFloat(d.prod.vProd) / vProd) * 100) / 100);
+    const soma = partes.reduce((a, b) => a + b, 0);
+    const ultimo = partes.length - 1;
+    partes[ultimo] = Math.round((partes[ultimo] + (valor - soma)) * 100) / 100;
+    return partes;
+  };
+  const fretes = ratear(vFrete);
+  const descs  = ratear(vDesc);
+  itens.forEach((d, i) => {
+    if (fretes[i] > 0) d.prod.vFrete = v2(fretes[i]);
+    if (descs[i]  > 0) d.prod.vDesc  = v2(descs[i]);
+  });
 
   // Sem "versao" e sem "Id" aqui: a lib monta infNFe como
   // { $: { versao, Id }, ...este objeto } — mandar versao junto faz virar um
