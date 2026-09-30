@@ -9,6 +9,16 @@
 //   node limpar_pedidos_teste.js            # so mostra o que seria removido
 //   node limpar_pedidos_teste.js --confirm  # remove de verdade
 //
+// O robo troca de valor quando a gente fecha uma porta: comecou em R$ 5 e,
+// depois do piso de R$ 10, passou pra R$ 39,73. Entao o valor e parametro,
+// nao numero fixo no codigo:
+//
+//   node limpar_pedidos_teste.js --valor=39.73
+//   node limpar_pedidos_teste.js --valor=39.73 --confirm
+//
+// Pedido PAGO nunca e removido, mesmo batendo no valor — venda de verdade
+// pode ter caido no mesmo total por coincidencia.
+//
 // Antes de remover, grava uma copia em
 // data/pedidos-removidos-<data>.json. Se algum virar chargeback,
 // a prova continua existindo.
@@ -19,8 +29,17 @@ const { readData, writeData } = require('./db');
 
 // Mesmo criterio da rota do painel: item do produto interno de teste,
 // ou total ate R$ 5,01 (o pacote mais barato da loja e R$ 30).
+const valorAlvo = parseFloat(
+  (process.argv.find(a => a.startsWith('--valor=')) || '').split('=')[1]);
+
 function ehPedidoDeTeste(o) {
   const total = parseFloat(o.total) || 0;
+
+  // Pago e venda. Nao remove, aconteca o que acontecer.
+  if (o.status === 'paid' || o.payment_status === 'paid' || o.paid_at) return false;
+
+  if (valorAlvo > 0) return Math.abs(total - valorAlvo) < 0.005;
+
   const temItemInterno = (o.items || []).some(it =>
     /produto de teste/i.test(it.name || '') || String(it.id || '') === 'teste-pag');
   return temItemInterno || (total > 0 && total <= 5.01);
@@ -33,7 +52,8 @@ const ficam     = orders.filter(o => !ehPedidoDeTeste(o));
 
 console.log('');
 console.log('  Pedidos no banco:   ' + orders.length);
-console.log('  De teste (R$ 5):    ' + alvos.length);
+console.log('  A remover:          ' + alvos.length +
+  (valorAlvo > 0 ? '  (R$ ' + valorAlvo.toFixed(2) + ', nao pagos)' : '  (R$ 5 / produto de teste)'));
 console.log('  Vendas de verdade:  ' + ficam.length);
 console.log('');
 
@@ -53,7 +73,8 @@ console.log('');
 
 if (!confirmar) {
   console.log('  Isto foi so a previa. Para remover de verdade:');
-  console.log('    node limpar_pedidos_teste.js --confirm\n');
+  console.log('    node limpar_pedidos_teste.js' +
+              (valorAlvo > 0 ? ' --valor=' + valorAlvo : '') + ' --confirm\n');
   process.exit(0);
 }
 

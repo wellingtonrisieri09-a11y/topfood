@@ -386,6 +386,48 @@ function rateLimit(nome, max, janelaMs) {
 }
 setInterval(() => { const now = Date.now(); for (const [k, b] of rlBuckets) if (now > b.reset) rlBuckets.delete(k); }, 60 * 1000);
 
+// Limite do SITE INTEIRO, sem olhar IP. Teste de cartao roubado roda de
+// dezenas de enderecos diferentes — cada tentativa parece um cliente novo e
+// passa pelo limite por IP. Contando o site todo o golpista nao tem como
+// escapar: uma loja pequena nao tem dezenas de tentativas de cartao por hora.
+function rateLimitGlobal(nome, max, janelaMs) {
+  return (req, res, next) => {
+    const key = 'GLOBAL|' + nome;
+    const now = Date.now();
+    let b = rlBuckets.get(key);
+    if (!b || now > b.reset) { b = { n: 0, reset: now + janelaMs }; rlBuckets.set(key, b); }
+    b.n++;
+    if (b.n > max) {
+      if (b.n === max + 1) console.warn('\u26d4 Limite global [' + nome + '] atingido — possivel ataque | IP ' + clientIp(req));
+      return res.status(429).json({ ok: false, error: 'Pagamento com cartao temporariamente indisponivel. Use o PIX.' });
+    }
+    next();
+  };
+}
+
+// Disjuntor do cartao: conta as RECUSAS do site inteiro. Cinco cartoes
+// recusados em quinze minutos nao e cliente errando o numero — e varredura.
+// Quando dispara, o cartao fecha por uma hora e o PIX continua funcionando,
+// entao a venda legitima nao para.
+const cartaoDisjuntor = { falhas: [], bloqueadoAte: 0 };
+const CARTAO_MAX_FALHAS  = 5;
+const CARTAO_JANELA_MS   = 15 * 60 * 1000;
+const CARTAO_BLOQUEIO_MS = 60 * 60 * 1000;
+
+function cartaoBloqueado() { return Date.now() < cartaoDisjuntor.bloqueadoAte; }
+function registrarFalhaCartao(ip, motivo) {
+  const now = Date.now();
+  cartaoDisjuntor.falhas = cartaoDisjuntor.falhas.filter(t => now - t < CARTAO_JANELA_MS);
+  cartaoDisjuntor.falhas.push(now);
+  console.warn('\u26a0 Cartao recusado (' + cartaoDisjuntor.falhas.length + '/' + CARTAO_MAX_FALHAS +
+               ') | IP ' + ip + ' | ' + String(motivo).slice(0, 80));
+  if (cartaoDisjuntor.falhas.length >= CARTAO_MAX_FALHAS) {
+    cartaoDisjuntor.bloqueadoAte = now + CARTAO_BLOQUEIO_MS;
+    cartaoDisjuntor.falhas = [];
+    console.warn('\u26d4 CARTAO BLOQUEADO por 1 hora — recusas demais em sequencia (teste de cartao roubado). PIX segue no ar.');
+  }
+}
+
 // Logins: 10 tentativas/min por IP · cadastro/recuperação: 5/min ·
 // formulários públicos: 15/min · criação de pedido: 8/min.
 // Cobrança (cartão/PIX) é o alvo de teste de cartão roubado — o golpista roda
@@ -399,7 +441,8 @@ app.use('/api/customer/forgot-password', rateLimit('cliente-senha', 5, 60 * 1000
 app.use('/api/contact',                  rateLimit('contato', 15, 60 * 1000));
 app.use('/api/newsletter',               rateLimit('news', 15, 60 * 1000));
 app.post('/api/orders',                  rateLimit('pedido', 8, 60 * 1000), (req, res, next) => next());
-app.post('/api/asaas/credit-card',       rateLimit('cartao', 5, 10 * 60 * 1000), (req, res, next) => next());
+app.post('/api/asaas/credit-card',       rateLimit('cartao', 5, 10 * 60 * 1000),
+                                         rateLimitGlobal('cartao-site', 12, 60 * 60 * 1000), (req, res, next) => next());
 app.post('/api/pix-charge',              rateLimit('pix-cobranca', 10, 60 * 1000), (req, res, next) => next());
 app.post('/api/admin/abandoned',         rateLimit('carrinho', 10, 60 * 1000), (req, res, next) => next());
 app.post('/api/checkout',                rateLimit('mp-checkout', 10, 60 * 1000), (req, res, next) => next());
@@ -1477,6 +1520,13 @@ app.post('/api/orders', (req, res) => {
 // POST /api/asaas/credit-card — Cobrança cartão via Asaas
 // ============================================================
 app.post('/api/asaas/credit-card', async (req, res) => {
+  // Disjuntor aberto: recusas demais em sequencia no site inteiro. Recusar
+  // aqui custa nada; deixar passar custa taxa de tentativa e risco de
+  // chargeback a cada cartao roubado testado.
+  if (cartaoBloqueado()) {
+    console.warn('\u26d4 Cartao recusado (disjuntor aberto) | IP ' + clientIp(req));
+    return res.status(503).json({ ok: false, error: 'Pagamento com cartao temporariamente indisponivel. Use o PIX.' });
+  }
   const { orderId, total, customer, card, billingAddress, installments } = req.body;
   if (!orderId || !total || !customer || !card) {
     return res.status(400).json({ ok: false, error: 'Dados incompletos' });
@@ -1581,6 +1631,9 @@ app.post('/api/asaas/credit-card', async (req, res) => {
 
   } catch(e) {
     const asaasErr = (e.response && e.response.data && e.response.data.errors && e.response.data.errors[0] && e.response.data.errors[0].description) || e.message;
+    // Cada recusa alimenta o disjuntor. Cliente que erra o numero uma ou duas
+    // vezes nao chega perto do limite; varredura de cartao chega em minutos.
+    registrarFalhaCartao(clientIp(req), asaasErr);
     console.error('[asaas] credit-card erro:', asaasErr);
     res.status(400).json({ ok: false, error: asaasErr });
   }
