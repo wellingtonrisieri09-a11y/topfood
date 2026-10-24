@@ -26,6 +26,15 @@ const APP_ID = process.env.ML_APP_ID;
 const SECRET = process.env.ML_CLIENT_SECRET;
 const REDIRECT_URI = 'https://topfoodembalagens.com.br/api/ml/callback';
 const API = 'https://api.mercadolibre.com';
+// Owner-approved account lock; never derive this from an OAuth callback.
+const ALLOWED_ACCOUNT_ID = '304486323';
+function assertAllowedAccount(id) {
+  if (String(id) !== ALLOWED_ACCOUNT_ID) {
+    const error = new Error('Somente a conta RISIERIWELLINGTON pode ser conectada nesta loja.');
+    error.code = 'ML_ACCOUNT_NOT_ALLOWED';
+    throw error;
+  }
+}
 
 // Buscas do radar de concorrência (M12)
 const RADAR_QUERIES = [
@@ -66,6 +75,8 @@ function loadAccounts() {
 }
 
 let accounts = loadAccounts();
+accounts = Object.fromEntries(Object.entries(accounts).filter(([id, account]) =>
+  id === ALLOWED_ACCOUNT_ID && String(account.user_id) === ALLOWED_ACCOUNT_ID));
 function saveAccounts() { saveJSON(ACCT_FILE, accounts); }
 function accountIds() { return Object.keys(accounts); }
 function anyAccountId() { return accountIds()[0] || null; }
@@ -102,7 +113,9 @@ async function connectAccount(code) {
   });
   let me = {};
   try { me = await fetchMe(data.access_token); } catch (e) { console.error('[ML] users/me:', e.message); }
-  const uid = String(me.id || data.user_id || Date.now());
+  const uid = String(me.id || data.user_id || '');
+  assertAllowedAccount(uid);
+  if (data.user_id != null) assertAllowedAccount(data.user_id);
   const prev = accounts[uid] || {};
   accounts[uid] = {
     user_id: me.id || data.user_id || prev.user_id || null,
@@ -119,8 +132,10 @@ async function connectAccount(code) {
 
 // Token válido de uma conta específica (renova via refresh_token se preciso)
 async function getToken(accountId) {
+  assertAllowedAccount(accountId);
   const a = accounts[accountId];
   if (!a) throw new Error('Conta Mercado Livre não conectada: ' + accountId);
+  assertAllowedAccount(a.user_id);
   if (Date.now() < a.expires_at) return a.access_token;
   const data = await oauthExchange({
     grant_type: 'refresh_token',
@@ -128,6 +143,7 @@ async function getToken(accountId) {
     client_secret: SECRET,
     refresh_token: a.refresh_token
   });
+  assertAllowedAccount(data.user_id);
   a.access_token = data.access_token;
   a.refresh_token = data.refresh_token || a.refresh_token;
   a.expires_at = Date.now() + (data.expires_in - 300) * 1000;
@@ -741,6 +757,10 @@ function registerMlRoutes(app, requireAuth) {
       res.redirect('/admin.html?ml=ok');
     } catch (e) {
       console.error('[ML] callback:', e.message);
+      if (e.code === 'ML_ACCOUNT_NOT_ALLOWED') {
+        return res.status(403).type('text/plain').send(
+          'Conexao recusada. Esta loja permite somente RISIERIWELLINGTON (ID 304486323). A conexao existente foi preservada. Entre na conta correta no Mercado Livre e tente novamente.');
+      }
       res.redirect('/admin.html?ml=erro');
     }
   });
@@ -752,6 +772,7 @@ function registerMlRoutes(app, requireAuth) {
     const topic = (req.body && (req.body.topic || req.body.type)) || '?';
     const resource = (req.body && req.body.resource) || '';
     const userId = req.body && req.body.user_id != null ? String(req.body.user_id) : '';
+    if (userId !== ALLOWED_ACCOUNT_ID) return;
     console.log('[ML] notificação:', topic, resource, 'conta:', userId || '?');
     if (topic === 'orders_v2' || topic === 'orders') {
       const m = resource.match(/\/orders\/(\d+)/);
